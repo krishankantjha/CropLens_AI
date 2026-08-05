@@ -1,0 +1,35 @@
+# Python Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Data & Model Binary Exclusions
+*.pkl
+*.parquet
+*.h5
+*.log
+
+# Node / Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/build/
+frontend/dist/
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+.idea/
+
+# Environment Variables & Secrets
+.env
+.env.local
+*.pem
