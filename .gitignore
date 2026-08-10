@@ -10,29 +10,45 @@ __pycache__/
 *$py.class
 .pytest_cache/
 
-# Data & Model Binary Exclusions
+# SQLite Database & Session Files
+*.db
+*.sqlite
+*.sqlite3
+backend/app/croplens.db
+
+# Heavy ML Model Binaries & PyTorch Checkpoints
 *.pkl
-*.parquet
+*.pt
+*.pth
 *.h5
+backend/app/models/*.pkl
+backend/app/models/tft/*.pt
+
+# Processed Parquet Datasets & Raw Logs
+*.parquet
 *.log
 data/raw/*.csv
 data/processed/*.parquet
 
-
-# Node / Frontend
+# Node / Frontend Build & Modules
+node_modules/
 frontend/node_modules/
 frontend/.next/
 frontend/build/
 frontend/dist/
+dist/
 
-# OS & IDE
+# OS & IDE System Files
 .DS_Store
 Thumbs.db
 .vscode/*
 !.vscode/settings.json
 .idea/
+.gemini/
+.agents/
 
-# Environment Variables & Secrets
+# Environment Secrets & Credentials
 .env
 .env.local
+.env.*.local
 *.pem
