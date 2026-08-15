@@ -1,14 +1,15 @@
-﻿"""
+"""
 Security and JWT Token Utilities for CropLens AI.
 Handles Bcrypt password hashing and JWT access token creation/decoding.
 """
 
+import os
 from datetime import datetime, timedelta
 from typing import Optional
 import bcrypt
 import jwt
 
-SECRET_KEY = "croplens_ai_jwt_secret_key_super_secure_btech_thesis_2026"
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "croplens_ai_jwt_secret_key_super_secure_btech_thesis_2026")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 30
 
