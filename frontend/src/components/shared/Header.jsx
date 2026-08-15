@@ -1,8 +1,14 @@
-import React from 'react';
-import { Sprout, MapPin, Calendar, Activity, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sprout, MapPin, Calendar, RefreshCw, ChevronDown, Search } from 'lucide-react';
 
-const COMMODITIES = ['Tomato', 'Potato', 'Onion'];
-const MARKETS = ['Azadpur', 'Kolar', 'Lasalgaon', 'Agra', 'Narayangaon'];
+const COMMODITIES = [
+  'Potato', 'Onion', 'Tomato', 'Wheat', 'Paddy(Dhan)',
+  'Maize', 'Soyabean', 'Mustard', 'Gram(Chana)', 'Chilli Red'
+];
+const MARKETS = [
+  'Agra', 'Khanna', 'Azadpur', 'Mathura', 'Lasalgaon',
+  'Karnal', 'Indore', 'Farrukhabad', 'Guntur', 'Kolkata'
+];
 
 export default function Header({
   commodity,
@@ -15,32 +21,18 @@ export default function Header({
   loading,
   health
 }) {
+  const [showMandiSearch, setShowMandiSearch] = useState(false);
+  const [mandiQuery, setMandiQuery] = useState('');
+
+  const filteredMarkets = MARKETS.filter(m => m.toLowerCase().includes(mandiQuery.toLowerCase()));
+
   return (
     <header className="glass-card" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
         
         {/* Brand identity */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 0 15px rgba(16, 185, 129, 0.4)'
-          }}>
-            <Sprout size={24} color="#ffffff" />
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: '800', letterSpacing: '-0.02em', background: 'linear-gradient(90deg, #ffffff, #9ca3af)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              CropLens AI
-            </h1>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '500' }}>
-              APMC Market Intelligence & Price Forecasting Platform
-            </p>
-          </div>
+          <img src="/logo.png" alt="CropLens AI" style={{ height: '52px', width: 'auto', objectFit: 'contain', borderRadius: '14px' }} />
         </div>
 
         {/* Mandi controls and date filters */}
@@ -50,6 +42,7 @@ export default function Header({
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-surface)', padding: '0.4rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
             <Sprout size={16} color="var(--accent-emerald)" />
             <select
+              aria-label="Select Commodity"
               value={commodity}
               onChange={(e) => setCommodity(e.target.value)}
               style={{ background: 'transparent', color: 'var(--text-primary)', border: 'none', outline: 'none', fontWeight: '600', cursor: 'pointer' }}
@@ -60,18 +53,52 @@ export default function Header({
             </select>
           </div>
 
-          {/* Market selector */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-surface)', padding: '0.4rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-            <MapPin size={16} color="var(--accent-teal)" />
-            <select
-              value={market}
-              onChange={(e) => setMarket(e.target.value)}
-              style={{ background: 'transparent', color: 'var(--text-primary)', border: 'none', outline: 'none', fontWeight: '600', cursor: 'pointer' }}
+          {/* Searchable Mandi selector */}
+          <div className="relative">
+            <button
+              onClick={() => setShowMandiSearch(!showMandiSearch)}
+              aria-label="Select Mandi Market"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-surface)', padding: '0.4rem 0.8rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontWeight: '600', cursor: 'pointer' }}
             >
-              {MARKETS.map((m) => (
-                <option key={m} value={m} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>{m} Mandi</option>
-              ))}
-            </select>
+              <MapPin size={16} color="var(--accent-teal)" />
+              <span>{market} Mandi</span>
+              <ChevronDown size={14} className="text-slate-400" />
+            </button>
+
+            {showMandiSearch && (
+              <div className="absolute top-full left-0 mt-2 w-56 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-2 z-50 space-y-1.5 font-['Inter']">
+                <div className="flex items-center gap-2 px-2 py-1.5 bg-slate-800 rounded-xl border border-slate-700">
+                  <Search size={14} className="text-slate-400 shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Search APMC mandi..."
+                    value={mandiQuery}
+                    onChange={(e) => setMandiQuery(e.target.value)}
+                    className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {filteredMarkets.map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => {
+                        setMarket(m);
+                        setShowMandiSearch(false);
+                        setMandiQuery('');
+                      }}
+                      className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center justify-between ${
+                        market === m ? 'bg-[#046c4e] text-white font-extrabold' : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                      }`}
+                    >
+                      <span>{m} APMC</span>
+                      {market === m && <span className="text-[10px]">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Target date selector */}
