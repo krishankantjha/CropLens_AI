@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { LineChart, Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
+import React from 'react';
+import { Line, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 
 export default function AnalyticsTrendChart({ trends }) {

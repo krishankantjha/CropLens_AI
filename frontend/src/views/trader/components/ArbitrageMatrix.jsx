@@ -1,11 +1,28 @@
-﻿import React from 'react';
-import { ArrowRightLeft, ExternalLink, Info } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowRightLeft, Info, Map, Table } from 'lucide-react';
+import InteractiveMandiMap from '../../../components/shared/InteractiveMandiMap';
 
 export default function ArbitrageMatrix({ arbitrage }) {
+  const [viewMode, setViewMode] = useState('table');
   const opportunities = arbitrage?.opportunities || [];
-  const baseMarket = arbitrage?.base_market || 'Source';
+  const baseMarket = arbitrage?.base_market || 'Kolar';
   const commodity = arbitrage?.commodity || 'Crop';
   const disclaimer = arbitrage?.disclaimer || '';
+
+  // Format spatial transport corridor routes for Leaflet map
+  const routes = opportunities.map(opp => ({
+    origin: baseMarket,
+    destination: opp.target_market,
+    marginType: opp.price_difference > 150 ? 'high' : opp.price_difference > 50 ? 'medium' : 'low'
+  }));
+
+  const mapRows = opportunities.map((opp, idx) => ({
+    name: opp.target_market,
+    rate: Math.round(opp.modal_price),
+    transport: -Math.round(Math.abs(opp.transport_cost_per_qtl || 50)),
+    netProfit: Math.round(opp.net_gain_per_qtl),
+    badgeType: opp.is_recommended ? 'best' : idx === 0 ? 'nearest' : 'normal'
+  }));
 
   return (
     <div className="glass-card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
@@ -21,9 +38,31 @@ export default function ArbitrageMatrix({ arbitrage }) {
             </p>
           </div>
         </div>
+
+        {/* View Toggle */}
+        <div className="flex items-center p-1 bg-slate-800 rounded-xl border border-slate-700 text-xs">
+          <button
+            onClick={() => setViewMode('table')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
+              viewMode === 'table' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Table size={14} /> Table
+          </button>
+          <button
+            onClick={() => setViewMode('map')}
+            className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
+              viewMode === 'map' ? 'bg-[#046c4e] text-white shadow-sm' : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Map size={14} /> Corridor Map
+          </button>
+        </div>
       </div>
 
-      {opportunities.length === 0 ? (
+      {viewMode === 'map' ? (
+        <InteractiveMandiMap rows={mapRows} routes={routes} height="350px" />
+      ) : opportunities.length === 0 ? (
         <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '1rem' }}>No active arbitrage records found.</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
