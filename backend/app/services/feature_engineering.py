@@ -1,6 +1,9 @@
 """Feature engineering pipeline for CropLens AI.
 
-Merges cleaned datasets and computes 42 numeric features for model training."""
+Forecasting Horizon: 1-Day Ahead (Next-Day) APMC Wholesale Price Prediction.
+CropLens predicts the next day's (t+1) APMC modal wholesale price using market closing,
+arrival volume, NASA POWER meteorological, and remote sensing NDVI data known up to day t.
+Computes 47 numeric features for tabular and sequence model training."""
 
 import os
 import logging
@@ -47,19 +50,33 @@ FESTIVAL_WEIGHTS: dict = {
     "Navratri": 0.7, "Dussehra": 0.7, "Pongal": 0.7, "Onam": 0.7
 }
 
-# Crop base temperatures in Celsius
+# Crop base temperatures in Celsius across 5 agricultural sectors
 CROP_BASE_TEMP: dict = {
-    "Onion": 7.0,
     "Potato": 5.0,
+    "Onion": 7.0,
     "Tomato": 10.0,
+    "Wheat": 4.0,
+    "Paddy(Dhan)": 10.0,
+    "Maize": 10.0,
+    "Soyabean": 10.0,
+    "Mustard": 5.0,
+    "Gram(Chana)": 7.0,
+    "Chilli Red": 12.0,
 }
 DEFAULT_BASE_TEMP: float = 10.0
 
-# Crop peak harvest months
+# Crop peak harvest months (Rabi and Kharif agricultural calendar)
 PEAK_HARVEST_MONTHS: dict = {
-    "Onion": [3, 4, 11, 12],
     "Potato": [1, 2, 3],
+    "Onion": [3, 4, 11, 12],
     "Tomato": [1, 2, 10, 11],
+    "Wheat": [4, 5],
+    "Paddy(Dhan)": [10, 11, 12],
+    "Maize": [9, 10, 11],
+    "Soyabean": [10, 11],
+    "Mustard": [3, 4],
+    "Gram(Chana)": [3, 4, 5],
+    "Chilli Red": [2, 3, 4],
 }
 DEFAULT_PEAK_MONTHS: list = [3, 4, 9, 10]
 
@@ -180,10 +197,26 @@ def _compute_price_features(df: pd.DataFrame) -> pd.DataFrame:
     """Calculate price lags, velocity, volatility, and market structure features."""
     grp = df.groupby(["market", "commodity"])
 
-    # Calculate historical price lags
+    # Calculate historical price lags (short-horizon and seasonal)
+    df["price_lag_1d"] = grp["modal_price"].shift(1)
+    df["price_lag_2d"] = grp["modal_price"].shift(2)
+    df["price_lag_3d"] = grp["modal_price"].shift(3)
     df["price_lag_1w"] = grp["modal_price"].shift(7)
     df["price_lag_4w"] = grp["modal_price"].shift(28)
     df["price_lag_52w"] = grp["modal_price"].shift(364)
+
+    # Calculate Exponential Moving Averages (EMAs) for short and medium term trend
+    df["price_ema_7d"] = grp["modal_price"].transform(
+        lambda x: x.shift(1).ewm(span=7, adjust=False).mean()
+    )
+    df["price_ema_21d"] = grp["modal_price"].transform(
+        lambda x: x.shift(1).ewm(span=21, adjust=False).mean()
+    )
+
+    # Calculate 7-day rolling price channel width
+    roll_max_7d = grp["modal_price"].transform(lambda x: x.shift(1).rolling(7, min_periods=2).max())
+    roll_min_7d = grp["modal_price"].transform(lambda x: x.shift(1).rolling(7, min_periods=2).min())
+    df["price_channel_width_7d"] = (roll_max_7d - roll_min_7d).fillna(0.0)
 
     # Calculate price velocity using lagged price
     df["price_velocity_7d"] = (df["modal_price"] - df["price_lag_1w"]) / 7.0
@@ -222,24 +255,27 @@ def _compute_price_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _compute_supply_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate supply arrival ratios and supply demand divergence."""
+    """Calculate supply arrival ratios and supply demand divergence using strictly lagged past arrivals (t-1)."""
     grp = df.groupby(["market", "commodity"])
 
-    # Calculate 30 day rolling mean of arrivals
+    # Shift arrivals by 1 day to ensure arrival metrics use data strictly available prior to morning auction price discovery
+    arrivals_lag1 = grp["arrivals_in_qtl"].shift(1).fillna(df["arrivals_in_qtl"])
+    
+    # Calculate 30 day rolling mean of past arrivals (strictly t-1 to t-30)
     df["arrivals_rolling_mean_30d"] = grp["arrivals_in_qtl"].transform(
-        lambda x: x.rolling(30, min_periods=1).mean()
-    )
+        lambda x: x.shift(1).rolling(30, min_periods=1).mean()
+    ).fillna(df["arrivals_in_qtl"])
 
-    # Calculate arrival glut or deficit ratio
-    df["arrival_ratio"] = df["arrivals_in_qtl"] / (df["arrivals_rolling_mean_30d"] + 1e-5)
+    # Calculate arrival glut or deficit ratio using lagged arrivals
+    df["arrival_ratio"] = arrivals_lag1 / (df["arrivals_rolling_mean_30d"] + 1e-5)
 
-    # Calculate rate of change in arrivals over 7 days
-    arrivals_lag_1w = grp["arrivals_in_qtl"].shift(7)
-    df["arrival_velocity_7d"] = (df["arrivals_in_qtl"] - arrivals_lag_1w) / 7.0
+    # Calculate rate of change in arrivals over 7 days (t-1 vs t-8)
+    arrivals_lag_8d = grp["arrivals_in_qtl"].shift(8).fillna(df["arrivals_in_qtl"])
+    df["arrival_velocity_7d"] = (arrivals_lag1 - arrivals_lag_8d) / 7.0
 
-    # Calculate arrival price divergence signal
-    delta_arrivals = grp["arrivals_in_qtl"].diff().fillna(0.0)
-    delta_price = grp["modal_price"].diff().fillna(0.0)
+    # Calculate arrival price divergence signal using lagged changes
+    delta_arrivals = grp["arrivals_in_qtl"].shift(1).diff().fillna(0.0)
+    delta_price = grp["modal_price"].shift(1).diff().fillna(0.0)
     df["arrival_price_divergence_signal"] = (
         np.sign(delta_arrivals) * np.sign(delta_price)
     ).astype(int)
@@ -248,39 +284,44 @@ def _compute_supply_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _compute_weather_features(df: pd.DataFrame) -> pd.DataFrame:
-    """Calculate weather stress, satellite NDVI, and crop health indicators."""
+    """Calculate weather stress, satellite NDVI, and crop health indicators using strictly lagged meteorological signals (t-1)."""
     grp_district = df.groupby("district")
 
-    # Calculate diurnal temperature range
-    df["temp_range"] = df["temp_max"] - df["temp_min"]
+    # Shift weather observations by 1 day so day-t price forecasts use weather recorded prior to trading start
+    temp_max_lag1 = grp_district["temp_max"].shift(1).fillna(df["temp_max"])
+    temp_min_lag1 = grp_district["temp_min"].shift(1).fillna(df["temp_min"])
+    rainfall_lag1 = grp_district["rainfall_mm"].shift(1).fillna(0.0)
 
-    # Calculate 14 day cumulative rainfall sum
+    # Calculate diurnal temperature range
+    df["temp_range"] = temp_max_lag1 - temp_min_lag1
+
+    # Calculate 14 day cumulative rainfall sum (strictly past 14 days)
     df["rainfall_rolling_sum_14d"] = grp_district["rainfall_mm"].transform(
-        lambda x: x.rolling(14, min_periods=1).sum()
-    )
+        lambda x: x.shift(1).rolling(14, min_periods=1).sum()
+    ).fillna(0.0)
 
     # Calculate rainfall and NDVI interaction
-    df["rain_x_ndvi_interaction"] = df["rainfall_mm"] * df["ndvi_mean"]
+    df["rain_x_ndvi_interaction"] = rainfall_lag1 * df["ndvi_mean"]
 
     # Count heatwave stress days above 35 degrees in past week
     df["temp_stress_days_7d"] = grp_district["temp_max"].transform(
-        lambda x: (x > 35.0).astype(int).rolling(7, min_periods=1).sum()
+        lambda x: (x.shift(1) > 35.0).astype(int).rolling(7, min_periods=1).sum()
     ).fillna(0.0)
 
     # Count consecutive dry days with zero rain
     df["consecutive_dry_days"] = grp_district["rainfall_mm"].transform(
-        lambda x: (x == 0.0).astype(int).groupby((x != 0.0).cumsum()).cumsum()
+        lambda x: (x.shift(1) == 0.0).astype(int).groupby((x.shift(1) != 0.0).cumsum()).cumsum()
     ).fillna(0.0)
 
     # Calculate vegetative stress ratio using crop base temperatures
     df["base_temp"] = df["commodity"].map(CROP_BASE_TEMP).fillna(DEFAULT_BASE_TEMP)
-    effective_heat = (df["temp_max"] - df["base_temp"]).clip(lower=0.0) + 1.0
+    effective_heat = (temp_max_lag1 - df["base_temp"]).clip(lower=0.0) + 1.0
     df["vegetative_stress_ratio"] = df["ndvi_mean"] / effective_heat
     df = df.drop(columns=["base_temp"])
 
     # Flag heatwave events of 3 consecutive days at or above 40 degrees
     df["heat_wave_event_flag"] = grp_district["temp_max"].transform(
-        lambda x: (x >= 40.0).astype(int).rolling(3, min_periods=3).sum().eq(3).astype(int)
+        lambda x: (x.shift(1) >= 40.0).astype(int).rolling(3, min_periods=3).sum().eq(3).astype(int)
     ).fillna(0).astype(int)
 
     # Calculate 4 week crop greenness momentum
@@ -415,9 +456,11 @@ def _compute_market_features(df: pd.DataFrame) -> pd.DataFrame:
     """Calculate seasonality, market regimes, and harvest flags."""
     grp = df.groupby(["market", "commodity"])
 
-    # Calculate Fourier seasonality sine and cosine waves
+    # Calculate Fourier seasonality sine and cosine waves (monthly and day-of-week)
     df["sin_month"] = np.sin(2 * np.pi * df["date"].dt.month / 12.0)
     df["cos_month"] = np.cos(2 * np.pi * df["date"].dt.month / 12.0)
+    df["sin_dow"] = np.sin(2 * np.pi * df["date"].dt.dayofweek / 7.0)
+    df["cos_dow"] = np.cos(2 * np.pi * df["date"].dt.dayofweek / 7.0)
 
     # Flag crop peak harvest months
     df["month"] = df["date"].dt.month
