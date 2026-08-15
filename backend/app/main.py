@@ -18,10 +18,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 
+import sys
+
 def get_base_dir() -> str:
     """Returns absolute base directory path for project root."""
     current_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.abspath(os.path.join(current_dir, "..", ".."))
+
+# Add project root to sys.path so 'backend.app...' imports succeed anywhere
+base_dir = get_base_dir()
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
+
+try:
+    from backend.app.api.api_router import api_router
+except ModuleNotFoundError:
+    from app.api.api_router import api_router
 
 
 def load_model_artifacts() -> Dict[str, Any]:
@@ -124,6 +136,11 @@ async def lifespan(app: FastAPI):
         app.state.dataset_loaded = True
         app.state.startup_timestamp = datetime.now(timezone.utc).isoformat()
         app.state.startup_duration_ms = round((time.time() - start_time) * 1000, 2)
+
+        # Initialize and start APScheduler background worker
+        from backend.app.services.scheduler_service import init_scheduler, warm_prediction_cache, scheduler as bg_scheduler
+        init_scheduler(app)
+        warm_prediction_cache(app)
     except Exception as e:
         app.state.models_loaded = False
         app.state.dataset_loaded = False
@@ -133,6 +150,13 @@ async def lifespan(app: FastAPI):
     yield
 
     # Clean shutdown
+    try:
+        from backend.app.services.scheduler_service import scheduler as bg_scheduler
+        if bg_scheduler is not None and bg_scheduler.running:
+            bg_scheduler.shutdown(wait=False)
+    except Exception:
+        pass
+
     app.state.models = None
     app.state.metadata = None
     app.state.dataset = None
@@ -150,8 +174,6 @@ else:
         "http://127.0.0.1:5173"
     ]
 
-
-from backend.app.api.api_router import api_router
 
 app = FastAPI(
     title="CropLens AI: APMC Market Intelligence Platform",
