@@ -1,8 +1,9 @@
-﻿"""
+"""
 Pytest Integration Suite for CropLens AI Authentication & User Management.
 Tests user registration, Bcrypt password hashing, JWT token issuing, OTP flow, and preferences.
 """
 
+import time
 import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
@@ -12,7 +13,7 @@ client = TestClient(app)
 
 def test_user_registration_and_login():
     """Test user registration, duplicate prevention, and login with JWT token."""
-    test_mobile = "9998887770"
+    test_mobile = f"99{str(time.time_ns())[-8:]}"
     
     # 1. Register new user
     reg_payload = {
@@ -78,7 +79,7 @@ def test_user_registration_and_login():
 
 def test_otp_flow():
     """Test OTP code sending and passwordless verification."""
-    test_mobile = "9991112223"
+    test_mobile = f"98{str(time.time_ns())[-8:]}"
 
     # Send OTP
     send_res = client.post("/api/v1/auth/otp/send", json={"mobile_number": test_mobile})

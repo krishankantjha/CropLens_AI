@@ -78,14 +78,14 @@ def test_predict_shocks(client):
 
 def test_procurement_arbitrage(client):
     """Tests GET /api/v1/procurement/arbitrage spatial price difference calculation."""
-    response = client.get("/api/v1/procurement/arbitrage?commodity=Tomato&base_market=Kolar")
+    response = client.get("/api/v1/procurement/arbitrage?commodity=Tomato&base_market=Agra")
     assert response.status_code == 200
     data = response.json()
     assert data["commodity"] == "Tomato"
-    assert data["base_market"] == "Kolar"
+    assert data["base_market"] == "Agra"
     assert len(data["opportunities"]) > 0
     first_opp = data["opportunities"][0]
-    assert first_opp["source_market"] == "Kolar"
+    assert first_opp["source_market"] == "Agra"
     assert "gross_price_difference" in first_opp
     assert "price_gradient_percentage" in first_opp
     assert "disclaimer" in data
@@ -104,4 +104,33 @@ def test_analytics_trends(client):
     assert data["price_trend_direction"] in ["Upward", "Downward", "Stable"]
     assert len(data["historical_points"]) <= 30
     assert len(data["historical_points"]) > 0
+
+
+def test_predict_7day_forecast(client):
+    """Tests POST /api/v1/predict/forecast-7d recursive roll-forward trajectory."""
+    payload = {
+        "commodity": "Potato",
+        "market": "Agra",
+        "horizon_days": 7
+    }
+    response = client.post("/api/v1/predict/forecast-7d", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["commodity"] == "Potato"
+    assert data["market"] == "Agra"
+    assert data["forecast_horizon_days"] == 7
+    assert len(data["forecasts"]) == 7
+
+    # Verify continuous horizon index & monotonic quantile bounds for each day
+    for idx, pt in enumerate(data["forecasts"], 1):
+        assert pt["day_index"] == idx
+        assert pt["p10_floor_price"] <= pt["p50_median_price"] <= pt["p90_ceiling_price"]
+        assert pt["price"] > 0
+        assert pt["height"].endswith("%")
+
+    assert "peak_day" in data
+    assert data["peak_day"]["price"] >= max([f["price"] for f in data["forecasts"]])
+    assert "decision" in data
+    assert "decision_hi" in data
+    assert "expected_gain" in data
 
