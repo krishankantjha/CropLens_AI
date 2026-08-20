@@ -35,8 +35,10 @@ if base_dir not in sys.path:
 
 try:
     from backend.app.api.api_router import api_router
+    from backend.app.core.config import ENVIRONMENT
 except ModuleNotFoundError:
     from app.api.api_router import api_router
+    from app.core.config import ENVIRONMENT
 
 
 def load_model_artifacts() -> Dict[str, Any]:
@@ -126,10 +128,21 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager to handle startup resource loading and shutdown cleanup."""
     start_time = time.time()
     try:
-        # Initialize SQLite database tables (croplens.db)
-        from backend.app.db.database import engine, Base
-        from backend.app.db.models import User
-        Base.metadata.create_all(bind=engine)
+        # Run Alembic database migrations programmatically (or fallback to create_all)
+        alembic_ini_path = os.path.join(base_dir, "backend", "alembic.ini")
+        if not os.path.exists(alembic_ini_path):
+            alembic_ini_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "alembic.ini"))
+        if os.path.exists(alembic_ini_path):
+            from alembic.config import Config
+            from alembic import command
+            alembic_cfg = Config(alembic_ini_path)
+            from backend.app.db.database import DATABASE_URL
+            alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
+            command.upgrade(alembic_cfg, "head")
+        else:
+            from backend.app.db.database import engine, Base
+            from backend.app.db.models import User
+            Base.metadata.create_all(bind=engine)
 
         artifacts = load_model_artifacts()
         app.state.models = artifacts["models"]
@@ -184,13 +197,15 @@ else:
     ]
 
 
+enable_docs = ENVIRONMENT != "production" or os.getenv("ENABLE_PRODUCTION_DOCS", "false").lower() == "true"
+
 app = FastAPI(
     title="CropLens AI: APMC Market Intelligence Platform",
     description="Enterprise-grade agricultural market price forecasting, supply shock detection, and procurement intelligence API service.",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
+    docs_url="/docs" if enable_docs else None,
+    redoc_url="/redoc" if enable_docs else None,
+    openapi_url="/openapi.json" if enable_docs else None,
     lifespan=lifespan
 )
 
