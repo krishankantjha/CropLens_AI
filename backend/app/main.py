@@ -22,8 +22,11 @@ import sys
 
 def get_base_dir() -> str:
     """Returns absolute base directory path for project root."""
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.abspath(os.path.join(current_dir, "..", ".."))
+    # Start from the location of this file: backend/app/main.py
+    current_file_dir = os.path.dirname(os.path.abspath(__file__))
+    # The project root is two levels up from backend/app/
+    project_root = os.path.abspath(os.path.join(current_file_dir, "..", ".."))
+    return project_root
 
 # Add project root to sys.path so 'backend.app...' imports succeed anywhere
 base_dir = get_base_dir()
@@ -142,10 +145,16 @@ async def lifespan(app: FastAPI):
         init_scheduler(app)
         warm_prediction_cache(app)
     except Exception as e:
+        # DEGRADED MODE: Log the error but allow the server to start so /docs and /health are accessible.
+        app.state.models = {}
+        app.state.metadata = {"feature_cols": []}
+        app.state.dataset = pd.DataFrame()
         app.state.models_loaded = False
         app.state.dataset_loaded = False
         app.state.startup_error = str(e)
-        raise RuntimeError(f"FastAPI startup failed during resource initialization: {str(e)}")
+        app.state.startup_timestamp = datetime.now(timezone.utc).isoformat()
+        app.state.startup_duration_ms = round((time.time() - start_time) * 1000, 2)
+        print(f"WARNING: CropLens AI started in DEGRADED MODE. Resource initialization failed: {str(e)}")
 
     yield
 
@@ -231,21 +240,20 @@ def read_root() -> RootResponse:
 @app.get("/health", response_model=HealthResponse, tags=["General"])
 def health_check() -> HealthResponse:
     """System Health Check Endpoint verifying model and dataset readiness."""
-    if not getattr(app.state, "models_loaded", False) or not getattr(app.state, "dataset_loaded", False):
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="System unready: Model binaries or master dataset fail readiness check."
-        )
-
-    loaded_model_names = list(app.state.models.keys())
+    models_loaded = getattr(app.state, "models_loaded", False)
+    dataset_loaded = getattr(app.state, "dataset_loaded", False)
+    
+    status_str = "healthy" if (models_loaded and dataset_loaded) else "degraded"
+    
+    loaded_model_names = list(app.state.models.keys()) if app.state.models else []
     dataset_rows = len(app.state.dataset)
     feature_count = len(app.state.metadata.get("feature_cols", []))
 
     return HealthResponse(
-        status="healthy",
+        status=status_str,
         version="1.0.0",
-        models_loaded=True,
-        dataset_loaded=True,
+        models_loaded=models_loaded,
+        dataset_loaded=dataset_loaded,
         loaded_models=loaded_model_names,
         dataset_rows=dataset_rows,
         feature_count=feature_count,
