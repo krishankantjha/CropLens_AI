@@ -1,56 +1,77 @@
 export interface PricePredictionResponse {
+  commodity: string;
+  market: string;
+  date: string;
   p10_floor_price: number;
   p50_median_price: number;
   p90_ceiling_price: number;
-  expected_price: number;
-  conformal_band_width: number;
-  prediction_date: string;
+  band_width: number;
+  band_terminology: string;
+  model_version: string;
 }
 
-export interface ForecastDayItem {
-  day: string;
+export interface DailyForecastPoint {
+  day_index: number;
   date: string;
+  day_name: string;
+  day_name_hi: string;
   price: number;
-  p10: number;
-  p90: number;
-  recommended?: boolean;
+  p10_floor_price: number;
+  p50_median_price: number;
+  p90_ceiling_price: number;
+  band_width: number;
+  height: string;
+  is_peak: boolean;
+  type: string;
 }
 
 export interface Forecast7DayResponse {
   commodity: string;
   market: string;
-  forecast: ForecastDayItem[];
-  peak_day?: {
-    day: string;
-    date: string;
-    price: number;
-    days_ahead: number;
-  };
+  forecast_horizon_days: number;
+  current_price: number;
+  forecasts: DailyForecastPoint[];
+  peak_day: DailyForecastPoint;
+  decision: string;
+  decision_hi: string;
+  expected_gain: number;
+  confidence: string;
+  model_version: string;
 }
 
-export interface ArbitrageRouteItem {
+export interface ArbitrageOpportunityItem {
+  commodity: string;
+  source_market: string;
   destination_market: string;
-  distance_km: number;
+  source_price: number;
   destination_price: number;
-  transport_cost_per_qtl: number;
-  net_gain_per_qtl: number;
-  is_optimal: boolean;
-  transit_risk?: string;
+  gross_price_difference: number;
+  price_gradient_percentage: number;
+  recommendation: string;
 }
 
 export interface ArbitrageResponse {
-  source_market: string;
   commodity: string;
-  routes: ArbitrageRouteItem[];
-  optimal_route: ArbitrageRouteItem;
+  base_market: string;
+  date: string;
+  opportunities: ArbitrageOpportunityItem[];
+  disclaimer: string;
 }
 
 export interface SupplyShockItem {
-  id: string;
-  mandi: string;
   commodity: string;
+  market: string;
+  date: string;
+  anomaly_status: string;
+  is_anomaly: boolean;
   anomaly_score: number;
-  severity: 'low' | 'medium' | 'high';
-  description: string;
-  timestamp: string;
+  arrival_ratio: number;
+  price_velocity_7d: number;
+  message: string;
+}
+
+export interface SupplyShockResponse {
+  total_records_analyzed: number;
+  total_anomalies_detected: number;
+  anomalies: SupplyShockItem[];
 }
