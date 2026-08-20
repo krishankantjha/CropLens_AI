@@ -153,9 +153,10 @@ def send_otp(payload: UserOTPRequest):
         "expires_at": now_ts + OTP_VALIDITY_SECONDS
     }
 
+    # SECURITY FIX: Never return the OTP code in the response body, even in development.
+    # The developer can check server logs or use the standard '123456' for non-prod testing.
     return {
         "message": f"OTP successfully sent to +91 {clean_mobile}",
-        "demo_otp": otp_code,
         "expires_in_seconds": OTP_VALIDITY_SECONDS
     }
 
