@@ -26,8 +26,8 @@ CropLens AI is an end-to-end decision-support platform designed to eliminate pri
          ┌────────────────────────────┼────────────────────────────┐
          ▼                            ▼                            ▼
 ┌───────────────────┐        ┌───────────────────┐        ┌───────────────────┐
-│ React / Next.js   │        │ Voice Audio (gTTS)│        │ WhatsApp Bot      │
-│ Frontend (:3000)  │        │ MP3 Stream Engine │        │ (Twilio Webhook)  │
+│ React + Vite      │        │ Dynamic Speech    │        │ WhatsApp & Telegram│
+│ Frontend (:5173)  │        │ Advisory Engine   │        │ Direct wa.me + Bot │
 └───────────────────┘        └───────────────────┘        └───────────────────┘
 ```
 

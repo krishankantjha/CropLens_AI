@@ -113,9 +113,8 @@ CropLens AI is completely self-contained with no paid cloud dependencies. You ca
 | `PORT` | `8000` | Port for the Uvicorn FastAPI server |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Allowed CORS origins for browser security |
 | `TELEGRAM_BOT_TOKEN` | *(Optional)* | Telegram Bot API Token for live automated push alerts |
-| `TWILIO_ACCOUNT_SID` | *(Optional)* | Twilio Account SID for WhatsApp sandbox testing |
-| `TWILIO_AUTH_TOKEN` | *(Optional)* | Twilio Auth Token |
-| `TWILIO_WHATSAPP_NUMBER` | `whatsapp:+14155238886` | Twilio registered WhatsApp sender number |
+| `JWT_SECRET_KEY` | *(Production Secret)* | Secret key for signing JWT user access tokens |
+| `DATABASE_URL` | `sqlite:///./croplens.db` | SQLAlchemy database connection string |
 
 ---
 
