@@ -30,8 +30,9 @@ export const cropLensService = {
       const cleanMobile = mobile.replace(/[^0-9]/g, '').slice(-10);
       const res = await apiClient.post('/auth/otp/send', { mobile_number: cleanMobile });
       return { success: true, message: res.data?.message || 'OTP sent successfully' };
-    } catch {
-      return { success: true, message: 'OTP sent successfully to your mobile.' };
+    } catch (err) {
+      console.error('OTP Send Error:', err);
+      return { success: false, message: 'Failed to send OTP. Please try again.' };
     }
   },
 
@@ -43,24 +44,26 @@ export const cropLensService = {
         localStorage.setItem('croplens_jwt', res.data.access_token);
       }
       return { success: true, token: res.data?.access_token, user: res.data?.user };
-    } catch {
-      // Offline fallback: accept valid 6-digit OTP
-      if (otp.length === 6) {
-        return { success: true, token: 'demo_jwt_token', user: { full_name: 'Rajesh Kumar', mobile_number: mobile } };
-      }
+    } catch (err) {
+      console.error('OTP Verify Error:', err);
       return { success: false };
     }
   },
 
-  async register(data: { full_name: string; mobile_number: string; home_mandi?: string; preferred_commodity?: string }): Promise<{ success: boolean; token?: string }> {
+  async register(data: { full_name: string; mobile_number: string; password?: string; home_mandi?: string; preferred_commodity?: string }): Promise<{ success: boolean; token?: string }> {
     try {
-      const res = await apiClient.post('/auth/register', data);
+      const payload = {
+        ...data,
+        password: data.password || 'croplens_default_pass_123'
+      };
+      const res = await apiClient.post('/auth/register', payload);
       if (res.data?.access_token) {
         localStorage.setItem('croplens_jwt', res.data.access_token);
       }
       return { success: true, token: res.data?.access_token };
-    } catch {
-      return { success: true, token: 'demo_registered_token' };
+    } catch (err) {
+      console.error('Registration Error:', err);
+      return { success: false };
     }
   },
 
@@ -68,31 +71,38 @@ export const cropLensService = {
   async getForecast(cropKey: CropKey, mandi = 'Agra'): Promise<CropForecast> {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const res = await apiClient.get<Forecast7DayResponse>('/predict/forecast-7d', {
-        params: { commodity: cropKey, market: mandi, start_date: today },
+      // ALIGNMENT FIX: Use POST method and match backend schemas
+      const res = await apiClient.post<Forecast7DayResponse>('/predict/forecast-7d', {
+        commodity: cropKey,
+        market: mandi,
+        start_date: today,
+        horizon_days: 7
       });
 
-      if (res.data && res.data.forecast && res.data.forecast.length > 0) {
-        const peakDay = res.data.peak_day || { day: 'Friday', price: res.data.forecast[res.data.forecast.length - 1].price, days_ahead: 3 };
-        const baseline = res.data.forecast[0].price;
-        const upside = peakDay.price - baseline;
+      if (res.data && res.data.forecasts && res.data.forecasts.length > 0) {
+        const peakDay = res.data.peak_day;
+        const baseline = res.data.current_price || res.data.forecasts[0].price;
+        const upside = res.data.expected_gain;
 
         return {
-          cropKey,
+          key: cropKey,
           name: cropKey.charAt(0).toUpperCase() + cropKey.slice(1),
+          variety: 'Regular',
+          market: mandi,
           today: baseline,
-          recommendation: upside > 40 ? `Wait ~${peakDay.days_ahead} days for peak rate` : 'Selling favored at current peak rate',
+          recommendation: res.data.decision,
           recommendationTone: upside > 40 ? 'favorable' : 'caution',
           potentialUpside: upside,
           range: {
-            floor: Math.round(baseline * 0.92),
-            expected: baseline,
-            upside: peakDay.price,
+            floor: res.data.forecasts[0].p10_floor_price,
+            expected: res.data.forecasts[0].p50_median_price,
+            upside: res.data.forecasts[0].p90_ceiling_price,
           },
-          outlook: res.data.forecast.map((f) => ({
-            day: f.day,
+          outlook: res.data.forecasts.map((f) => ({
+            label: f.day_name,
+            day: f.day_name,
             price: f.price,
-            recommended: f.day === peakDay.day,
+            recommended: f.is_peak,
           })),
         };
       }
@@ -107,18 +117,19 @@ export const cropLensService = {
     try {
       const today = new Date().toISOString().split('T')[0];
       const res = await apiClient.get<ArbitrageResponse>('/procurement/arbitrage', {
-        params: { commodity: crop, market: homeMandi, date: today },
+        params: { commodity: crop, base_market: homeMandi, date: today },
       });
 
-      if (res.data && res.data.routes) {
-        return res.data.routes.map((r) => ({
+      if (res.data && res.data.opportunities) {
+        return res.data.opportunities.map((r) => ({
           name: r.destination_market,
-          distance: `${r.distance_km} km`,
+          distance: 'N/A',
           rate: r.destination_price,
-          netGain: r.net_gain_per_qtl,
-          freightCost: r.transport_cost_per_qtl,
-          tag: r.is_optimal ? 'Best net profit' : undefined,
-          featured: r.is_optimal,
+          transport: 0,
+          net: r.destination_price * 50, // Default to 50 qtl for net estimation
+          x: 0,
+          y: 0,
+          featured: r.gross_price_difference > 200,
         }));
       }
     } catch (err) {
