@@ -46,7 +46,7 @@ export default function Login() {
             <label htmlFor="mobile" className="block text-xs font-extrabold uppercase tracking-[.12em] text-[#66716A]">Mobile number</label>
             <div className="mt-2 flex items-center rounded-xl border border-[#DDE4DE] bg-[#F8F7F2] px-4 py-3 focus-within:border-[#176B45] focus-within:bg-white">
               <span className="text-sm font-bold text-[#66716A]">+91</span>
-              <input id="mobile" type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} maxLength={10} placeholder="98765 43210" className="w-full bg-transparent pl-3 text-sm font-extrabold text-[#17201B] focus:outline-none" required />
+              <input id="mobile" type="tel" value={mobile} onChange={(e) => setMobile(e.target.value)} maxLength={10} placeholder="Enter mobile number" className="w-full bg-transparent pl-3 text-sm font-extrabold text-[#17201B] focus:outline-none" required />
             </div>
           </div>
 
