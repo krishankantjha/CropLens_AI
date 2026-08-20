@@ -35,3 +35,9 @@ apscheduler==3.11.3
 tzlocal==5.4.4
 
 
+
+# Distributed Caching & Rate Limiting
+redis>=5.0.0
+
+# Database Migrations
+alembic>=1.14.0

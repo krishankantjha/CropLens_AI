@@ -1,11 +1,11 @@
 """
 Authentication and User Profile REST Router for CropLens AI.
 Provides endpoints for mobile registration, password/OTP login, JWT issuing, and profile preferences.
+Backed by Redis (with robust in-memory fallback) for OTP storage and distributed rate limiting.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
-import time
 import secrets
 from typing import Optional, Dict, Any, List
 
@@ -13,6 +13,7 @@ from backend.app.db.database import get_db
 from backend.app.db.models import User
 from backend.app.core.config import ENVIRONMENT
 from backend.app.core.security import hash_password, verify_password, create_access_token, decode_access_token
+from backend.app.core.redis_client import redis_store
 from backend.app.schemas import (
     UserRegisterRequest,
     UserLoginRequest,
@@ -25,28 +26,23 @@ from backend.app.schemas import (
 
 auth_router = APIRouter(prefix="/auth", tags=["Authentication & User Profile"])
 
-# In-memory store for OTP codes: mobile_number -> {"code": "123456", "expires_at": timestamp}
-OTP_STORE: Dict[str, Dict[str, Any]] = {}
 OTP_VALIDITY_SECONDS = 300  # 5 minutes
-
-# In-memory sliding window rate limiter: key -> [timestamps]
-RATE_LIMIT_STORE: Dict[str, List[float]] = {}
 RATE_LIMIT_WINDOW_SECONDS = 60
 MAX_AUTH_REQUESTS_PER_WINDOW = 10
 
 
 def check_rate_limit(key: str) -> None:
-    """Checks and updates sliding window rate limit for sensitive authentication routes."""
-    now = time.time()
-    timestamps = RATE_LIMIT_STORE.get(key, [])
-    valid_timestamps = [t for t in timestamps if now - t < RATE_LIMIT_WINDOW_SECONDS]
-    if len(valid_timestamps) >= MAX_AUTH_REQUESTS_PER_WINDOW:
+    """Checks and updates distributed sliding window rate limit for sensitive authentication routes."""
+    allowed = redis_store.check_rate_limit(
+        key,
+        window_seconds=RATE_LIMIT_WINDOW_SECONDS,
+        max_requests=MAX_AUTH_REQUESTS_PER_WINDOW
+    )
+    if not allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many authentication attempts. Please wait 60 seconds before retrying."
         )
-    valid_timestamps.append(now)
-    RATE_LIMIT_STORE[key] = valid_timestamps
 
 
 def get_current_user(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)) -> User:
@@ -147,14 +143,8 @@ def send_otp(payload: UserOTPRequest):
     else:
         otp_code = "123456"  # Standard demo/test OTP in dev & testing
 
-    now_ts = time.time()
-    OTP_STORE[clean_mobile] = {
-        "code": otp_code,
-        "expires_at": now_ts + OTP_VALIDITY_SECONDS
-    }
+    redis_store.set_otp(clean_mobile, otp_code, ttl_seconds=OTP_VALIDITY_SECONDS)
 
-    # SECURITY FIX: Never return the OTP code in the response body, even in development.
-    # The developer can check server logs or use the standard '123456' for non-prod testing.
     return {
         "message": f"OTP successfully sent to +91 {clean_mobile}",
         "expires_in_seconds": OTP_VALIDITY_SECONDS
@@ -165,30 +155,22 @@ def send_otp(payload: UserOTPRequest):
 def verify_otp(payload: UserOTPVerifyRequest, db: Session = Depends(get_db)):
     """Verifies OTP code with expiration check, consumes OTP once, and logs in user."""
     clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
-    now_ts = time.time()
-    otp_entry = OTP_STORE.get(clean_mobile)
+    stored_code = redis_store.get_otp(clean_mobile)
 
-    if not otp_entry:
+    if not stored_code:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No active OTP found. Please request a new OTP first."
+            detail="No active OTP found or OTP has expired. Please request a new OTP."
         )
 
-    if now_ts > otp_entry["expires_at"]:
-        OTP_STORE.pop(clean_mobile, None)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="OTP code has expired. Please request a new OTP."
-        )
-
-    if payload.otp_code.strip() != otp_entry["code"]:
+    if payload.otp_code.strip() != stored_code:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid OTP code entered."
         )
 
     # One-time consumption: delete OTP immediately upon verification
-    OTP_STORE.pop(clean_mobile, None)
+    redis_store.delete_otp(clean_mobile)
 
     user = db.query(User).filter(User.mobile_number == clean_mobile).first()
     if not user:

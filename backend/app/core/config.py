@@ -31,3 +31,6 @@ GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
 
 # --- Database ---
 DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./croplens.db")
+
+# --- Redis ---
+REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
