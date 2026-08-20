@@ -23,16 +23,19 @@ def get_feature_vector(
     feature_cols: List[str]
 ) -> tuple[pd.DataFrame, str]:
     """
-    Extracts and prepares a single-row feature DataFrame matching the exact 39 features required by Phase 3 ML models.
+    Extracts and prepares a single-row feature DataFrame matching the exact 47 features required by Phase 3 ML models.
     Resolves historical context from master dataset and applies optional user overrides.
     """
     # Filter dataset for commodity and market
-    matched = dataset[(dataset['commodity'] == req.commodity) & (dataset['market'] == req.market)].copy()
+    matched = dataset[(dataset['commodity'].str.lower() == req.commodity.lower()) & 
+                      (dataset['market'].str.lower() == req.market.lower())].copy()
     if matched.empty:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No historical market records found for commodity '{req.commodity}' in market '{req.market}'."
         )
+
+    matched = matched.sort_values('date')
 
     # Date resolution
     if req.date:
@@ -42,13 +45,15 @@ def get_feature_vector(
             target_row = exact.iloc[-1].copy()
             forecast_date = req.date
         else:
-            # Fallback to latest row and update date features
+            # Fallback to latest row and update calendar date features for requested future date
             target_row = matched.iloc[-1].copy()
             forecast_date = req.date
             try:
                 dt_val = pd.to_datetime(req.date)
-                target_row['sin_month'] = np.sin(2 * np.pi * dt_val.month / 12)
-                target_row['cos_month'] = np.cos(2 * np.pi * dt_val.month / 12)
+                target_row['sin_month'] = float(np.sin(2 * np.pi * dt_val.month / 12.0))
+                target_row['cos_month'] = float(np.cos(2 * np.pi * dt_val.month / 12.0))
+                target_row['sin_dow'] = float(np.sin(2 * np.pi * dt_val.dayofweek / 7.0))
+                target_row['cos_dow'] = float(np.cos(2 * np.pi * dt_val.dayofweek / 7.0))
             except Exception:
                 pass
     else:
@@ -57,17 +62,19 @@ def get_feature_vector(
 
     # Apply user feature overrides if supplied
     if req.arrivals_in_qtl is not None:
-        target_row['arrivals_in_qtl'] = req.arrivals_in_qtl
+        target_row['arrivals_in_qtl'] = float(req.arrivals_in_qtl)
     if req.rainfall_mm is not None:
-        target_row['rainfall_mm'] = req.rainfall_mm
+        target_row['rainfall_mm'] = float(req.rainfall_mm)
     if req.temp_max is not None:
-        target_row['temp_max'] = req.temp_max
+        target_row['temp_max'] = float(req.temp_max)
 
     # Construct single-row DataFrame with exact feature columns in order
     X_single = pd.DataFrame([target_row[feature_cols].to_dict()], columns=feature_cols)
 
-    # Impute any missing numeric values with median
-    X_single = X_single.fillna(dataset[feature_cols].median())
+    # Impute missing values with commodity-specific median first, then global dataset median
+    comm_median = matched[feature_cols].median(numeric_only=True)
+    global_median = dataset[feature_cols].median(numeric_only=True)
+    X_single = X_single.fillna(comm_median).fillna(global_median).fillna(0.0)
 
     return X_single, forecast_date
 
@@ -120,8 +127,8 @@ def predict_7day_forecast_service(
 ) -> MultiDayForecastResponse:
     """
     Executes a 7-day recursive autoregressive roll-forward price forecasting loop (t+1 to t+7).
-    Propagates predicted P50 prices into trailing lags, recalculates dynamic moving averages
-    and Fourier seasonality waves, applies Chernozhukov rearrangement, and returns peak-day advisory.
+    Propagates predicted P50 prices into trailing lags, recalculates dynamic EMAs, channel width,
+    and velocity, applies Chernozhukov rearrangement, and returns peak-day advisory.
     """
     feature_cols = metadata.get('feature_cols', [])
     if not feature_cols:
@@ -155,12 +162,12 @@ def predict_7day_forecast_service(
         base_row = matched.iloc[-1].copy()
         start_dt = pd.to_datetime(matched.iloc[-1]['date'])
 
-    current_price = float(base_row.get('modal_price', base_row.get('modal_price_lag_1', 1500.0)))
+    current_price = float(base_row.get('modal_price', base_row.get('price_lag_1d', 1500.0)))
 
-    # Seed 30-day historical price sequence for lag roll-forward
-    history_prices = list(matched['modal_price'].tail(30).values) if 'modal_price' in matched.columns else [current_price] * 30
-    if len(history_prices) < 30:
-        history_prices = [current_price] * (30 - len(history_prices)) + history_prices
+    # Seed 35-day historical price sequence for autoregressive lag roll-forward
+    history_prices = list(matched['modal_price'].tail(35).values) if 'modal_price' in matched.columns else [current_price] * 35
+    if len(history_prices) < 35:
+        history_prices = [current_price] * (35 - len(history_prices)) + history_prices
 
     DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     DAY_NAMES_HI = ["सोम", "मंगल", "बुध", "गुरु", "शुक्र", "शनि", "रवि"]
@@ -173,60 +180,63 @@ def predict_7day_forecast_service(
         target_dt = start_dt + pd.Timedelta(days=k)
         target_date_str = target_dt.strftime('%Y-%m-%d')
         dow = target_dt.dayofweek
-        doy = target_dt.dayofyear
 
-        # Update calendar & seasonality features
-        rolling_row['month'] = target_dt.month
-        rolling_row['day_of_week'] = dow
-        rolling_row['is_weekend'] = 1 if dow >= 5 else 0
-        rolling_row['sin_month'] = np.sin(2 * np.pi * target_dt.month / 12)
-        rolling_row['cos_month'] = np.cos(2 * np.pi * target_dt.month / 12)
+        # Update calendar & seasonality features matching model feature definitions
+        if 'sin_month' in feature_cols:
+            rolling_row['sin_month'] = float(np.sin(2 * np.pi * target_dt.month / 12.0))
+        if 'cos_month' in feature_cols:
+            rolling_row['cos_month'] = float(np.cos(2 * np.pi * target_dt.month / 12.0))
+        if 'sin_dow' in feature_cols:
+            rolling_row['sin_dow'] = float(np.sin(2 * np.pi * dow / 7.0))
+        if 'cos_dow' in feature_cols:
+            rolling_row['cos_dow'] = float(np.cos(2 * np.pi * dow / 7.0))
 
-        if 'sin_fourier_1' in feature_cols:
-            rolling_row['sin_fourier_1'] = np.sin(2 * np.pi * doy / 365.25)
-            rolling_row['cos_fourier_1'] = np.cos(2 * np.pi * doy / 365.25)
-        if 'sin_fourier_2' in feature_cols:
-            rolling_row['sin_fourier_2'] = np.sin(4 * np.pi * doy / 365.25)
-            rolling_row['cos_fourier_2'] = np.cos(4 * np.pi * doy / 365.25)
+        # Diurnal temperature fluctuation & rainfall shock dissipation over forecast horizon
+        if 'temp_max' in feature_cols:
+            base_tmax = float(base_row.get('temp_max', 30.0))
+            rolling_row['temp_max'] = round(base_tmax + 1.2 * np.sin(2 * np.pi * k / 7.0), 2)
+        if 'rainfall_mm' in feature_cols:
+            base_rain = float(base_row.get('rainfall_mm', 0.0))
+            rolling_row['rainfall_mm'] = max(0.0, round(base_rain * (0.7 ** k), 2))
 
-        # Autoregressive lag updates
-        for lag in [1, 2, 3, 7, 14, 30]:
-            col_name = f'modal_price_lag_{lag}'
-            if col_name in feature_cols:
-                rolling_row[col_name] = float(history_prices[-lag])
+        # Update historical price lags matching feature_cols
+        if 'price_lag_1d' in feature_cols:
+            rolling_row['price_lag_1d'] = float(history_prices[-1])
+        if 'price_lag_2d' in feature_cols:
+            rolling_row['price_lag_2d'] = float(history_prices[-2]) if len(history_prices) >= 2 else float(history_prices[-1])
+        if 'price_lag_3d' in feature_cols:
+            rolling_row['price_lag_3d'] = float(history_prices[-3]) if len(history_prices) >= 3 else float(history_prices[-1])
+        if 'price_lag_1w' in feature_cols:
+            rolling_row['price_lag_1w'] = float(history_prices[-7]) if len(history_prices) >= 7 else float(history_prices[0])
+        if 'price_lag_4w' in feature_cols:
+            rolling_row['price_lag_4w'] = float(history_prices[-28]) if len(history_prices) >= 28 else float(history_prices[0])
 
-        # Rolling statistics
-        p_ma7 = float(np.mean(history_prices[-7:]))
-        p_ma14 = float(np.mean(history_prices[-14:]))
-        p_ma30 = float(np.mean(history_prices[-30:]))
-        p_std7 = float(np.std(history_prices[-7:]))
-        p_std30 = float(np.std(history_prices[-30:]))
+        # Dynamic Exponential Moving Averages (EMAs)
+        p_ema7 = float(pd.Series(history_prices[-14:]).ewm(span=7, adjust=False).mean().iloc[-1])
+        p_ema21 = float(pd.Series(history_prices[-30:]).ewm(span=21, adjust=False).mean().iloc[-1])
+        if 'price_ema_7d' in feature_cols:
+            rolling_row['price_ema_7d'] = p_ema7
+        if 'price_ema_21d' in feature_cols:
+            rolling_row['price_ema_21d'] = p_ema21
 
-        if 'price_ma_7' in feature_cols:
-            rolling_row['price_ma_7'] = p_ma7
-        if 'price_ma_14' in feature_cols:
-            rolling_row['price_ma_14'] = p_ma14
-        if 'price_ma_30' in feature_cols:
-            rolling_row['price_ma_30'] = p_ma30
-        if 'price_std_7d' in feature_cols:
-            rolling_row['price_std_7d'] = p_std7
-        if 'price_std_30d' in feature_cols:
-            rolling_row['price_std_30d'] = p_std30
-        if 'price_volatility_30d' in feature_cols:
-            rolling_row['price_volatility_30d'] = p_std30
+        # 7-day rolling channel width and velocity (divided by 7.0 to match training)
+        p_slice7 = history_prices[-7:]
+        if 'price_channel_width_7d' in feature_cols:
+            rolling_row['price_channel_width_7d'] = float(np.max(p_slice7) - np.min(p_slice7))
         if 'price_velocity_7d' in feature_cols:
-            rolling_row['price_velocity_7d'] = float(history_prices[-1] - history_prices[-7])
-        if 'price_momentum_3d' in feature_cols:
-            rolling_row['price_momentum_3d'] = float(history_prices[-1] - history_prices[-3])
-        if 'price_ratio_ma7' in feature_cols:
-            rolling_row['price_ratio_ma7'] = float(history_prices[-1] / (p_ma7 + 1e-6))
-        if 'price_ratio_ma30' in feature_cols:
-            rolling_row['price_ratio_ma30'] = float(history_prices[-1] / (p_ma30 + 1e-6))
-        if 'price_regime_indicator' in feature_cols:
-            rolling_row['price_regime_indicator'] = 1.0 if p_ma7 > p_ma30 else 0.0
+            rolling_row['price_velocity_7d'] = float((history_prices[-1] - history_prices[-7]) / 7.0)
 
-        # Construct single-row DataFrame
+        # 30-day volatility
+        p_slice30 = history_prices[-30:] if len(history_prices) >= 30 else history_prices
+        if 'price_volatility_30d' in feature_cols:
+            rolling_row['price_volatility_30d'] = float(np.std(p_slice30))
+
+        if 'price_regime_indicator' in feature_cols:
+            rolling_row['price_regime_indicator'] = 1.0 if p_ema7 > p_ema21 else 0.0
+
+        # Construct single-row DataFrame for model scoring
         X_df = pd.DataFrame([{col: rolling_row.get(col, 0.0) for col in feature_cols}], columns=feature_cols)
+        X_df = X_df.fillna(0.0)
 
         # Score multi-quantile LightGBM models
         p10_raw = float(models['p10'].predict(X_df)[0])
@@ -285,6 +295,12 @@ def predict_7day_forecast_service(
         decision = f"SELL ON {peak_day.day_name.upper()}"
         decision_hi = f"{peak_day.day_name_hi} को बेचें"
 
+    # Dynamic confidence score derived from uncertainty width relative to price
+    avg_price = float(np.mean(all_prices))
+    avg_band = float(np.mean([pt.band_width for pt in daily_forecasts]))
+    dynamic_conf = max(70.0, min(98.5, round(100.0 * (1.0 - (avg_band / (2.0 * max(avg_price, 1.0)))), 1)))
+    confidence_str = f"{dynamic_conf:.1f}%"
+
     return MultiDayForecastResponse(
         commodity=req.commodity,
         market=req.market,
@@ -295,7 +311,7 @@ def predict_7day_forecast_service(
         decision=decision,
         decision_hi=decision_hi,
         expected_gain=gain,
-        confidence="95.2%",
+        confidence=confidence_str,
         model_version="7-Day Recursive Roll-Forward v1.0"
     )
 
@@ -320,8 +336,8 @@ def detect_supply_shocks_service(
             detail="No market data records match the requested commodity or market filters."
         )
 
-    # Filter last N days of available data
-    df = df.sort_values('date').tail(days * len(df['market'].unique()))
+    # Filter last N days per commodity and market group
+    df = df.sort_values('date').groupby(['commodity', 'market'], as_index=False).tail(days).reset_index(drop=True)
 
     shock_features = ['arrival_ratio', 'arrival_velocity_7d', 'price_volatility_30d', 'price_spread']
     for f in shock_features:
@@ -331,7 +347,10 @@ def detect_supply_shocks_service(
                 detail=f"Required supply shock feature '{f}' missing from dataset."
             )
 
-    X_shock = df[shock_features].fillna(dataset[shock_features].median()).values
+    # Impute missing features with commodity median first, then global median
+    comm_median = df.groupby('commodity')[shock_features].transform('median')
+    global_median = dataset[shock_features].median(numeric_only=True)
+    X_shock = df[shock_features].fillna(comm_median).fillna(global_median).fillna(0.0).values
 
     iso_model = models['isolation_forest']
     scores = iso_model.decision_function(X_shock)

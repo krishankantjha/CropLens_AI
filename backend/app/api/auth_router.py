@@ -1,14 +1,17 @@
-﻿"""
+"""
 Authentication and User Profile REST Router for CropLens AI.
 Provides endpoints for mobile registration, password/OTP login, JWT issuing, and profile preferences.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
-from typing import Optional
+import time
+import secrets
+from typing import Optional, Dict, Any, List
 
 from backend.app.db.database import get_db
 from backend.app.db.models import User
+from backend.app.core.config import ENVIRONMENT
 from backend.app.core.security import hash_password, verify_password, create_access_token, decode_access_token
 from backend.app.schemas import (
     UserRegisterRequest,
@@ -22,8 +25,28 @@ from backend.app.schemas import (
 
 auth_router = APIRouter(prefix="/auth", tags=["Authentication & User Profile"])
 
-# In-memory store for demo OTP codes (mobile_number -> "123456")
-DEMO_OTP_STORE = {}
+# In-memory store for OTP codes: mobile_number -> {"code": "123456", "expires_at": timestamp}
+OTP_STORE: Dict[str, Dict[str, Any]] = {}
+OTP_VALIDITY_SECONDS = 300  # 5 minutes
+
+# In-memory sliding window rate limiter: key -> [timestamps]
+RATE_LIMIT_STORE: Dict[str, List[float]] = {}
+RATE_LIMIT_WINDOW_SECONDS = 60
+MAX_AUTH_REQUESTS_PER_WINDOW = 10
+
+
+def check_rate_limit(key: str) -> None:
+    """Checks and updates sliding window rate limit for sensitive authentication routes."""
+    now = time.time()
+    timestamps = RATE_LIMIT_STORE.get(key, [])
+    valid_timestamps = [t for t in timestamps if now - t < RATE_LIMIT_WINDOW_SECONDS]
+    if len(valid_timestamps) >= MAX_AUTH_REQUESTS_PER_WINDOW:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many authentication attempts. Please wait 60 seconds before retrying."
+        )
+    valid_timestamps.append(now)
+    RATE_LIMIT_STORE[key] = valid_timestamps
 
 
 def get_current_user(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)) -> User:
@@ -56,16 +79,18 @@ def get_current_user(authorization: Optional[str] = Header(None), db: Session = 
 @auth_router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     """Registers a new user account in SQLite and returns JWT access token."""
-    existing_user = db.query(User).filter(User.mobile_number == payload.mobile_number).first()
+    clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
+    check_rate_limit(f"reg_{clean_mobile}")
+    existing_user = db.query(User).filter(User.mobile_number == clean_mobile).first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"User with mobile number '{payload.mobile_number}' is already registered."
+            detail=f"User with mobile number '{clean_mobile}' is already registered."
         )
 
     hashed_pwd = hash_password(payload.password)
     new_user = User(
-        mobile_number=payload.mobile_number,
+        mobile_number=clean_mobile,
         full_name=payload.full_name,
         hashed_password=hashed_pwd,
         role=payload.role if payload.role in ["farmer", "trader"] else "farmer",
@@ -88,7 +113,9 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
 @auth_router.post("/login", response_model=TokenResponse)
 def login_user(payload: UserLoginRequest, db: Session = Depends(get_db)):
     """Authenticates mobile number & password, issuing JWT access token."""
-    user = db.query(User).filter(User.mobile_number == payload.mobile_number).first()
+    clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
+    check_rate_limit(f"login_{clean_mobile}")
+    user = db.query(User).filter(User.mobile_number == clean_mobile).first()
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -106,31 +133,69 @@ def login_user(payload: UserLoginRequest, db: Session = Depends(get_db)):
 @auth_router.post("/otp/send")
 def send_otp(payload: UserOTPRequest):
     """Sends 6-digit OTP code to mobile number for passwordless login."""
-    # For local demo purposes, default OTP code is "123456"
-    DEMO_OTP_STORE[payload.mobile_number] = "123456"
+    clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
+    if len(clean_mobile) != 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid 10-digit mobile number."
+        )
+
+    check_rate_limit(f"otp_{clean_mobile}")
+
+    if ENVIRONMENT == "production":
+        otp_code = str(secrets.randbelow(900000) + 100000)
+    else:
+        otp_code = "123456"  # Standard demo/test OTP in dev & testing
+
+    now_ts = time.time()
+    OTP_STORE[clean_mobile] = {
+        "code": otp_code,
+        "expires_at": now_ts + OTP_VALIDITY_SECONDS
+    }
+
     return {
-        "message": f"OTP successfully sent to +91 {payload.mobile_number}",
-        "demo_otp": "123456"
+        "message": f"OTP successfully sent to +91 {clean_mobile}",
+        "demo_otp": otp_code,
+        "expires_in_seconds": OTP_VALIDITY_SECONDS
     }
 
 
 @auth_router.post("/otp/verify", response_model=TokenResponse)
 def verify_otp(payload: UserOTPVerifyRequest, db: Session = Depends(get_db)):
-    """Verifies OTP code and auto-creates / logs in user with JWT token."""
-    stored_otp = DEMO_OTP_STORE.get(payload.mobile_number, "123456")
-    if payload.otp_code != stored_otp and payload.otp_code != "123456":
+    """Verifies OTP code with expiration check, consumes OTP once, and logs in user."""
+    clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
+    now_ts = time.time()
+    otp_entry = OTP_STORE.get(clean_mobile)
+
+    if not otp_entry:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No active OTP found. Please request a new OTP first."
+        )
+
+    if now_ts > otp_entry["expires_at"]:
+        OTP_STORE.pop(clean_mobile, None)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP code has expired. Please request a new OTP."
+        )
+
+    if payload.otp_code.strip() != otp_entry["code"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid OTP code entered."
         )
 
-    user = db.query(User).filter(User.mobile_number == payload.mobile_number).first()
+    # One-time consumption: delete OTP immediately upon verification
+    OTP_STORE.pop(clean_mobile, None)
+
+    user = db.query(User).filter(User.mobile_number == clean_mobile).first()
     if not user:
         # Auto-register new farmer user on first OTP login
         hashed_pwd = hash_password("otp_default_pass_123")
         user = User(
-            mobile_number=payload.mobile_number,
-            full_name=f"Farmer ({payload.mobile_number[-4:]})",
+            mobile_number=clean_mobile,
+            full_name=f"Farmer ({clean_mobile[-4:]})",
             hashed_password=hashed_pwd,
             role="farmer",
             home_mandi="Azadpur",

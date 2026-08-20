@@ -1,23 +1,34 @@
-﻿"""
-SQLite Database Connection and Session Engine for CropLens AI.
-Provides SQLAlchemy SessionLocal dependency for FastAPI route endpoints.
+"""
+Database Connection and Session Engine for CropLens AI.
+Supports local SQLite with thread safety and enterprise PostgreSQL connection pooling.
 """
 
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.pool import NullPool, QueuePool
 
-# Set SQLite database path inside backend/app/croplens.db
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATABASE_PATH = os.path.join(BASE_DIR, "croplens.db")
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+DEFAULT_SQLITE_URL = f"sqlite:///{DATABASE_PATH}"
 
-# Create SQLite engine with check_same_thread=False for FastAPI concurrency
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False}
-)
+DATABASE_URL = os.environ.get("DATABASE_URL", DEFAULT_SQLITE_URL)
+is_sqlite = DATABASE_URL.startswith("sqlite")
+
+if is_sqlite:
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=NullPool
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        poolclass=QueuePool,
+        pool_size=20,
+        max_overflow=10,
+        pool_pre_ping=True
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

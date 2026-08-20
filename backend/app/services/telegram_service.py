@@ -8,6 +8,7 @@ import os
 import logging
 from typing import Dict, Any, Optional
 import requests
+from backend.app.core.constants import CROP_NAMES_HI
 
 logger = logging.getLogger("croplens.telegram")
 logger.setLevel(logging.INFO)
@@ -29,13 +30,7 @@ def format_telegram_advisory_message(
     """Formats Telegram Markdown market advisory in Hindi or English."""
     is_hi = lang == "hi"
 
-    crop_names_hi = {
-        "Potato": "आलू", "Onion": "प्याज", "Tomato": "टमाटर", "Wheat": "गेहूं",
-        "Paddy(Dhan)": "धान", "Maize": "मक्का", "Soyabean": "सोयाबीन",
-        "Mustard": "सरसों", "Gram(Chana)": "चना", "Chilli Red": "लाल मिर्च"
-    }
-
-    crop_str = crop_names_hi.get(crop, crop) if is_hi else crop
+    crop_str = CROP_NAMES_HI.get(crop, crop) if is_hi else crop
 
     if is_hi:
         return (
@@ -46,7 +41,7 @@ def format_telegram_advisory_message(
             f"💰 *आज का भाव:* ₹{int(current_price)}/क्विंटल\n"
             f"📈 *अनुमानित लक्ष्य भाव:* ₹{int(target_price)}/क्विंटल\n"
             f"🚀 *संभावित लाभ:* +₹{int(expected_gain)}/क्विंटल\n\n"
-            f"📊 _लाइव एआई पूर्वानुमान एवं आर्बिट्राज डैशबोर्ड:_ http://localhost:5173"
+            f"📊 _लाइव एआई पूर्वानुमान एवं आर्बिट्राज डैशबोर्ड:_ https://croplens.ai"
         )
     else:
         return (
@@ -57,7 +52,7 @@ def format_telegram_advisory_message(
             f"💰 *Today's Rate:* ₹{int(current_price)}/qtl\n"
             f"📈 *Target Price:* ₹{int(target_price)}/qtl\n"
             f"🚀 *Expected Profit Gain:* +₹{int(expected_gain)}/qtl\n\n"
-            f"📊 _Live AI Forecasting & Arbitrage Hub:_ http://localhost:5173"
+            f"📊 _Live AI Forecasting & Arbitrage Hub:_ https://croplens.ai"
         )
 
 

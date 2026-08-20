@@ -134,3 +134,13 @@ def test_predict_7day_forecast(client):
     assert "decision_hi" in data
     assert "expected_gain" in data
 
+
+def test_download_procurement_pdf(client):
+    """Tests GET /api/v1/procurement/pdf report generation and headers."""
+    response = client.get("/api/v1/procurement/pdf?commodity=Potato&market=Agra")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert "Content-Disposition" in response.headers
+    assert 'filename="CropLens_Procurement_Potato_Agra.pdf"' in response.headers["Content-Disposition"]
+    assert len(response.content) > 1000  # Valid non-empty PDF binary
+

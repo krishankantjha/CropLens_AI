@@ -772,7 +772,9 @@ class ModelTrainer:
         }
 
     def run_diebold_mariano_tests(self):
-        """Calculates Diebold-Mariano (DM) pairwise statistical significance tests with Newey-West (HAC) robust standard errors."""
+        """Calculates Diebold-Mariano (DM) pairwise statistical significance tests with Newey-West (HAC) robust standard errors.
+        Evaluates under both Absolute Error Loss (appropriate for median/quantile models) and Squared Error Loss (MSE).
+        """
         print("\nRunning Diebold-Mariano (DM) Statistical Significance Tests (Newey-West HAC Corrected)...")
         p50_preds = self.models['p50'].predict(self.X_test)
         e_lgb = np.array(self.y_test) - np.array(p50_preds)
@@ -782,27 +784,40 @@ class ModelTrainer:
         if 'ridge_baseline' in self.models:
             r_preds = self.models['ridge_baseline'].predict(self.X_test)
             e_ridge = np.array(self.y_test) - np.array(r_preds)
-            d = np.array(e_ridge**2 - e_lgb**2, dtype=np.float64)
             
-            # Estimate Newey-West HAC standard errors (maxlags=7 for weekly autocorrelation)
-            ols_fit = OLS(d, np.ones(len(d))).fit(cov_type='HAC', cov_kwds={'maxlags': 7})
-            dm_stat = float(ols_fit.tvalues[0])
-            p_val = float(ols_fit.pvalues[0])
-            
-            if p_val < 0.05:
-                winner = 'LightGBM P50' if dm_stat > 0 else 'Ridge'
-            else:
-                winner = 'No Statistically Significant Difference'
+            # 1. Absolute Error Loss (MAE)
+            d_mae = np.abs(e_ridge) - np.abs(e_lgb)
+            ols_mae = OLS(d_mae, np.ones(len(d_mae))).fit(cov_type='HAC', cov_kwds={'maxlags': 7})
+            stat_mae = float(ols_mae.tvalues[0])
+            p_mae = float(ols_mae.pvalues[0])
+            winner_mae = 'LightGBM P50' if stat_mae > 0 else 'Ridge' if p_mae < 0.05 else 'No Statistically Significant Difference'
+
+            # 2. Squared Error Loss (MSE)
+            d_mse = np.array(e_ridge**2 - e_lgb**2, dtype=np.float64)
+            ols_mse = OLS(d_mse, np.ones(len(d_mse))).fit(cov_type='HAC', cov_kwds={'maxlags': 7})
+            stat_mse = float(ols_mse.tvalues[0])
+            p_mse = float(ols_mse.pvalues[0])
+            winner_mse = 'LightGBM P50' if stat_mse > 0 else 'Ridge' if p_mse < 0.05 else 'No Statistically Significant Difference'
                 
             dm_results['LightGBM_vs_Ridge'] = {
-                'loss_function': 'Squared Error (MSE)',
-                'variance_estimator': 'Newey-West HAC (maxlags=7)',
-                'DM_Statistic': round(dm_stat, 4),
-                'p_value': round(p_val, 6),
-                'Statistically_Significant': bool(p_val < 0.05),
-                'Superior_Model': winner
+                'absolute_loss_mae': {
+                    'loss_function': 'Absolute Error Loss (MAE)',
+                    'variance_estimator': 'Newey-West HAC (maxlags=7)',
+                    'DM_Statistic': round(stat_mae, 4),
+                    'p_value': round(p_mae, 6),
+                    'Statistically_Significant': bool(p_mae < 0.05),
+                    'Superior_Model': winner_mae
+                },
+                'squared_loss_mse': {
+                    'loss_function': 'Squared Error (MSE)',
+                    'variance_estimator': 'Newey-West HAC (maxlags=7)',
+                    'DM_Statistic': round(stat_mse, 4),
+                    'p_value': round(p_mse, 6),
+                    'Statistically_Significant': bool(p_mse < 0.05),
+                    'Superior_Model': winner_mse
+                }
             }
-            print(f"- LightGBM vs Ridge   | DM Stat: {dm_stat:7.3f} | p-value: {p_val:.6f} (Significant: {p_val < 0.05} | Winner: {winner})")
+            print(f"- LightGBM vs Ridge   | MAE Loss DM Stat: {stat_mae:7.3f} (p={p_mae:.6f}, Winner: {winner_mae}) | MSE Loss DM Stat: {stat_mse:7.3f} (p={p_mse:.6f}, Winner: {winner_mse})")
 
         # Compare against XGBoost
         if 'xgboost' in self.models:
@@ -815,27 +830,40 @@ class ModelTrainer:
                 
             xgb_preds = self.models['xgboost'].predict(X_te_imp)
             e_xgb = np.array(self.y_test) - np.array(xgb_preds)
-            d = np.array(e_xgb**2 - e_lgb**2, dtype=np.float64)
             
-            # Estimate Newey-West HAC standard errors (maxlags=7 for weekly autocorrelation)
-            ols_fit = OLS(d, np.ones(len(d))).fit(cov_type='HAC', cov_kwds={'maxlags': 7})
-            dm_stat = float(ols_fit.tvalues[0])
-            p_val = float(ols_fit.pvalues[0])
-            
-            if p_val < 0.05:
-                winner = 'LightGBM P50' if dm_stat > 0 else 'XGBoost'
-            else:
-                winner = 'No Statistically Significant Difference'
+            # 1. Absolute Error Loss (MAE)
+            d_mae = np.abs(e_xgb) - np.abs(e_lgb)
+            ols_mae = OLS(d_mae, np.ones(len(d_mae))).fit(cov_type='HAC', cov_kwds={'maxlags': 7})
+            stat_mae = float(ols_mae.tvalues[0])
+            p_mae = float(ols_mae.pvalues[0])
+            winner_mae = 'LightGBM P50' if stat_mae > 0 else 'XGBoost' if p_mae < 0.05 else 'No Statistically Significant Difference'
+
+            # 2. Squared Error Loss (MSE)
+            d_mse = np.array(e_xgb**2 - e_lgb**2, dtype=np.float64)
+            ols_mse = OLS(d_mse, np.ones(len(d_mse))).fit(cov_type='HAC', cov_kwds={'maxlags': 7})
+            stat_mse = float(ols_mse.tvalues[0])
+            p_mse = float(ols_mse.pvalues[0])
+            winner_mse = 'LightGBM P50' if stat_mse > 0 else 'XGBoost' if p_mse < 0.05 else 'No Statistically Significant Difference'
                 
             dm_results['LightGBM_vs_XGBoost'] = {
-                'loss_function': 'Squared Error (MSE)',
-                'variance_estimator': 'Newey-West HAC (maxlags=7)',
-                'DM_Statistic': round(dm_stat, 4),
-                'p_value': round(p_val, 6),
-                'Statistically_Significant': bool(p_val < 0.05),
-                'Superior_Model': winner
+                'absolute_loss_mae': {
+                    'loss_function': 'Absolute Error Loss (MAE)',
+                    'variance_estimator': 'Newey-West HAC (maxlags=7)',
+                    'DM_Statistic': round(stat_mae, 4),
+                    'p_value': round(p_mae, 6),
+                    'Statistically_Significant': bool(p_mae < 0.05),
+                    'Superior_Model': winner_mae
+                },
+                'squared_loss_mse': {
+                    'loss_function': 'Squared Error (MSE)',
+                    'variance_estimator': 'Newey-West HAC (maxlags=7)',
+                    'DM_Statistic': round(stat_mse, 4),
+                    'p_value': round(p_mse, 6),
+                    'Statistically_Significant': bool(p_mse < 0.05),
+                    'Superior_Model': winner_mse
+                }
             }
-            print(f"- LightGBM vs XGBoost | DM Stat: {dm_stat:7.3f} | p-value: {p_val:.6f} (Significant: {p_val < 0.05} | Winner: {winner})")
+            print(f"- LightGBM vs XGBoost | MAE Loss DM Stat: {stat_mae:7.3f} (p={p_mae:.6f}, Winner: {winner_mae}) | MSE Loss DM Stat: {stat_mse:7.3f} (p={p_mse:.6f}, Winner: {winner_mse})")
 
         self.metrics['diebold_mariano_tests'] = dm_results
 
@@ -916,10 +944,10 @@ class ModelTrainer:
         }
 
     def run_covid_analysis(self):
-        """Evaluates model robustness during COVID-19 lockdown market shock period (2020-2021) vs Normal period (2022-2024).
-        Note: This is an in-sample training-period robustness analysis, not an out-of-sample holdout test.
+        """Evaluates model performance across historical market regimes: COVID-19 lockdown period (2020-2021) vs Normal period (2022-2024).
+        Methodological Note: This is an in-sample training-period retrospective consistency analysis (not an unseen stress test).
         """
-        print("\nRunning COVID-19 Period Robustness Analysis (In-Sample 2020-2021 Shock vs 2022-2024 Normal)...")
+        print("\nRunning Historical Regime Consistency Analysis (In-Sample 2020-2021 Shock vs 2022-2024 Normal)...")
         df_eval = self.df.copy()
         df_eval['year'] = df_eval['date'].dt.year
         
@@ -951,8 +979,8 @@ class ModelTrainer:
         print(f"- COVID Shock Period (2020-2021): MAE = Rs {mae_covid:6.2f}/qtl | RMSE = Rs {rmse_covid:6.2f}/qtl | MAPE = {mape_covid:.2f}% | R2 = {r2_covid:.3f}")
         print(f"- Normal Market Period (2022-2024): MAE = Rs {mae_normal:6.2f}/qtl | RMSE = Rs {rmse_normal:6.2f}/qtl | MAPE = {mape_normal:.2f}% | R2 = {r2_normal:.3f}")
         
-        self.metrics['covid_period_stress_test'] = {
-            'study_type': 'In-sample training-period robustness analysis during the COVID-19 period (2020-2021 shock vs 2022-2024 normal)',
+        self.metrics['covid_period_consistency_analysis'] = {
+            'study_type': 'In-sample training-period temporal consistency analysis during the COVID-19 period (2020-2021 shock vs 2022-2024 normal)',
             'covid_shock_2020_2021': {
                 'MAE (Rs/qtl)': round(mae_covid, 2),
                 'RMSE (Rs/qtl)': round(rmse_covid, 2),

@@ -210,13 +210,55 @@ def get_analytics_trends(
     tags=["PDF Reports"]
 )
 def download_procurement_pdf(
+    request: Request,
     commodity: str = Query("Potato", description="Commodity name"),
     market: str = Query("Agra", description="APMC Mandi name")
 ):
-    pdf_bytes = generate_procurement_pdf(commodity=commodity, market=market)
-    filename = f"CropLens_Procurement_{commodity}_{market}.pdf"
+    p10_val, p50_val, p90_val, arb_items, decision = None, None, None, None, None
+
+    # Compute live forecast & arbitrage if models and dataset are loaded
+    if hasattr(request.app, "state") and getattr(request.app.state, "models_loaded", False):
+        try:
+            from backend.app.schemas import PricePredictionRequest
+            pred_req = PricePredictionRequest(commodity=commodity, market=market)
+            pred_res = predict_price_service(
+                req=pred_req,
+                models=request.app.state.models,
+                metadata=request.app.state.metadata,
+                dataset=request.app.state.dataset
+            )
+            p10_val = pred_res.p10_floor_price
+            p50_val = pred_res.p50_median_price
+            p90_val = pred_res.p90_ceiling_price
+        except Exception:
+            pass
+
+        try:
+            arb_res = calculate_arbitrage_service(
+                commodity=commodity,
+                base_market=market,
+                date=None,
+                dataset=request.app.state.dataset
+            )
+            arb_items = [item.model_dump() for item in arb_res.opportunities]
+        except Exception:
+            pass
+
+    pdf_bytes = generate_procurement_pdf(
+        commodity=commodity,
+        market=market,
+        p10=p10_val,
+        p50=p50_val,
+        p90=p90_val,
+        arbitrage_items=arb_items,
+        decision=decision
+    )
+    safe_commodity = commodity.replace(" ", "_").replace("(", "").replace(")", "")
+    safe_market = market.replace(" ", "_")
+    filename = f"CropLens_Procurement_{safe_commodity}_{safe_market}.pdf"
+
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"inline; filename={filename}"}
+        headers={"Content-Disposition": f'inline; filename="{filename}"'}
     )

@@ -5,27 +5,18 @@ Defines strict validation for price prediction, supply shock alerts, spatial arb
 
 from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
+from backend.app.core.constants import VALID_COMMODITIES, VALID_MARKETS
 
 
 # --- Price Prediction Schemas ---
-
-VALID_COMMODITIES = [
-    "Chilli Red", "Gram(Chana)", "Maize", "Mustard", "Onion",
-    "Paddy(Dhan)", "Potato", "Soyabean", "Tomato", "Wheat"
-]
-
-VALID_MARKETS = [
-    "Agra", "Azadpur", "Farrukhabad", "Guntur", "Indore",
-    "Karnal", "Khanna", "Kolkata", "Lasalgaon", "Mathura"
-]
 
 class PricePredictionRequest(BaseModel):
     commodity: str = Field(..., description="Target commodity name", json_schema_extra={"example": "Potato"})
     market: str = Field(..., description="Target APMC mandi name", json_schema_extra={"example": "Agra"})
     date: Optional[str] = Field(None, description="Forecast target date (YYYY-MM-DD)", json_schema_extra={"example": "2025-06-15"})
-    arrivals_in_qtl: Optional[float] = Field(None, description="Optional custom mandi arrival quantity in quintals", json_schema_extra={"example": 1250.0})
-    rainfall_mm: Optional[float] = Field(None, description="Optional custom daily rainfall in mm", json_schema_extra={"example": 0.0})
-    temp_max: Optional[float] = Field(None, description="Optional custom maximum temperature in Celsius", json_schema_extra={"example": 36.5})
+    arrivals_in_qtl: Optional[float] = Field(None, ge=0.0, le=50000.0, description="Optional custom mandi arrival quantity in quintals", json_schema_extra={"example": 1250.0})
+    rainfall_mm: Optional[float] = Field(None, ge=0.0, le=500.0, description="Optional custom daily rainfall in mm", json_schema_extra={"example": 0.0})
+    temp_max: Optional[float] = Field(None, ge=-10.0, le=60.0, description="Optional custom maximum temperature in Celsius", json_schema_extra={"example": 36.5})
 
     @field_validator("commodity")
     @classmethod

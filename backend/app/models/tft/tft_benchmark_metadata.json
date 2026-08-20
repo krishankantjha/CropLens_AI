@@ -1,0 +1,53 @@
+{
+    "project": "CropLens AI",
+    "phase": "Phase 4 Deep Learning Benchmark",
+    "model_architecture": "PyTorch Temporal Fusion Transformer (TFT)",
+    "tft_config": {
+        "seq_len": 30,
+        "d_model": 64,
+        "n_heads": 4,
+        "dropout": 0.1,
+        "learning_rate": 0.001,
+        "batch_size": 64,
+        "optimizer": "AdamW",
+        "loss_function": "MSE Loss",
+        "random_seed": 42,
+        "nan_imputation": "Training-set median per feature column",
+        "categorical_encoding": "LabelEncoder fitted on training split only"
+    },
+    "dataset_split": {
+        "train_years": "2019-2023",
+        "val_year": "2024",
+        "test_year": "2025",
+        "sequence_type": "30-day sliding windows grouped by commodity and market"
+    },
+    "research_notes": {
+        "temporal_leakage": "None: each window uses features [t-30:t-1] to predict price at t",
+        "market_leakage": "None: sequences grouped strictly by commodity and market",
+        "tft_horizon": "1-step ahead next-day modal price, not multi-horizon",
+        "comparison_basis": "All three models evaluated on identical 2025 out-of-sample test set"
+    },
+    "benchmark_comparison_2025_test_set": {
+        "Naive Persistence Baseline": {
+            "MAE": 47.95,
+            "RMSE": 95.15,
+            "MAPE": 0.93
+        },
+        "Ridge Linear Baseline": {
+            "MAE": 29.77,
+            "RMSE": 59.36,
+            "MAPE": 0.6
+        },
+        "LightGBM P50 (Production)": {
+            "MAE": 59.58,
+            "RMSE": 212.87,
+            "MAPE": 0.78
+        },
+        "PyTorch TFT (Benchmark)": {
+            "MAE": 87.53,
+            "RMSE": 112.13,
+            "MAPE": 3.73
+        }
+    },
+    "canonical_reconciliation_note": "Reconciled with canonical evaluation pipeline. All models evaluated on identical 2025 out-of-sample test set."
+}

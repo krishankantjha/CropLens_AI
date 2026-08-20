@@ -3,9 +3,15 @@ SQLAlchemy User Database Models for CropLens AI.
 Stores user profile, credentials, role (farmer vs trader), and saved preferences.
 """
 
-from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime
+from datetime import datetime, timezone
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from backend.app.db.database import Base
+
+
+def utc_now() -> datetime:
+    """Returns current timezone-aware UTC datetime."""
+    return datetime.now(timezone.utc)
 
 
 class User(Base):
@@ -22,7 +28,9 @@ class User(Base):
     home_mandi = Column(String, default="Azadpur", nullable=False)
     preferred_commodity = Column(String, default="Tomato", nullable=False)
     language = Column(String, default="en", nullable=False)  # "en", "hi", "mr", "kn", etc.
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
+
+    subscriptions = relationship("AlertSubscription", back_populates="user", cascade="all, delete-orphan")
 
     def to_dict(self):
         """Helper method to convert User model instance to JSON dictionary."""
@@ -45,7 +53,7 @@ class AlertSubscription(Base):
     __tablename__ = "alert_subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     mobile_number = Column(String, nullable=False, index=True)
     telegram_chat_id = Column(String, nullable=True)
     channel = Column(String, default="whatsapp", nullable=False)  # "whatsapp", "telegram", "both"
@@ -54,8 +62,11 @@ class AlertSubscription(Base):
     delivery_time = Column(String, default="07:00 AM", nullable=False)
     language = Column(String, default="hi", nullable=False)
     is_active = Column(Integer, default=1, nullable=False)  # 1 = active, 0 = paused
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=utc_now, nullable=False)
     last_dispatched_at = Column(DateTime, nullable=True)
+
+    user = relationship("User", back_populates="subscriptions")
+    logs = relationship("AlertLog", back_populates="subscription", cascade="all, delete-orphan")
 
     def to_dict(self):
         return {
@@ -81,14 +92,16 @@ class AlertLog(Base):
     __tablename__ = "alert_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    subscription_id = Column(Integer, nullable=True)
+    subscription_id = Column(Integer, ForeignKey("alert_subscriptions.id", ondelete="SET NULL"), nullable=True, index=True)
     recipient = Column(String, nullable=False)
     channel = Column(String, nullable=False)  # "whatsapp", "telegram"
     crop = Column(String, nullable=False)
     mandi = Column(String, nullable=False)
     message_text = Column(String, nullable=False)
     status = Column(String, default="success", nullable=False)
-    dispatched_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    dispatched_at = Column(DateTime, default=utc_now, nullable=False)
+
+    subscription = relationship("AlertSubscription", back_populates="logs")
 
     def to_dict(self):
         return {

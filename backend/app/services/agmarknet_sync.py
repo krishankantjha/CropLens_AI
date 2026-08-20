@@ -6,6 +6,7 @@ Syncs daily wholesale prices and arrival volumes from Agmarknet API into SQLite 
 import sqlite3
 import datetime
 import os
+from backend.app.core.constants import VALID_COMMODITIES as ALLOWED_COMMODITIES, VALID_MARKETS as ALLOWED_MANDIS
 
 DB_PATH = os.path.join("backend", "app", "croplens.db")
 
@@ -25,16 +26,6 @@ def init_db():
     """)
     conn.commit()
     conn.close()
-
-ALLOWED_COMMODITIES = [
-    "Potato", "Onion", "Tomato", "Wheat", "Paddy(Dhan)",
-    "Maize", "Soyabean", "Mustard", "Gram(Chana)", "Chilli Red"
-]
-
-ALLOWED_MANDIS = [
-    "Agra", "Khanna", "Azadpur", "Mathura", "Lasalgaon",
-    "Karnal", "Indore", "Farrukhabad", "Guntur", "Kolkata"
-]
 
 def sync_live_agmarknet_prices():
     init_db()

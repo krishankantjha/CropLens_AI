@@ -1,22 +1,28 @@
 """
 CropLens AI — WhatsApp Market Advisory & Automation Service
 Handles formatting, daily morning dispatches, instant share-to-myself messages,
-and developer sandbox testing dispatches for Indian farmers.
+and 1-click wa.me direct deep-link dispatches for Indian farmers.
 """
 
 import os
+import urllib.parse
 import logging
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
+
+from backend.app.core.constants import CROP_NAMES_HI, MANDI_NAMES_HI
 
 logger = logging.getLogger("croplens.whatsapp")
 logger.setLevel(logging.INFO)
 
-# Optional Twilio / Meta WhatsApp API credentials from environment variables
-TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
-TWILIO_API_KEY = os.getenv("TWILIO_API_KEY", "")
-TWILIO_API_SECRET = os.getenv("TWILIO_API_SECRET", "")
-TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
-TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER", "whatsapp:+14155238886")
+
+def mask_phone_number(mobile: str) -> str:
+    """Masks phone number for privacy-compliant logging."""
+    digits = "".join(filter(str.isdigit, str(mobile)))
+    if len(digits) >= 10:
+        return f"+91 ******{digits[-4:]}"
+    return "***"
+
 
 def format_advisory_message(
     crop: str,
@@ -32,17 +38,8 @@ def format_advisory_message(
     """
     is_hi = lang == "hi"
 
-    crop_names_hi = {"Potato": "आलू", "Onion": "प्याज", "Tomato": "टमाटर"}
-    mandi_names_hi = {
-        "Agra APMC": "आगरा मंडी",
-        "Hathras APMC": "हाथरस मंडी",
-        "Mathura APMC": "मथुरा मंडी",
-        "Azadpur APMC": "आज़ादपुर मंडी",
-        "Lasalgaon APMC": "लासलगांव मंडी"
-    }
-
-    crop_str = crop_names_hi.get(crop, crop) if is_hi else crop
-    mandi_str = mandi_names_hi.get(mandi, mandi) if is_hi else mandi
+    crop_str = CROP_NAMES_HI.get(crop, crop) if is_hi else crop
+    mandi_str = MANDI_NAMES_HI.get(mandi, mandi) if is_hi else mandi
 
     if is_hi:
         return (
@@ -53,7 +50,7 @@ def format_advisory_message(
             f"💰 आज का भाव: ₹{int(current_price)}/क्विंटल\n"
             f"📈 अनुमानित लक्ष्य: ₹{int(target_price)}/क्विंटल\n"
             f"🚀 संभावित लाभ: +₹{int(expected_gain)}/क्विंटल\n\n"
-            f"सटीक मंडी मूल्य पूर्वानुमान: http://localhost:5173"
+            f"सटीक मंडी मूल्य पूर्वानुमान: https://croplens.ai"
         )
     else:
         return (
@@ -64,16 +61,14 @@ def format_advisory_message(
             f"💰 Today's Rate: ₹{int(current_price)}/qtl\n"
             f"📈 Target Price: ₹{int(target_price)}/qtl\n"
             f"🚀 Expected Gain: +₹{int(expected_gain)}/qtl\n\n"
-            f"Live Mandi Intelligence at http://localhost:5173"
+            f"Live Mandi Intelligence at https://croplens.ai"
         )
 
 
 def send_whatsapp_message(mobile_number: str, message_text: str) -> Dict[str, Any]:
     """
-    Dispatches a WhatsApp message to a 10-digit Indian mobile number.
-    Uses developer sandbox mode if Twilio credentials are not set.
+    Prepares and logs a WhatsApp advisory dispatch using direct wa.me protocol.
     """
-    # Clean mobile number
     clean_mobile = "".join(filter(str.isdigit, str(mobile_number)))
     if len(clean_mobile) == 10:
         formatted_number = f"+91{clean_mobile}"
@@ -82,50 +77,18 @@ def send_whatsapp_message(mobile_number: str, message_text: str) -> Dict[str, An
     else:
         formatted_number = f"+91{clean_mobile[-10:]}" if len(clean_mobile) >= 10 else mobile_number
 
-    logger.info(f"[WhatsApp Dispatch] Destination: {formatted_number}")
-    logger.info(f"[WhatsApp Dispatch] Payload:\n{message_text}")
+    masked = mask_phone_number(clean_mobile)
+    logger.info(f"[WhatsApp Dispatch] Destination: {masked} | Status: generated wa.me dispatch")
 
-    # If Twilio API credentials exist, dispatch via Twilio SDK
-    has_api_key = bool(TWILIO_API_KEY and TWILIO_API_SECRET and TWILIO_ACCOUNT_SID)
-    has_auth_token = bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and not TWILIO_AUTH_TOKEN.startswith("your_"))
+    deeplink = generate_whatsapp_deeplink(mobile_number, message_text)
 
-    if has_api_key or has_auth_token:
-        try:
-            from twilio.rest import Client
-            if has_api_key:
-                client = Client(TWILIO_API_KEY, TWILIO_API_SECRET, account_sid=TWILIO_ACCOUNT_SID)
-            else:
-                client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-
-            message = client.messages.create(
-                body=message_text,
-                from_=TWILIO_WHATSAPP_NUMBER,
-                to=f"whatsapp:{formatted_number}"
-            )
-            return {
-                "status": "success",
-                "mode": "live_twilio",
-                "sid": message.sid,
-                "recipient": formatted_number,
-                "message": "Live WhatsApp message dispatched via Twilio API"
-            }
-        except Exception as e:
-            logger.error(f"Twilio WhatsApp Error: {e}")
-            return {
-                "status": "success",
-                "mode": "sandbox_fallback",
-                "recipient": formatted_number,
-                "message": f"Dev Sandbox: Message delivered to {formatted_number}"
-            }
-
-    # Developer Mock Sandbox Mode (Zero cost, instant 2-second simulation)
     return {
         "status": "success",
-        "mode": "developer_sandbox",
-        "recipient": formatted_number,
+        "mode": "direct_whatsapp",
+        "recipient": masked,
         "payload": message_text,
-        "deeplink_url": generate_whatsapp_deeplink(mobile_number, message_text),
-        "message": f"WhatsApp Advisory dispatched successfully to {formatted_number}"
+        "deeplink_url": deeplink,
+        "message": f"WhatsApp Advisory dispatched successfully to {masked}"
     }
 
 
@@ -134,9 +97,8 @@ def generate_whatsapp_deeplink(mobile_number: str, message_text: str) -> str:
     Generates a 100% free direct WhatsApp deep-link URL (wa.me protocol).
     Opens real WhatsApp on iOS/Android/Web with zero external API fees.
     """
-    import urllib.parse
     clean_digits = "".join(filter(str.isdigit, str(mobile_number)))
-    phone_with_country = f"91{clean_digits}" if len(clean_digits) == 10 else clean_digits
+    phone_with_country = f"91{clean_digits[-10:]}" if len(clean_digits) >= 10 else clean_digits
     encoded_text = urllib.parse.quote(message_text)
     return f"https://wa.me/{phone_with_country}?text={encoded_text}"
 
@@ -147,7 +109,6 @@ def dispatch_scheduled_advisories_service(app: Any = None) -> Dict[str, Any]:
     generates latest multi-quantile market advisory, dispatches to WhatsApp/Telegram,
     and logs the delivery event into alert_logs.
     """
-    import datetime
     from backend.app.db.database import SessionLocal
     from backend.app.db.models import AlertSubscription, AlertLog
     from backend.app.services.telegram_service import send_telegram_message, format_telegram_advisory_message
@@ -162,7 +123,7 @@ def dispatch_scheduled_advisories_service(app: Any = None) -> Dict[str, Any]:
             return {"status": "success", "dispatched_count": 0, "message": "No active subscriptions found"}
 
         dispatched_count = 0
-        today_str = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+        today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         for sub in active_subs:
             # 1. Fetch latest forecast data from cache or model
@@ -231,7 +192,7 @@ def dispatch_scheduled_advisories_service(app: Any = None) -> Dict[str, Any]:
                 )
                 db.add(log_entry)
 
-            sub.last_dispatched_at = datetime.datetime.utcnow()
+            sub.last_dispatched_at = datetime.now(timezone.utc)
             dispatched_count += 1
 
         db.commit()
