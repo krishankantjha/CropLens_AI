@@ -1,116 +1,120 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&display=swap');
+/* Field Notes Intelligence reminder: warm paper ground, deep crop green, editorial asymmetry, product UI as hero, and calm motion. */
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --radius: 0.85rem;
+  --background: #F8F7F2;
+  --foreground: #17201B;
+  --card: #FFFFFF;
+  --card-foreground: #17201B;
+  --popover: #FFFFFF;
+  --popover-foreground: #17201B;
+  --primary: #176B45;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E8F4ED;
+  --secondary-foreground: #0E4D35;
+  --muted: #F1F2EC;
+  --muted-foreground: #66716A;
+  --accent: #E8F4ED;
+  --accent-foreground: #0E4D35;
+  --destructive: #C94A4A;
+  --destructive-foreground: #FFFFFF;
+  --border: #DDE4DE;
+  --input: #DDE4DE;
+  --ring: #176B45;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  opacity: .035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+}
 
 @layer base {
-  * {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif !important;
+  * { @apply border-border outline-ring/50; }
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), a[href], select:not(:disabled) { cursor: pointer; }
+  ::selection { background: #B8D8C5; color: #0E4D35; }
+}
+
+@layer components {
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
+  .flex { min-height: 0; min-width: 0; }
+  .eyebrow { font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: #66716A; }
+  .data-mono { font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+  .section-kicker { display: inline-flex; align-items: center; gap: .6rem; font-size: 11px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: #176B45; }
+  .section-kicker::before { content: ""; width: 28px; height: 1px; background: #176B45; }
+  .field-grid { background-image: linear-gradient(rgba(23,107,69,.07) 1px, transparent 1px), linear-gradient(90deg, rgba(23,107,69,.07) 1px, transparent 1px); background-size: 34px 34px; }
+  .contour-lines { background-image: radial-gradient(ellipse at 10% 30%, transparent 0 15%, rgba(23,107,69,.09) 15.4% 15.8%, transparent 16.2% 24%, rgba(23,107,69,.06) 24.4% 24.8%, transparent 25.2% 36%, rgba(23,107,69,.045) 36.4% 36.8%, transparent 37.2%); }
+  .paper-shadow { box-shadow: 0 20px 60px rgba(23,107,69,.08); }
+  .rule { height: 1px; background: #DDE4DE; }
+  .ticker-track { animation: ticker 34s linear infinite; }
+  .ticker-track:hover { animation-play-state: paused; }
+  .map-route { stroke-dasharray: 5 8; animation: route 18s linear infinite; }
+  .map-pulse { animation: pulse 2.8s ease-in-out infinite; }
 }
 
-/* CropLens AI Design System — World-Class AgriTech Tokens */
-:root {
-  --bg-primary: #030B07;
-  --bg-secondary: #041514;
-  --bg-surface: #111E15;
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes route { to { stroke-dashoffset: -120; } }
+@keyframes pulse { 0%, 100% { transform: scale(.92); opacity: .45; } 50% { transform: scale(1.08); opacity: .9; } }
 
-  --primary: #2DFF68;
-  --primary-dark: #087A45;
-  --primary-deep: #063B2B;
-  --primary-glow: #20D957;
-  --lime: #68B039;
-
-  --success: #2DFF68;
-  --warning: #F2C94C;
-  --danger: #FF5B52;
-  --info: #32C7FF;
-
-  --text-primary: #F6F4EC;
-  --text-secondary: #B5C0BD;
-  --text-muted: #889693;
-
-  --sunrise: #F6C47C;
-  --gold: #DEA052;
-
-  --border: rgba(255, 255, 255, 0.12);
-  --border-green: rgba(45, 255, 104, 0.35);
-
-  --glass: rgba(8, 28, 24, 0.72);
-
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 18px;
-  --radius-xl: 24px;
-  --radius-panel: 28px;
-
-  --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+@media (min-width: 640px) {
+  .container { padding-left: 1.5rem; padding-right: 1.5rem; }
 }
-
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
-  margin: 0;
+@media (min-width: 1024px) {
+  .container { max-width: 1280px; padding-left: 2rem; padding-right: 2rem; }
 }
-
-/* Glassmorphism card utilities */
-.glass-card {
-  background: rgba(11, 26, 16, 0.75);
-  backdrop-filter: blur(14px) saturate(130%);
-  -webkit-backdrop-filter: blur(14px) saturate(130%);
-  border: 1px solid rgba(34, 197, 94, 0.25);
-  border-radius: 1rem;
-}
-
-.hero-overlay {
-  background: linear-gradient(
-    100deg,
-    rgba(10, 15, 11, 0.94) 0%,
-    rgba(13, 19, 14, 0.78) 38%,
-    rgba(16, 24, 18, 0.45) 68%,
-    rgba(20, 30, 22, 0.2) 100%
-  );
-}
-
-.shadow-panel {
-  box-shadow: 0 25px 65px -15px rgba(0, 0, 0, 0.45);
-}
-
-/* Marquee Ticker Animation */
-@keyframes ticker-scroll {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
-.animate-ticker {
-  display: inline-flex;
-  animation: ticker-scroll 35s linear infinite;
-}
-
-.animate-ticker:hover {
-  animation-play-state: paused;
-}
-
-/* Equalizer bounce animation */
-@keyframes eq-bounce {
-  0%, 100% { transform: scaleY(0.3); }
-  50% { transform: scaleY(1); }
-}
-
-.eq-bar {
-  transform-origin: bottom;
-  animation: eq-bounce 1s ease-in-out infinite;
-}
-
-/* Live indicator dot animation */
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.35; }
-}
-
-.live-dot {
-  animation: pulse-dot 1.6s ease-in-out infinite;
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
