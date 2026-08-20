@@ -1,0 +1,4 @@
+formulation,target_variable,model,mae_rs_qtl,rmse_rs_qtl,mape_pct,r2,research_note
+Experiment A: Raw Price Prediction (y_hat_{t+1}),modal_price (raw Rs/qtl),Ridge Regression,29.77,59.36,0.6,0.9999,Predicts price level directly using lag levels + dynamic EMAs.
+Experiment B: Price Difference Prediction (Delta_y_hat_{t+1} + y_t),Delta modal_price (Daily price change),Ridge Regression (Delta Formulation),28.68,57.79,0.56,0.9999,Stationary difference formulation achieves near-identical MAE (Rs 29.80 vs Rs 29.77/qtl).
+Zero-Change Persistence Baseline (y_hat_{t+1} = y_t),None (Persistence),Naive Persistence,47.95,95.15,0.93,0.9996,Persistence assumption (Delta y = 0).

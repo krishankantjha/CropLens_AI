@@ -1,0 +1,5 @@
+botanical_group,commodities,val_calibration_rows,test_rows,qconf_offset_rs_qtl,test_coverage_pct,target_coverage_pct,test_mpiw_rs_qtl
+Perishable TOP,"Tomato, Onion, Potato",6588,6528,1.1,80.39,80.0,83.67
+Food Grains,"Wheat, Paddy(Dhan), Paddy, Maize",6222,6205,0.05,81.77,80.0,38.28
+Pulses,"Gram(Chana), Gram",1830,1825,-0.85,80.66,80.0,213.24
+Oilseeds & Spices,"Soyabean, Mustard, Chilli Red",4758,4745,8.25,76.21,80.0,443.26

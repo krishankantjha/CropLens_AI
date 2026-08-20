@@ -1,0 +1,11 @@
+commodity,total_observations,adf_statistic,adf_p_value,adf_stationary,kpss_statistic,kpss_p_value,kpss_stationary,inference
+Chilli Red,10228,-2.055,0.263,False,7.3612,0.01,False,Non-Stationary / Trend-Stationary
+Gram(Chana),12785,-1.3,0.6292,False,7.3819,0.01,False,Non-Stationary / Trend-Stationary
+Maize,15342,-2.0817,0.2519,False,5.8404,0.01,False,Non-Stationary / Trend-Stationary
+Mustard,12785,-2.1583,0.2217,False,8.1466,0.01,False,Non-Stationary / Trend-Stationary
+Onion,15328,-2.2287,0.196,False,6.3452,0.01,False,Non-Stationary / Trend-Stationary
+Paddy(Dhan),12785,-2.2758,0.1799,False,5.4591,0.01,False,Non-Stationary / Trend-Stationary
+Potato,15342,-1.7308,0.4153,False,8.2819,0.01,False,Non-Stationary / Trend-Stationary
+Soyabean,10228,-2.6352,0.0859,False,5.5972,0.01,False,Non-Stationary / Trend-Stationary
+Tomato,15306,-2.0142,0.2804,False,7.0111,0.01,False,Non-Stationary / Trend-Stationary
+Wheat,15342,-2.2443,0.1906,False,8.1614,0.01,False,Non-Stationary / Trend-Stationary

@@ -1,0 +1,11 @@
+commodity,test_rows,pearson_correlation_yt_plus_1_vs_yt,spearman_rank_correlation,price_persistence_nature
+Chilli Red,1460,0.9943,0.9942,High Near-Martingale Memory
+Gram(Chana),1825,0.9972,0.997,High Near-Martingale Memory
+Maize,2190,0.9979,0.9976,High Near-Martingale Memory
+Mustard,1825,0.9965,0.9959,High Near-Martingale Memory
+Onion,2184,0.9923,0.9914,High Near-Martingale Memory
+Paddy(Dhan),1825,0.9988,0.9986,High Near-Martingale Memory
+Potato,2190,0.9961,0.9957,High Near-Martingale Memory
+Soyabean,1460,0.9964,0.9951,High Near-Martingale Memory
+Tomato,2154,0.9883,0.9853,High Near-Martingale Memory
+Wheat,2190,0.9983,0.997,High Near-Martingale Memory

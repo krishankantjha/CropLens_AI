@@ -1,0 +1,86 @@
+{
+    "LightGBM_vs_Ridge_Regression": {
+        "competitor": "Ridge Regression",
+        "absolute_loss_mae": {
+            "loss_function": "Absolute Error Loss (MAE)",
+            "variance_estimator": "Newey-West HAC (maxlags=7)",
+            "dm_statistic": -20.8805,
+            "p_value": 0.0,
+            "statistically_significant": true,
+            "mean_loss_differential": -29.8033
+        },
+        "squared_loss_mse": {
+            "loss_function": "Squared Error Loss (MSE)",
+            "variance_estimator": "Newey-West HAC (maxlags=7)",
+            "dm_statistic": -12.4054,
+            "p_value": 0.0,
+            "statistically_significant": true,
+            "mean_loss_differential": -41788.1023
+        },
+        "percentage_loss_mape": {
+            "loss_function": "Absolute Percentage Error Loss (MAPE)",
+            "variance_estimator": "Newey-West HAC (maxlags=7)",
+            "dm_statistic": -21.3638,
+            "p_value": 0.0,
+            "statistically_significant": true,
+            "mean_loss_differential": -0.0018
+        },
+        "methodological_interpretation": "Under Absolute Error loss (matching LightGBM quantile pinball median loss), DM stat is -20.881 (p = 0.0000). Under Squared Error loss (which penalizes outlier volatility heavily), DM stat is -12.405."
+    },
+    "LightGBM_vs_XGBoost": {
+        "competitor": "XGBoost",
+        "absolute_loss_mae": {
+            "loss_function": "Absolute Error Loss (MAE)",
+            "variance_estimator": "Newey-West HAC (maxlags=7)",
+            "dm_statistic": -6.3717,
+            "p_value": 0.0,
+            "statistically_significant": true,
+            "mean_loss_differential": -2.4117
+        },
+        "squared_loss_mse": {
+            "loss_function": "Squared Error Loss (MSE)",
+            "variance_estimator": "Newey-West HAC (maxlags=7)",
+            "dm_statistic": -5.347,
+            "p_value": 0.0,
+            "statistically_significant": true,
+            "mean_loss_differential": -5911.3825
+        },
+        "percentage_loss_mape": {
+            "loss_function": "Absolute Percentage Error Loss (MAPE)",
+            "variance_estimator": "Newey-West HAC (maxlags=7)",
+            "dm_statistic": 9.6532,
+            "p_value": 0.0,
+            "statistically_significant": true,
+            "mean_loss_differential": 0.0004
+        },
+        "methodological_interpretation": "Under Absolute Error loss (matching LightGBM quantile pinball median loss), DM stat is -6.372 (p = 0.0000). Under Squared Error loss (which penalizes outlier volatility heavily), DM stat is -5.347."
+    },
+    "LightGBM_vs_CatBoost": {
+        "competitor": "CatBoost",
+        "absolute_loss_mae": {
+            "loss_function": "Absolute Error Loss (MAE)",
+            "variance_estimator": "Newey-West HAC (maxlags=7)",
+            "dm_statistic": 34.2592,
+            "p_value": 0.0,
+            "statistically_significant": true,
+            "mean_loss_differential": 24.752
+        },
+        "squared_loss_mse": {
+            "loss_function": "Squared Error Loss (MSE)",
+            "variance_estimator": "Newey-West HAC (maxlags=7)",
+            "dm_statistic": -0.4272,
+            "p_value": 0.669206,
+            "statistically_significant": false,
+            "mean_loss_differential": -569.3591
+        },
+        "percentage_loss_mape": {
+            "loss_function": "Absolute Percentage Error Loss (MAPE)",
+            "variance_estimator": "Newey-West HAC (maxlags=7)",
+            "dm_statistic": 67.3125,
+            "p_value": 0.0,
+            "statistically_significant": true,
+            "mean_loss_differential": 0.0064
+        },
+        "methodological_interpretation": "Under Absolute Error loss (matching LightGBM quantile pinball median loss), DM stat is 34.259 (p = 0.0000). Under Squared Error loss (which penalizes outlier volatility heavily), DM stat is -0.427."
+    }
+}

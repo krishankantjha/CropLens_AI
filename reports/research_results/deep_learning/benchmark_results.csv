@@ -1,0 +1,4 @@
+model,mae_rs_qtl,rmse_rs_qtl,mape_pct,r2,mase,benchmark_role
+LSTM (2-Layer),112.98,327.8,1.53,0.996,0.031,Proof-of-Concept Sequence Baseline
+GRU (2-Layer),110.05,331.64,1.54,0.996,0.03,Proof-of-Concept Sequence Baseline
+Temporal Fusion Transformer (TFT),87.53,112.13,3.73,0.991,0.024,Proof-of-Concept Sequence Baseline

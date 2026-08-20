@@ -1,0 +1,50 @@
+{
+    "project": "CropLens AI \u2014 Agricultural Price Intelligence",
+    "experiment_name": "Canonical 2025 Out-of-Sample Benchmark Evaluation",
+    "execution_timestamp": "2026-08-19T16:03:49.360662",
+    "dataset_scope": {
+        "data_file": "data/processed/features_master.parquet",
+        "date_range": "2019-01-01 to 2025-12-31",
+        "total_rows": 135471,
+        "train_rows_2019_2023": 96770,
+        "val_rows_2024": 19398,
+        "test_rows_2025": 19303,
+        "commodities": [
+            "Chilli Red",
+            "Gram(Chana)",
+            "Maize",
+            "Mustard",
+            "Onion",
+            "Paddy(Dhan)",
+            "Potato",
+            "Soyabean",
+            "Tomato",
+            "Wheat"
+        ],
+        "markets": [
+            "Agra",
+            "Azadpur",
+            "Farrukhabad",
+            "Guntur",
+            "Indore",
+            "Karnal",
+            "Khanna",
+            "Kolkata",
+            "Lasalgaon",
+            "Mathura"
+        ],
+        "commodity_count": 10,
+        "market_count": 10,
+        "feature_count": 47,
+        "target_variable": "modal_price",
+        "forecast_horizon": "1-Day Ahead (t+1 next-day APMC modal wholesale price)"
+    },
+    "random_seed": 42,
+    "evaluation_rules": {
+        "identical_test_set": true,
+        "identical_metric_definitions": true,
+        "no_data_leakage": true,
+        "rearranged_quantiles": true,
+        "conformal_calibration": "Mondrian Group-Conditional CQR"
+    }
+}

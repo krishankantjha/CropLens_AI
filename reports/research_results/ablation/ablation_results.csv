@@ -1,0 +1,7 @@
+variant,description,features_removed,mae_rs_qtl,rmse_rs_qtl,mape_pct
+Model_B_No_Price_Lags,Removed 7 price lag/velocity momentum features,10,100.37,280.12,1.53
+Model_C_No_Weather,"Removed 12 NASA weather, NDVI, and stress features",13,67.29,223.13,0.93
+Model_D_No_Arrivals,Removed 5 arrival volume and ratio features,5,78.71,271.58,1.07
+Model_E_No_Weather_No_Arrivals,Removed all 17 exogenous weather and arrival features,18,66.4,227.13,0.91
+Model_F_No_Spatial,Removed 3 Haversine distance and spatial price gradient features,3,63.68,209.33,0.86
+Model_G_No_Festivals,Removed 3 festival demand anticipation and hangover features,3,66.1,219.56,0.9

@@ -1,0 +1,2 @@
+method,block_length_days,n_bootstraps,random_seed,MAE_CI_95,RMSE_CI_95,MAPE_CI_95,R2_CI_95,Coverage_CI_95
+Circular Block Bootstrap (7-Day Temporal Blocks),7,1000,42,"[56.35, 62.47]","[196.25, 227.92]","[0.76, 0.8]","[0.998, 0.998]","[77.62, 78.81]"

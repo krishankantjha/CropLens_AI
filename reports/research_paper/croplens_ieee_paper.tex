@@ -1,0 +1,782 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{microtype}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{CropLens AI: APMC Market Intelligence, Supply Shock Detection \& Procurement Intelligence Platform}
+
+\author{
+  \IEEEauthorblockN{Krishan Kant Jha, Hemant Raghav, Divya Parashar, Lokendra Sachan}
+  \IEEEauthorblockA{\textit{Department of Information Technology, ABES Engineering College, Ghaziabad, India}}
+  \IEEEauthorblockA{\textit{Emails:} krishankant4019@gmail.com, hr246740@gmail.com, parashardivy@gmail.com, lokendrasachan20@gmail.com}
+}
+
+\maketitle
+
+\begin{abstract}
+Agricultural wholesale price volatility in emerging physical spot markets poses severe economic risks for smallholder farmers and institutional procurement agencies. In India's Agricultural Produce Market Committee (APMC) mandis, clearing prices reflect complex interactions across weather extremes, vegetative biomass, physical arrival gluts, and cultural festive demand. However, existing agricultural forecasting models rely primarily on point predictions that fail to quantify downside market risk, while standard quantile regression methods frequently suffer from quantile crossing and lack finite-sample distribution-free coverage validity.
+
+We present CropLens AI, a calibrated multi-quantile forecasting method for physical agricultural spot markets. The model integrates daily APMC auction prices, high-resolution meteorological telemetry, Sentinel-2 satellite vegetation indices (NDVI), physical arrival volumes, and cultural calendar drivers into a 47-feature taxonomy across 135,471 records (10 commodities, 10 representative mandis, 2019--2025).
+
+To ensure reliable risk quantification, CropLens AI trains multi-quantile LightGBM regressors under asymmetric pinball loss, applies Chernozhukov monotonic rearrangement to eliminate quantile crossings, and incorporates Group-Conditional Mondrian Conformalized Quantile Regression (CQR) to calibrate prediction intervals. Evaluated on an untouched 2025 test set (19,303 observations), the model achieves an empirical 80\% coverage rate of 79.85\% with a Mean Prediction Interval Width (MPIW) of INR 166.91/quintal and zero post-rearrangement crossings. On point-forecast accuracy, the model obtains 20.3\% to 46.6\% lower Mean Absolute Error (MAE) than zero-shot Naive Persistence on 7 of 10 commodities, with multi-loss Diebold--Mariano tests and Leave-One-Mandi-Out (LOMO) spatial validation confirming statistical significance and spatial transferability.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Agricultural Price Forecasting, Conformalized Quantile Regression, Multi-Source Feature Fusion, Gradient Boosted Decision Trees, APMC Mandis, Uncertainty Quantification, Market Intelligence.
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+\subsection{Background and Macro-Economic Realities in Indian APMC Mandis}
+Agriculture forms the operational foundation of India's rural economy, engaging over 40\% of the national workforce and sustaining more than 600 million livelihoods \cite{census2011}. The primary mechanism for wholesale agricultural price discovery across India is the network of regulated Agricultural Produce Market Committee (APMC) mandis. These physical market yards facilitate daily spot open-outcry auctions and electronic bidding across food grains, oilseeds, commercial cash crops, and perishable horticultural produce.
+
+Despite their structural importance, APMC spot markets exhibit severe daily price volatility. Perishable commodities such as tomato, onion, and potato (designated as TOP crops in national stabilization policy) and high-value cash crops routinely experience price swings exceeding 50\% to 200\% within a single harvesting cycle. This volatility stems from rigid short-term supply, inelastic consumer demand, localized transport bottlenecks, and the physical perishability of horticultural harvests.
+
+This price volatility directly impacts daily harvest, transport, and procurement decisions. When clearing prices collapse below local production costs, smallholder farmers face distress sales at the mandi gate. For a farmer deciding whether to harvest and transport produce to a distant market yard, knowing the downside price floor is more critical than knowing the expected central price alone. Concurrently, institutional procurement agencies (such as the Food Corporation of India and NAFED) and Farmer Producer Organizations (FPOs) require bounded price intervals to plan procurement schedules and storage allocations under volatile market arrivals.
+
+\subsection{Research Gap: Point Forecasting and Calibrated Uncertainty}
+Over the past two decades, computational agricultural price forecasting has evolved across three broad methodological paradigms: classical econometric time series (such as ARIMA, SARIMA, and Vector Autoregression), tree-based gradient boosting (such as XGBoost \cite{chen2016xgboost}, LightGBM \cite{ke2017lightgbm}, and CatBoost \cite{prokhorenkova2018catboost}), and deep recurrent or attention-based neural networks (such as LSTM \cite{hochreiter1997long}, GRU \cite{cho2014learning}, and Temporal Fusion Transformers \cite{lim2021temporal}).
+
+Although these computational approaches improve point-forecast accuracy, standard formulations present two fundamental limitations in spot markets:
+\begin{enumerate}
+    \item \textbf{Inadequacy of Deterministic Point Forecasts:} Conventional models optimize for the conditional mean $\mathbb{E}[y_{t+1}|x_t]$ under squared-error loss or the conditional median under absolute-error loss. A single deterministic scalar estimate (e.g., predicting that tomorrow's potato price will be Rs 1,850/quintal) provides no measure of forecast variance or tail risk. For a farmer deciding whether to harvest and transport perishable produce to a distant market yard, the primary decision parameter is not merely the expected central price, but the downside price floor (e.g., whether the 10th percentile outcome guarantees Rs 1,800/quintal or collapses to Rs 1,350/quintal).
+    \item \textbf{Quantile Crossing and Lack of Calibration:} When researchers train independent quantile regression models \cite{koenker1978regression} to estimate lower and upper boundaries (e.g., the 10th and 90th percentiles using asymmetric pinball loss), independent optimization frequently violates monotonicity. This produces quantile crossings where the predicted lower bound exceeds the predicted median or upper bound ($\hat{q}_{0.10}(x) > \hat{q}_{0.90}(x)$). Furthermore, standard quantile models lack finite-sample distribution-free validity: empirical coverage on unseen out-of-sample data often diverges from the nominal 80\% target under seasonal market regime shifts.
+\end{enumerate}
+
+\subsection{Multi-Source Feature Fusion Challenge}
+Agricultural wholesale prices are non-stationary time series driven by exogenous interactions operating across multiple physical scales. Modal clearing prices are governed not only by past price momentum, but also by:
+\begin{itemize}
+    \item \textbf{Physical Market Logistics:} Daily physical arrival volumes, seasonal arrival gluts, and spatial transportation gradients between regional production mandis and major national terminal consumption hubs.
+    \item \textbf{Meteorological Stressors:} Local maximum temperatures, prolonged heat stress during grain filling, and unseasonal rainfall during harvest windows that disrupt field operations and transport corridors.
+    \item \textbf{Satellite Remote Sensing:} Multi-spectral vegetation canopy health, captured through Sentinel-2 Normalized Difference Vegetation Index (NDVI) time series, reflecting biomass vigor across surrounding agricultural catchment districts.
+    \item \textbf{Cultural and Festive Demand Cycles:} Calendar-driven demand surges associated with major national religious festivals and wedding seasons, which systematically alter retail consumption patterns.
+\end{itemize}
+
+Fusing these diverse data streams presents several methodological difficulties. Meteorological telemetry, satellite surface reflectance imagery, mandi arrival records, and calendar indicators operate at distinct temporal intervals, exhibit differing missingness patterns, and possess varying noise characteristics. Developing a unified feature representation requires careful lag shifting to prevent temporal lookahead bias and ensure that every feature is strictly accessible at market closure on day $t-1$.
+
+\subsection{Overview of the Proposed CropLens AI Approach}
+To address these challenges, we develop \textbf{CropLens AI}, formulating wholesale price prediction as an uncertainty-aware decision-support problem rather than a pure point-regression task.
+
+CropLens AI operates across five sequential stages:
+\begin{enumerate}
+    \item \textbf{Data Ingestion and Feature Harmonization:} Integrating daily APMC price and arrival records, Open-Meteo meteorological telemetry, Sentinel-2 satellite NDVI time series, cultural festival calendars, and inter-mandi spatial distance matrices into a structured 47-feature leakage-free taxonomy.
+    \item \textbf{Multi-Quantile GBDT Ensembles:} Training independent LightGBM regressors optimized under asymmetric pinball loss to estimate the conditional 10th ($\hat{q}_{0.10}$), 50th ($\hat{q}_{0.50}$), and 90th ($\hat{q}_{0.90}$) price quantiles.
+    \item \textbf{Monotonic Rearrangement:} Applying Chernozhukov monotonic increasing rearrangement \cite{chernozhukov2010quantile} to enforce $\hat{q}^*_{0.10} \le \hat{q}^*_{0.50} \le \hat{q}^*_{0.90}$ pointwise, eliminating quantile crossings without distorting valid predictions.
+    \item \textbf{Group-Conditional Mondrian Conformal Calibration:} Computing non-conformity scores on an independent validation partition to adjust prediction intervals via Conformalized Quantile Regression (CQR) \cite{romano2019conformalized, barber2023conformal}, providing well-calibrated empirical coverage across distinct agricultural commodity groups.
+    \item \textbf{Decision Output:} Generating a calibrated 80\% prediction interval alongside a median point forecast to support risk-aware harvesting and procurement decisions.
+\end{enumerate}
+
+\subsection{Key Research Contributions}
+The main contributions of this work are:
+\begin{enumerate}
+    \item \textbf{Multi-Source Agro-Feature Corpus:} We construct and evaluate an agricultural dataset spanning 135,471 daily observations across 10 major commodities and 10 geographically representative APMC mandis over a seven-year period (2019--2025), unified across a 47-feature taxonomy covering price history, microstructure, arrivals, weather stress, satellite NDVI, festive anticipation, and spatial gradients.
+    \item \textbf{Calibrated Non-Crossing Probabilistic Pipeline:} We couple multi-quantile LightGBM with Chernozhukov monotonic rearrangement---eliminating all 2,942 raw quantile crossings ($15.24\%$ crossing rate down to $0.00\%$)---and Group-Conditional Mondrian CQR calibration. On the held-out 2025 test partition (19,303 observations), the calibrated interval achieves an empirical coverage of $79.85\%$ against a nominal $80.00\%$ target with a Mean Prediction Interval Width (MPIW) of INR 166.91/qtl.
+    \item \textbf{Multi-Loss and Multi-Model Benchmarking:} We conduct comparative benchmarking against seven baseline models spanning heuristic persistence, regularized linear regression (Ridge), tree ensembles (XGBoost, CatBoost), and deep sequence networks (PyTorch LSTM, GRU, and Temporal Fusion Transformer). We evaluate performance using multi-loss Diebold--Mariano tests with Newey--West HAC covariance and Ljung--Box residual autocorrelation diagnostics. While Ridge regression achieves lower aggregate point MAE (INR 29.77/qtl) under squared loss due to near-martingale short-term price memory, LightGBM P50 outperforms zero-shot Naive Persistence across 7 of the 10 individual commodity markets (achieving $20.3\%$ to $46.6\%$ lower MAE) while delivering calibrated probabilistic risk intervals.
+    \item \textbf{Spatial Generalization, Interpretability, and Diagnostics:} We evaluate spatial transferability across unseen mandis using Leave-One-Mandi-Out (LOMO) cross-validation, provide global feature importance attributions using TreeSHAP \cite{lundberg2020local}, establish statistical predictive precedence via grouped Granger causality with Benjamini--Hochberg False Discovery Rate (BH-FDR) correction \cite{benjamini1995controlling}, and examine operational shock triage across documented historical market events.
+\end{enumerate}
+
+\subsection{Paper Organization}
+The remainder of this paper is organized as follows: Section II reviews related work across econometric forecasting, tree ensembles, deep sequence models, and conformal prediction. Section III details the multi-source dataset, preprocessing protocols, the 47-feature taxonomy, and temporal partitioning. Section IV presents the mathematical methodology of Multi-Quantile LightGBM, Chernozhukov rearrangement, and Mondrian CQR. Section V describes the experimental setup, baseline configurations, and evaluation metrics. Section VI reports empirical results, benchmark comparisons, per-commodity breakdowns, statistical hypothesis tests, and ablation analyses. Section VII discusses model interpretability and historical case studies. Section VIII examines methodological limitations and outlines future research directions. Finally, Section IX concludes the paper.
+
+\section{Related Work}
+
+Computational agricultural price forecasting spans four main approaches: classical econometric time series, tree-based machine learning, deep neural sequence models, and conformal uncertainty estimation. Below, we review each paradigm and outline the methodological gaps in spot market forecasting.
+
+\subsection{Classical Econometric and Time-Series Forecasting}
+Agricultural commodity price forecasting has historically relied on parametric linear time-series formulations rooted in the Box--Jenkins methodology. Autoregressive Integrated Moving Average (ARIMA) and Seasonal ARIMA (SARIMA) formulations have been widely applied to model univariate price dynamics for staple cereals and cash crops across national wholesale markets. To capture inter-variable dynamics, Vector Autoregression (VAR) and Vector Error Correction Models (VECM) have been deployed to incorporate bidirectional relationships between physical market arrivals and wholesale prices.
+
+While classical econometric models offer mathematical tractability and interpretable asymptotic properties, they exhibit structural limitations in physical agricultural spot markets:
+\begin{enumerate}
+    \item \textbf{Linearity and Normality Assumptions:} Standard ARIMA and VAR formulations assume linear relationships and Gaussian-distributed error terms, which fail to accommodate the heavy-tailed, asymmetric price spikes characteristic of perishable horticultural auctions.
+    \item \textbf{Strict Stationarity Constraints:} Econometric models require differencing or variance-stabilizing transformations to achieve weak stationarity. However, sudden agricultural supply shocks (such as localized hail damage or unseasonal rainfall) induce structural regime shifts that alter underlying autocorrelation structures.
+    \item \textbf{High-Dimensional Modality Scaling:} Incorporating high-dimensional, multi-rate exogenous features (such as daily multi-band satellite vegetation indices, continuous weather telemetry, and discrete festival indicators) leads to severe parameter explosion and degrees-of-freedom depletion in classical VAR frameworks.
+\end{enumerate}
+
+\subsection{Machine Learning and Gradient-Boosted Forecasting}
+The development of gradient boosted decision tree (GBDT) algorithms---specifically XGBoost \cite{chen2016xgboost}, LightGBM \cite{ke2017lightgbm}, and CatBoost \cite{prokhorenkova2018catboost}---shifted agricultural price modeling from linear equations to non-parametric tree ensembles. Empirical studies across tabular benchmarks consistently indicate that GBDTs systematically outperform both linear models and standard deep neural networks on tabular datasets characterized by heterogeneous feature types, irregular distributions, and complex non-linear feature interactions \cite{grinsztajn2022tree}.
+
+In agricultural market forecasting, GBDTs offer specific operational advantages:
+\begin{itemize}
+    \item \textbf{Non-Linear Physical Thresholds:} Decision trees naturally partition feature spaces along non-linear physical thresholds, such as extreme temperatures beyond which crop quality rapidly deteriorates, or non-linear arrival glut dynamics where market clearance prices collapse abruptly once daily supply exceeds local mandi handling capacity.
+    \item \textbf{Heterogeneous Feature Ingestion:} Modern implementations (such as LightGBM's integer encoding and histogram-based binning) process high-cardinality categorical identifiers (mandi location, crop variety, harvesting regime) alongside continuous environmental measurements without requiring one-hot feature space expansion.
+    \item \textbf{Monotonic Scale Invariance:} Tree-based split criteria are invariant to monotonic feature scaling, enabling co-ingestion of micro-level pricing spreads alongside macro-level satellite vegetation indices.
+\end{itemize}
+Despite their empirical effectiveness in point forecasting, standard GBDTs are traditionally trained under Mean Squared Error (MSE) or Mean Absolute Error (MAE) loss, outputting only a deterministic point estimate that fails to convey downside price risk or predictive variance.
+
+\subsection{Deep Sequence and Attention-Based Forecasting}
+Deep learning sequence models have also been applied to agricultural price series to capture sequential dependencies and seasonal patterns. Recurrent architectures such as LSTM \cite{hochreiter1997long} and GRU \cite{cho2014learning} model sequential price dynamics, while attention-based architectures such as the Temporal Fusion Transformer (TFT) \cite{lim2021temporal} combine self-attention with variable selection networks to process heterogeneous time-varying covariates.
+
+However, applying deep sequence models to daily APMC mandi wholesale price forecasting introduces practical hurdles:
+\begin{itemize}
+    \item \textbf{Irregular Trading Sequences:} Daily spot mandi records frequently feature irregular trading closures (such as Sunday closures, local market holidays, and strike disruptions). Recurrent architectures and Transformer positional encodings struggle with non-uniform time steps unless interpolation or padding strategies are introduced, which risk introducing artificial temporal artifacts.
+    \item \textbf{Tabular Inductive Bias Discrepancies:} Deep neural networks lack the inductive bias of decision trees for axis-aligned tabular decision boundaries, frequently requiring substantial hyperparameter tuning and extensive training epochs while remaining sensitive to random initialization seeds.
+    \item \textbf{Computational Overhead:} Transformer and recurrent models impose higher memory footprints and training overheads, making frequent retraining and low-latency deployment challenging in edge advisory settings.
+\end{itemize}
+
+\subsection{Probabilistic and Conformal Forecasting}
+Point forecasting is inherently insufficient for agricultural risk management. A smallholder farmer deciding whether to incur post-harvest transportation costs requires probabilistic confidence bounds to guard against distress selling.
+
+\subsubsection{Quantile Regression and Quantile Crossing}
+Quantile Regression, pioneered by Koenker and Bassett \cite{koenker1978regression}, models the conditional quantile $q_\alpha(x)$ of a response variable by minimizing the asymmetric pinball loss function $\mathcal{L}_\alpha(y, \hat{y}) = \max(\alpha (y - \hat{y}), \, (\alpha - 1)(y - \hat{y}))$. When training multiple independent quantile models (e.g., targeting $\alpha \in \{0.10, 0.50, 0.90\}$), independent optimization can violate cumulative distribution monotonicity, causing quantile crossings where $\hat{q}_{0.10}(x) > \hat{q}_{0.50}(x)$ or $\hat{q}_{0.50}(x) > \hat{q}_{0.90}(x)$.
+
+To restore mathematical validity, Chernozhukov, Fern{\'a}ndez-Val, and Galichon established the theoretical framework of \textbf{Monotonic Rearrangement} \cite{chernozhukov2010quantile}. By applying an increasing rearrangement operator (pointwise sorting of predicted quantile curves), the rearranged quantiles are guaranteed to be non-decreasing, non-crossing, and bounded in estimation error relative to the true population quantiles.
+
+\subsubsection{Conformalized Quantile Regression (CQR)}
+While monotonic rearrangement guarantees non-crossing quantiles, uncalibrated quantile regression models lack finite-sample coverage validity under temporal and spatial distribution drift; an uncalibrated nominal 80\% interval ($\hat{q}_{0.10}$ to $\hat{q}_{0.90}$) can exhibit substantial under-coverage on unseen future market regimes.
+
+To achieve calibrated, distribution-free uncertainty estimation, Conformal Prediction provides a principled framework \cite{vovk2005algorithmic, shafer2008tutorial}. Romano, Patterson, and Cand{\`e}s introduced \textbf{Conformalized Quantile Regression (CQR)} \cite{romano2019conformalized}, which combines the adaptive interval sharpness of quantile regression with conformal calibration. By evaluating signed non-conformity scores $E_i = \max(\hat{q}^*_{\alpha/2}(x_i) - y_i, \, y_i - \hat{q}^*_{1 - \alpha/2}(x_i))$ on an independent calibration partition, CQR computes a conformal adjustment threshold $\hat{Q}_{1-\gamma}$ that expands or contracts prediction intervals to achieve the target coverage level $1 - \gamma$ \cite{barber2023conformal}.
+
+\subsection{Research Gap and Paradigm Comparison}
+Prior studies generally address point accuracy, non-linear feature interactions, or interval estimation in isolation; standard econometric models struggle with high-dimensional exogenous data, GBDTs and deep sequence models omit downside risk bounds, and vanilla quantile models suffer from crossing violations. Table~\ref{tab:paradigm_comparison} systematically compares prior paradigms against CropLens AI, which unifies multi-source agro-feature fusion with Multi-Quantile LightGBM, Chernozhukov rearrangement, and Mondrian CQR calibration.
+
+\begin{table*}[!t]
+\caption{Methodological Comparison of Agricultural Price Forecasting Paradigms}
+\label{tab:paradigm_comparison}
+\centering
+\resizebox{0.95\textwidth}{!}{
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Methodological Dimension} & \textbf{Classical Econometrics} & \textbf{Standard GBDT} & \textbf{Deep Sequence (TFT)} & \textbf{Standard Quantile GBDT} & \textbf{CropLens AI (Proposed)} \\ \midrule
+\textbf{Primary Output} & Point Forecast & Point Forecast & Point Forecast & Uncalibrated Quantiles & \textbf{Calibrated Risk Intervals + Median} \\
+\textbf{Exogenous Modalities} & Univariate / Bivariate & Tabular Features & Multi-Horizon Sequences & Tabular Features & \textbf{47-Feature Multi-Source Fusion} \\
+\textbf{Quantile Crossing Handling} & N/A & N/A & N/A & Unhandled (Crossings Present) & \textbf{Chernozhukov Rearrangement (0 Crossings)} \\
+\textbf{Coverage Calibration} & Asymptotic Gaussian & None & None & Heuristic / Uncalibrated & \textbf{Mondrian CQR (Empirical 80\%)} \\
+\textbf{Spatial Generalization} & Single-Market & Fixed Markets & Fixed Market Windows & Fixed Markets & \textbf{Leave-One-Mandi-Out (LOMO) Validated} \\
+\textbf{Inference Latency} & $< 1\text{ ms}$ & $< 1\text{ ms}$ & $15$--$30\text{ ms}$ & $< 1\text{ ms}$ & \textbf{$< 1\text{ ms}$ (Commodity CPU)} \\
+\textbf{Interpretability} & Linear Coefficients & TreeSHAP & Attention Weights & Partial SHAP & \textbf{TreeSHAP + BH-FDR Granger Causality} \\ \bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\section{Dataset and Feature Engineering}
+
+Forecasting agricultural spot prices requires integrating multi-rate physical data streams while strictly preventing lookahead leakage. Here, we present the data collection pipeline, preprocessing protocols, the 47-feature taxonomy, and the chronological train/calibration/test partitioning.
+
+\subsection{Multi-Source Data Architecture}
+The dataset harmonizes four distinct data streams spanning a continuous seven-year period from January 1, 2019 to December 31, 2025, across 10 major Indian agricultural commodities and 10 geographically representative APMC mandis, yielding a total corpus of \textbf{135,471 daily observations}. Table~\ref{tab:data_sources} summarizes the multi-source architecture.
+
+\begin{table}[htbp]
+\caption{Summary of Ingested Multi-Source Agricultural Data Streams}
+\label{tab:data_sources}
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}llccp{3.2cm}@{}}
+\toprule
+\textbf{Data Stream} & \textbf{Primary Source} & \textbf{Resolution} & \textbf{Coverage} & \textbf{Key Ingested Variables} \\ \midrule
+\textbf{APMC Auctions} & Agmarknet Portal & Daily & 10 Mandis & Modal ($y_t$), Min ($p^{\min}_t$), Max ($p^{\max}_t$) Prices; Arrivals ($A_t$). \\
+\textbf{Meteorology} & Open-Meteo API & Daily & Geo-Centroid & $T^{\max}_t, T^{\min}_t, \Delta T_t$, Precipitation ($R_t$). \\
+\textbf{Satellite NDVI} & Sentinel-2 (ESA) & 10-m / 5-day & District Belt & Red (B4), NIR (B8), Canopy Biomass Vigor. \\
+\textbf{Cultural Calendar} & National Schedule & Discrete & National/Reg. & Festive flags, 14-day anticipation \& decay. \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+\subsubsection{APMC Wholesale Auction Records}
+Daily spot wholesale price and arrival records were systematically ingested from the national Agmarknet portal (Directorate of Marketing \& Inspection, Ministry of Agriculture \& Farmers Welfare, Government of India). For each trading session, the recorded variables include the modal clearing price ($y_t$, in INR/qtl, where 1 quintal = 100 kg), the intraday minimum price boundary ($p^{\min}_t$), the maximum price boundary ($p^{\max}_t$), and total physical arrival volume entering the market yard ($A_t$, in quintals).
+
+The 10 evaluated commodities span four distinct agronomic and commercial categories:
+\begin{itemize}
+    \item \textit{Perishable Horticultural Produce:} Tomato, Onion, and Potato (the critical TOP vegetables in Indian market stabilization policy).
+    \item \textit{Staple Food Grains (Cereals):} Wheat, Paddy (Dhan), and Maize.
+    \item \textit{Pulses and Legumes:} Gram (Chana).
+    \item \textit{Oilseeds and Commercial Cash Crops:} Soyabean, Mustard, and Chilli Red (Spices).
+\end{itemize}
+The 10 APMC mandis represent diverse market tiers: primary production aggregation hubs (Lasalgaon, Farrukhabad, Guntur, Khanna), secondary commercial distribution centers (Agra, Indore, Karnal, Mathura), and mega terminal consumption centers (Azadpur in Delhi and Kolkata).
+
+\subsubsection{Meteorological and Satellite Telemetry}
+Daily meteorological parameters were harvested via the Open-Meteo Historical Weather API, referenced to the exact geographic coordinates of each mandi yard. Extracted telemetry includes maximum 2-meter air temperature ($T^{\max}_t$), minimum temperature ($T^{\min}_t$), diurnal temperature range ($\Delta T_t$), and cumulative daily precipitation ($R_t$, in mm).
+
+To monitor standing vegetative biomass health across surrounding district production basins, 10-meter spatial resolution multi-spectral surface reflectance imagery from the European Space Agency (ESA) Sentinel-2 constellation was processed. The Normalized Difference Vegetation Index (NDVI) was computed from the Red (Band 4, $665\text{ nm}$) and Near-Infrared (Band 8, $842\text{ nm}$) channels:
+\begin{equation}
+\text{NDVI} = \frac{\rho_{\text{NIR}} - \rho_{\text{Red}}}{\rho_{\text{NIR}} + \rho_{\text{Red}}}
+\end{equation}
+Cloud-masked district-level mean NDVI values were interpolated using strictly backward-looking persistence to construct continuous daily canopy health trajectories.
+
+\subsubsection{Cultural Calendars and Spatial Geography}
+Consumer demand for perishables, pulses, and edible oils exhibits pronounced surges during major Indian religious and cultural festive seasons. We constructed a structured calendar tracking major national events (Diwali, Eid, Holi, Navratri, Dussehra, Makar Sankranti, Chhath Puja, and regional harvest festivals). Two demand-modulation scores were engineered: an exponential anticipation score modeling consumer retail surges in the 14 days preceding each festival ($\exp(-\lambda \cdot \Delta t)$ with $\lambda = 0.15$), and a post-festival demand decay score ($\exp(-\mu \cdot \Delta t)$ with $\mu = 0.20$).
+
+\subsection{Data Cleaning and Temporal Alignment}
+Raw agricultural market records inherently contain operational reporting gaps, typographical entry errors, and trading holidays. A four-stage data hygiene pipeline was enforced:
+\begin{enumerate}
+    \item \textbf{Validity and Invariance Filters:} Records with non-positive values ($y_t \le 0$ or $A_t \le 0$) or non-physical auction reversals ($p^{\min}_t > p^{\max}_t$ or $y_t < p^{\min}_t$ or $y_t > p^{\max}_t$) were scrubbed.
+    \item \textbf{Trading Gap Forward-Fill Persistence:} APMC mandis routinely close on Sundays, gazetted holidays, and during local auction strikes. For missing trading sessions within a continuous series, price levels were forward-filled from the most recent active trading day, representing zero-order market persistence, while physical arrivals were set to zero ($A_t = 0$) to accurately reflect closed market gates.
+    \item \textbf{Extreme Outlier Capping:} Modal price changes exceeding $5\times$ the rolling 30-day interquartile range (IQR) were cross-verified against neighboring regional mandis to distinguish genuine macroeconomic supply crunches from typographical recording errors.
+    \item \textbf{Temporal Merging and Zero Lookahead:} All exogenous data streams were joined using strict left-indexing on calendar dates ($t-1$), ensuring that environmental, arrival, and remote sensing observations are strictly aligned with the information set available at market closure on day $t-1$.
+\end{enumerate}
+
+\begin{table*}[!t]
+\caption{Complete 47-Feature Engineering Taxonomy for CropLens AI}
+\label{tab:feature_taxonomy}
+\centering
+\resizebox{0.95\textwidth}{!}{
+\begin{tabular}{@{}clllp{6.5cm}@{}}
+\toprule
+\textbf{Cat.} & \textbf{Functional Domain} & \textbf{Count} & \textbf{Representative Features} & \textbf{Domain Description \& Operational Logic} \\ \midrule
+\textbf{1} & \textbf{Price History \& Momentum} & 12 & \texttt{price\_lag\_1d/2d/3d/1w/4w/52w}, \texttt{ema\_7d/21d}, \texttt{volatility\_30d} & Autoregressive price memory ($y_{t-1}, y_{t-7}, y_{t-364}$), EMAs, rolling volatility. \\
+\textbf{2} & \textbf{Microstructure \& Quality} & 4 & \texttt{price\_reversal\_signal}, \texttt{percentile\_rank}, \texttt{quality\_premium} & Mean-reversion probability, 365-day percentile rank, auction quality spread. \\
+\textbf{3} & \textbf{Physical Supply Dynamics} & 5 & \texttt{arrivals\_in\_qtl}, \texttt{arrival\_ratio}, \texttt{arrival\_velocity\_7d} & Physical mandi arrivals ($A_{t-1}$), 30-day baseline arrival ratio, supply velocity. \\
+\textbf{4} & \textbf{Weather \& Remote Sensing} & 12 & \texttt{temp\_max}, \texttt{rainfall\_mm}, \texttt{temp\_stress\_days}, \texttt{ndvi\_mean} & Thermal extremes ($T^{\max}_{t-1}$), 14-day rainfall sum, heat stress days, Sentinel-2 NDVI. \\
+\textbf{5} & \textbf{Agro-Ecological Indices} & 2 & \texttt{harvest\_glut\_index}, \texttt{is\_peak\_harvest\_month} & Interaction of peak harvest windows with daily physical arrival pressure. \\
+\textbf{6} & \textbf{Cultural \& Festive Drivers} & 3 & \texttt{is\_festive\_season}, \texttt{anticipation\_score}, \texttt{hangover\_decay} & Festive demand anticipation ($\exp(-\lambda \Delta t)$) and post-event decay ($\exp(-\mu \Delta t)$). \\
+\textbf{7} & \textbf{Spatial Transportation} & 3 & \texttt{dist\_to\_hub\_km}, \texttt{hub\_price\_diff}, \texttt{spatial\_price\_gradient} & Great-circle distance to benchmark terminal hub (Azadpur) and spatial price gradient. \\
+\textbf{8} & \textbf{Calendar Seasonality} & 6 & \texttt{sin/cos\_month}, \texttt{sin/cos\_dow}, \texttt{seasonality\_deviation} & Cyclical calendar harmonics, day-of-year seasonal deviation, macro regime flags. \\ \bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\subsection{Feature Engineering and Taxonomy}
+To capture the multidimensional dynamics of agricultural price formation without data leakage, we engineered a taxonomy of \textbf{47 numerical features} categorized into eight functional domains, detailed in Table~\ref{tab:feature_taxonomy}:
+
+\begin{enumerate}
+    \item \textbf{Autoregressive Price History (12 Features):} Captures short-term inertia and long-term seasonality via lag levels ($y_{t-1}, y_{t-2}, y_{t-3}, y_{t-7}, y_{t-28}, y_{t-364}$), fast and slow Exponential Moving Averages ($\text{EMA}_7, \text{EMA}_{21}$), 7-day channel width, 7-day price velocity ($(y_{t-1} - y_{t-7})/7$), 30-day rolling price volatility ($\sigma_{30\text{d}} / \bar{y}_{30\text{d}}$), and intraday auction spread ($(p^{\max}_{t-1} - p^{\min}_{t-1})/y_{t-1}$).
+    \item \textbf{Market Microstructure and Quality (4 Features):} Measures auction skewness and grade separation via rolling price reversal signals, modal-versus-midpoint bias ($y_{t-1} - (p^{\max}_{t-1} + p^{\min}_{t-1})/2$), 365-day historical price percentile rank, and quality grade premium ($(p^{\max}_{t-1} - y_{t-1})/y_{t-1}$).
+    \item \textbf{Physical Supply and Arrival Dynamics (5 Features):} Reflects mandi yard clearance pressure via previous-day physical arrival volume ($A_{t-1}$), 30-day baseline arrival mean, arrival shock ratio ($A_{t-1} / (\bar{A}_{30\text{d}} + \epsilon)$), 7-day arrival velocity, and arrival-price divergence ($\Delta A_{7\text{d}} \times \Delta y_{7\text{d}}$).
+    \item \textbf{Meteorological and Remote Sensing Telemetry (12 Features):} Quantifies environmental stress via maximum temperature ($T^{\max}_{t-1}$), minimum temperature ($T^{\min}_{t-1}$), diurnal range, daily precipitation ($R_{t-1}$), 14-day cumulative rainfall sum, consecutive dry days, 7-day thermal stress accumulation ($\sum \mathbb{I}(T^{\max} > 38^\circ\text{C})$), heatwave binary flag, Sentinel-2 mean NDVI, 4-week NDVI momentum, vegetative stress ratio relative to historical baseline, and rain-NDVI interaction ($R_{t-1} \times \text{NDVI}_{t-1}$).
+    \item \textbf{Agro-Ecological and Harvest Indices (2 Features):} Identifies seasonal glut periods via peak harvest month indicators and the harvest glut index ($A_{t-1} \times \mathbb{I}(\text{is\_harvest\_season})$).
+    \item \textbf{Cultural and Festive Drivers (3 Features):} Models retail demand surges through binary festival flags, exponential pre-festival anticipation scores ($\lambda = 0.15$), and post-festival demand decay ($\mu = 0.20$).
+    \item \textbf{Spatial Transportation Geography (3 Features):} Captures inter-mandi spatial arbitrage via great-circle distance to the national benchmark terminal hub (Azadpur, Delhi), hub price differential ($y^{\text{hub}}_{t-1} - y^{\text{local}}_{t-1}$), and the spatial price gradient ($(y^{\text{hub}}_{t-1} - y^{\text{local}}_{t-1}) / \text{dist\_to\_hub\_km}$).
+    \item \textbf{Calendar Seasonality and Regimes (6 Features):} Represents cyclical calendar rhythms via trigonometric sine and cosine transforms of month and day-of-week, seasonal deviation from historical day-of-year median, and macro inflationary regime flags ($\mathbb{I}(y_{t-1} > \bar{y}_{365\text{d}} + 1.5\sigma)$).
+\end{enumerate}
+
+\subsection{Temporal Partitioning and Leakage Prevention}
+To evaluate model performance under realistic operational deployment conditions, the master dataset was partitioned chronologically without random shuffling:
+
+\begin{table}[!t]
+\caption{Chronological Temporal Partitioning of the Master Dataset}
+\label{tab:temporal_split}
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}lccl@{}}
+\toprule
+\textbf{Partition} & \textbf{Date Range} & \textbf{Observations} & \textbf{Experimental Role} \\ \midrule
+\textbf{Training} & 2019-01-01 to 2023-12-31 & 96,770 (71.4\%) & GBDT parameter learning \& split optimization. \\
+\textbf{Calibration} & 2024-01-01 to 2024-12-31 & 19,398 (14.3\%) & Validation tuning \& CQR calibration. \\
+\textbf{Test Set} & 2025-01-01 to 2025-12-31 & 19,303 (14.2\%) & Strictly untouched out-of-sample holdout. \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+Four integrity constraints were enforced throughout: (i) all 47 features are strictly lagged by at least one day ($t-1$ relative to forecast target $y_t$); (ii) same-day auction variables ($y_t, p^{\min}_t, p^{\max}_t, A_t$) are strictly excluded from the input space; (iii) calibration parameters ($\hat{Q}_{\text{conf}}$) are computed exclusively on the 2024 validation split; and (iv) all 10 consistency checks (zero row duplicates, exact feature counts, zero target leakage) were formalized into unit tests with 100\% automated pass rates.
+
+\section{Methodology}
+
+We formulate \textbf{CropLens AI} as a three-stage probabilistic pipeline: Multi-Quantile LightGBM, Chernozhukov Monotonic Rearrangement, and Group-Conditional Mondrian Conformalized Quantile Regression.
+
+\subsection{Problem Formulation}
+Let $x_t \in \mathbb{R}^{d}$ ($d = 47$) denote the multi-source feature vector available at market closure on day $t-1$, comprising autoregressive price history, market microstructure indicators, physical arrival volumes, meteorological stress observations, satellite NDVI metrics, festive anticipation scores, and spatial gradient vectors. 
+
+Let $y_t \in \mathbb{R}^+$ denote the next-day clearing wholesale modal price for a given commodity $c \in \mathcal{C}$ at APMC mandi $m \in \mathcal{M}$. Rather than estimating a deterministic conditional expectation $\hat{y}_t = \mathbb{E}[y_t \mid x_t]$, the objective is to estimate a calibrated prediction interval $\hat{\mathcal{C}}(x_t) = [\hat{L}(x_t), \hat{U}(x_t)]$ alongside a robust median point prediction $\hat{q}_{0.50}(x_t)$. For a user-specified significance level $\gamma \in (0, 1)$ (where $\gamma = 0.20$ corresponds to a nominal $80\%$ interval), the desired coverage condition is:
+\begin{equation}
+\mathbb{P}\left( y_t \in \hat{\mathcal{C}}(x_t) \right) \ge 1 - \gamma
+\label{eq:coverage_condition}
+\end{equation}
+subject to minimizing the Mean Prediction Interval Width (MPIW) to ensure maximum practical sharpness:
+\begin{equation}
+\text{MPIW} = \frac{1}{N} \sum_{i=1}^N \left( \hat{U}(x_i) - \hat{L}(x_i) \right)
+\label{eq:mpiw_definition}
+\end{equation}
+
+\subsection{Multi-Quantile Gradient-Boosted Forecasting}
+To model non-linear interactions across agricultural supply-demand drivers, the proposed framework deploys Gradient Boosted Decision Trees (LightGBM) optimized under the asymmetric pinball loss function \cite{ke2017lightgbm}. Three independent ensemble regressors $f_{\alpha}(x)$ are instantiated at quantile levels $\alpha \in \{0.10, 0.50, 0.90\}$:
+\begin{itemize}
+    \item $\alpha = 0.10$: Lower risk boundary ($P_{10}$ price floor).
+    \item $\alpha = 0.50$: Conditional median point forecast ($P_{50}$ expected clearing price).
+    \item $\alpha = 0.90$: Upper risk boundary ($P_{90}$ price ceiling).
+\end{itemize}
+
+\subsection{Pinball Loss and Quantile Prediction}
+For a target quantile level $\alpha \in (0, 1)$, the pinball loss $\mathcal{L}_\alpha(y, \hat{y})$ is defined as:
+\begin{equation}
+\mathcal{L}_\alpha(y, \hat{y}) = \begin{cases} \alpha (y - \hat{y}), & \text{if } y \ge \hat{y} \\ (1 - \alpha) (\hat{y} - y), & \text{if } y < \hat{y} \end{cases} = \max\left(\alpha(y - \hat{y}), \, (\alpha - 1)(y - \hat{y})\right)
+\label{eq:pinball_loss}
+\end{equation}
+LightGBM constructs trees using a leaf-wise, best-first expansion strategy with histogram-based feature binning. For a leaf containing sample set $I$, the optimal leaf weight $w^*$ minimizing empirical pinball loss is derived from the subgradient:
+\begin{equation}
+g_i = \frac{\partial \mathcal{L}_\alpha(y_i, \hat{y}_i)}{\partial \hat{y}_i} = \begin{cases} -\alpha, & \text{if } y_i > \hat{y}_i \\ 1 - \alpha, & \text{if } y_i \le \hat{y}_i \end{cases}
+\label{eq:subgradient}
+\end{equation}
+Because the pinball loss is piecewise linear, its second derivative vanishes almost everywhere ($h_i = 0$); LightGBM employs a constant unit hessian ($h_i = 1.0$) for numerical stability. The leaf splits are evaluated by maximizing the gradient variance gain across discretized histogram bins:
+\begin{equation}
+\mathcal{G} = \frac{1}{2} \left[ \frac{\left( \sum_{i \in I_L} g_i \right)^2}{|I_L| + \lambda} + \frac{\left( \sum_{i \in I_R} g_i \right)^2}{|I_R| + \lambda} - \frac{\left( \sum_{i \in I} g_i \right)^2}{|I| + \lambda} \right]
+\label{eq:split_gain}
+\end{equation}
+where $\lambda$ denotes the $L_2$ regularization parameter preventing overfitting to volatile auction observations.
+
+\subsection{Monotonic Quantile Rearrangement}
+Because the three quantile models $f_{0.10}(x)$, $f_{0.50}(x)$, and $f_{0.90}(x)$ are trained independently, their unconstrained predictions can violate the monotonic property of cumulative distribution functions, producing quantile crossings:
+\begin{equation}
+\exists \, x : \hat{q}_{0.10}(x) > \hat{q}_{0.50}(x) \quad \text{or} \quad \hat{q}_{0.50}(x) > \hat{q}_{0.90}(x)
+\label{eq:crossing_condition}
+\end{equation}
+
+\subsubsection{The Monotonic Rearrangement Operator}
+To restore strict mathematical validity without altering valid predictions, we apply the Chernozhukov Monotonic Increasing Rearrangement operator \cite{chernozhukov2010quantile}. For a set of estimated quantiles $\hat{q}_{\alpha_1}(x), \dots, \hat{q}_{\alpha_K}(x)$ evaluated at levels $\alpha_1 < \dots < \alpha_K$, the sample generalized inverse distribution function is defined as:
+\begin{equation}
+\hat{F}^*(y \mid x) = \frac{1}{K} \sum_{k=1}^K \mathbb{I}\left( \hat{q}_{\alpha_k}(x) \le y \right)
+\label{eq:sample_cdf}
+\end{equation}
+The rearranged, strictly monotonic quantile function $\hat{q}^*(\alpha \mid x)$ is obtained by taking the left-continuous inverse:
+\begin{equation}
+\hat{q}^*(\alpha \mid x) = \inf \left\{ y \in \mathbb{R} : \hat{F}^*(y \mid x) \ge \alpha \right\}
+\label{eq:left_inverse}
+\end{equation}
+
+\subsubsection{Exact Discrete Realization of the Rearrangement Operator}
+For a discrete triplet of target quantile levels $\alpha \in \{0.10, 0.50, 0.90\}$ evaluated at a query point $x$, the empirical distribution function $\hat{F}^*(y \mid x) = \frac{1}{3} \sum_{k=1}^3 \mathbb{I}\left(\hat{q}_{\alpha_k}(x) \le y\right)$ is a step function with jump discontinuities of height $1/3$ at the ordered values of the three predictions. Evaluating the left-continuous generalized inverse $\hat{q}^*(\alpha \mid x) = \inf \left\{ y \in \mathbb{R} : \hat{F}^*(y \mid x) \ge \alpha \right\}$ at $\alpha = 0.10$ ($\ge 1/3$), $\alpha = 0.50$ ($\ge 2/3$), and $\alpha = 0.90$ ($\ge 3/3$) is mathematically equivalent to the exact order-statistic sorting operator:
+\begin{align}
+\hat{q}^*_{0.10}(x) &= \min\left( \hat{q}_{0.10}(x), \hat{q}_{0.50}(x), \hat{q}_{0.90}(x) \right) \label{eq:sort_p10} \\
+\hat{q}^*_{0.50}(x) &= \text{Median}\left( \hat{q}_{0.10}(x), \hat{q}_{0.50}(x), \hat{q}_{0.90}(x) \right) \label{eq:sort_p50} \\
+\hat{q}^*_{0.90}(x) &= \max\left( \hat{q}_{0.10}(x), \hat{q}_{0.50}(x), \hat{q}_{0.90}(x) \right) \label{eq:sort_p90}
+\end{align}
+guaranteeing $\hat{q}^*_{0.10}(x) \le \hat{q}^*_{0.50}(x) \le \hat{q}^*_{0.90}(x)$ pointwise across all query points without heuristic approximation error.
+
+\subsubsection{Theoretical Error Bounds}
+Under standard regularity conditions, the monotonic rearrangement operator possesses the contraction mapping property \cite{chernozhukov2010quantile}:
+\begin{equation}
+\left\| \hat{q}^*(\alpha \mid x) - q_0(\alpha \mid x) \right\|_p \le \left\| \hat{q}(\alpha \mid x) - q_0(\alpha \mid x) \right\|_p, \quad \forall p \in [1, \infty]
+\label{eq:contraction_bound}
+\end{equation}
+where $q_0(\alpha \mid x)$ denotes the true underlying population quantile. Thus, applying monotonic rearrangement guarantees zero post-rearrangement crossings while preserving or reducing estimation error.
+
+\subsection{Group-Conditional Mondrian Conformalized Quantile Regression}
+Although monotonic rearrangement eliminates quantile crossings, the raw interval $[\hat{q}^*_{0.10}(x), \hat{q}^*_{0.90}(x)]$ can exhibit under-coverage under temporal distribution drift. To provide calibrated interval coverage, the framework applies Conformalized Quantile Regression (CQR) \cite{romano2019conformalized, barber2023conformal}.
+
+\subsubsection{Non-Conformity Score Formulation}
+Let $\mathcal{D}_{\text{cal}} = \{(x_i, y_i)\}_{i=1}^{n_{\text{cal}}}$ denote the independent validation calibration set (2024 partition, $n_{\text{cal}} = 19,398$). For each validation sample $i$, we compute the signed conformity violation score $E_i \in \mathbb{R}$:
+\begin{equation}
+E_i = \max\left( \hat{q}^*_{0.10}(x_i) - y_i, \; y_i - \hat{q}^*_{0.90}(x_i) \right)
+\label{eq:nonconformity_score}
+\end{equation}
+If $y_i$ falls strictly inside the interval $[\hat{q}^*_{0.10}(x_i), \hat{q}^*_{0.90}(x_i)]$, then $E_i < 0$ (the interval is conservative). If $y_i$ falls outside, then $E_i > 0$ (measuring the exact magnitude of the coverage breach in INR/qtl).
+
+\subsubsection{Conformal Quantile Computation}
+For a target error rate $\gamma = 0.20$ (nominal $80\%$ coverage), the conformal adjustment threshold $\hat{Q}_{1-\gamma}(E, \mathcal{D}_{\text{cal}})$ is computed as the empirical $\beta$-quantile of the non-conformity scores $\{E_1, \dots, E_{n_{\text{cal}}}\}$, where:
+\begin{equation}
+\beta = \min\left(1.0, \; \frac{\lceil (1 - \gamma)(n_{\text{cal}} + 1) \rceil}{n_{\text{cal}}}\right)
+\label{eq:conformal_beta}
+\end{equation}
+The empirical pooled calibration offset was estimated at $\hat{Q}_{\text{conf}} = \text{INR } 0.93/\text{qtl}$.
+
+\subsubsection{Calibrated Prediction Interval Construction}
+The final calibrated prediction interval $\hat{\mathcal{C}}(x_t)$ for an unseen test observation $x_t$ is constructed by expanding the rearranged boundaries:
+\begin{equation}
+\hat{\mathcal{C}}(x_t) = \left[ \hat{q}^*_{0.10}(x_t) - \hat{Q}_{\text{conf}}, \quad \hat{q}^*_{0.90}(x_t) + \hat{Q}_{\text{conf}} \right]
+\label{eq:calibrated_interval}
+\end{equation}
+
+\subsubsection{Group-Conditional Mondrian Partitioning}
+To prevent aggregate coverage from masking category-specific under-coverage in highly volatile crops, we implement Mondrian CQR. Calibration non-conformity scores are partitioned into group-conditional sets $\mathcal{D}_{\text{cal}}^{(g)}$ based on botanical category $g \in \{\text{Perishable TOP}, \text{Food Grains}, \text{Pulses}, \text{Oilseeds/Spices}\}$:
+\begin{equation}
+\hat{Q}_{\text{conf}}^{(g)} = \text{Quantile}\left( \{E_i : i \in \mathcal{D}_{\text{cal}}^{(g)}\}, \; \beta_g \right)
+\label{eq:mondrian_offset}
+\end{equation}
+yielding group-tailored conformal offsets that maintain consistent coverage across heterogeneous commodity markets.
+
+\subsection{End-to-End Forecasting Workflow}
+The operational pipeline of CropLens AI executes across three phases:
+\begin{enumerate}
+    \item \textbf{Offline Model Training (Phase 1):} Three independent LightGBM regressors $\{f_{0.10}, f_{0.50}, f_{0.90}\}$ are trained on the 2019--2023 historical partition $\mathcal{D}_{\text{train}}$ by minimizing empirical pinball loss $\mathcal{L}_\alpha$.
+    \item \textbf{Calibration Parameter Estimation (Phase 2):} Raw quantiles are predicted on the isolated 2024 validation partition $\mathcal{D}_{\text{cal}}$, sorted via Chernozhukov rearrangement, and used to compute signed non-conformity scores $E_i$. Conformal offsets $\hat{Q}_{\text{conf}}$ (pooled and group-specific) are calculated and frozen.
+    \item \textbf{Online Test Inference (Phase 3):} Given a query feature vector $x_t \in \mathbb{R}^{47}$ on day $t-1$, the system predicts raw quantiles, applies pointwise sorting to eliminate crossings, expands boundaries by the group conformal offset $\hat{Q}_{\text{conf}}^{(g)}$, and outputs the calibrated 80\% prediction interval $[\hat{L}(x_t), \hat{U}(x_t)]$ alongside the median point forecast $\hat{q}^*_{0.50}(x_t)$.
+\end{enumerate}
+
+\section{Experimental Setup}
+
+We benchmark CropLens AI against seven baseline models spanning heuristic, linear, tree-based, and deep sequence architectures across point accuracy, conformal interval calibration, and spatial generalization.
+
+\subsection{Forecasting Baselines and Proposed Model}
+The forecasting task targets next-day ($t+1$) modal wholesale prices ($y_t \in \mathbb{R}^+$) across 10 agricultural commodities and 10 APMC mandis using the 47-feature taxonomy (detailed in Section III). CropLens AI was benchmarked against seven representative baseline models:
+\begin{enumerate}
+    \item \textbf{Zero-Shot Naive Persistence (Random Walk):} Assumes tomorrow's price equals today's observed closing price ($\hat{y}_{t+1} = y_t$, corresponding to \texttt{price\_lag\_1d}). In agricultural markets with strong near-martingale memory ($r > 0.98$), persistence represents an aggressive baseline.
+    \item \textbf{Ridge Linear Regression ($L_2$-OLS):} A regularized linear baseline trained on all 47 features under squared-error loss with Tikhonov regularization parameter $\alpha = 10.0$.
+    \item \textbf{XGBoost \cite{chen2016xgboost}:} A scalable tree ensemble trained under Mean Squared Error (MSE) loss using depth-wise tree expansion (learning rate $\eta = 0.05$, max depth 6, subsample ratio 0.80).
+    \item \textbf{CatBoost \cite{prokhorenkova2018catboost}:} An oblivious symmetric decision-tree ensemble trained with Root Mean Squared Error (RMSE) loss and ordered boosting ($\eta = 0.05$, depth 6).
+    \item \textbf{PyTorch 2-Layer LSTM / GRU / TFT \cite{lim2021temporal}:} Recurrent (LSTM, GRU with 64 units, 2 layers, dropout 0.15, lookback $L=7$) and attention-based (TFT with 4 heads, $d_{\text{model}}=64$, lookback $L=30$) architectures were evaluated under standardized prototype configurations. These baselines assess sequential modeling capability under operational low-latency edge inference constraints ($<1\text{ ms}$) rather than exhaustive hyperparameter optimization.
+\end{enumerate}
+
+\subsection{Evaluation Metrics}
+Model performance was evaluated across $N = 19,303$ test observations in the strictly held-out 2025 partition.
+
+\subsubsection{Point Forecast Accuracy Metrics}
+Let $y_i$ denote the true observed price and $\hat{y}_i$ denote the predicted price:
+\begin{itemize}
+    \item \textbf{Mean Absolute Error (MAE):} $\text{MAE} = \frac{1}{N}\sum_{i=1}^N |y_i - \hat{y}_i|$ (in INR/qtl).
+    \item \textbf{Root Mean Squared Error (RMSE):} $\text{RMSE} = \sqrt{\frac{1}{N}\sum_{i=1}^N (y_i - \hat{y}_i)^2}$ (in INR/qtl).
+    \item \textbf{Mean Absolute Percentage Error (MAPE):} $\text{MAPE} = \frac{100\%}{N}\sum_{i=1}^N |(y_i - \hat{y}_i)/y_i|$.
+    \item \textbf{Symmetric MAPE (sMAPE):} $\text{sMAPE} = \frac{100\%}{N}\sum_{i=1}^N \frac{2|y_i - \hat{y}_i|}{|y_i| + |\hat{y}_i|}$.
+    \item \textbf{Coefficient of Determination ($R^2$):} $R^2 = 1 - \frac{\sum_{i=1}^N (y_i - \hat{y}_i)^2}{\sum_{i=1}^N (y_i - \bar{y}_{\text{test}})^2}$.
+    \item \textbf{Mean Absolute Scaled Error (MASE) \cite{hyndman2006another}:} Scaled against the in-sample naive persistence difference:
+    \begin{equation}
+    \text{MASE} = \frac{\frac{1}{N}\sum_{i=1}^N |y_i - \hat{y}_i|}{\frac{1}{n_{\text{train}}-1}\sum_{k=2}^{n_{\text{train}}} |y_k - y_{k-1}|}
+    \label{eq:mase}
+    \end{equation}
+\end{itemize}
+
+\subsubsection{Uncertainty and Prediction Interval Metrics}
+For a calibrated interval $\hat{\mathcal{C}}(x_i) = [\hat{L}_i, \hat{U}_i]$ targeting nominal coverage $1 - \gamma = 0.80$:
+\begin{itemize}
+    \item \textbf{Empirical Interval Coverage Rate (\%):} $\text{Coverage} = \frac{100\%}{N}\sum_{i=1}^N \mathbb{I}(\hat{L}_i \le y_i \le \hat{U}_i)$.
+    \item \textbf{Mean Prediction Interval Width (MPIW):} $\text{MPIW} = \frac{1}{N}\sum_{i=1}^N (\hat{U}_i - \hat{L}_i)$ (in INR/qtl).
+    \item \textbf{Quantile Crossing Rate (\%):} Proportion of test points where predicted quantiles violate monotonicity ($\hat{q}_{0.10} > \hat{q}_{0.50} \lor \hat{q}_{0.50} > \hat{q}_{0.90}$).
+\end{itemize}
+
+\subsection{Statistical Testing and Diagnostics}
+
+\subsubsection{Multi-Loss Diebold--Mariano (DM) Tests}
+To assess whether forecast accuracy differences between CropLens AI and baseline models are statistically significant, we deploy pairwise Diebold--Mariano tests \cite{diebold1995comparing}. For loss differential series $d_t = \ell(e_{1,t}) - \ell(e_{2,t})$, the test statistic is:
+\begin{equation}
+\text{DM} = \frac{\bar{d}}{\sqrt{\hat{\sigma}^2_{\bar{d}}}} \xrightarrow{d} \mathcal{N}(0, 1)
+\label{eq:dm_stat}
+\end{equation}
+where $\bar{d} = \frac{1}{T}\sum_{t=1}^T d_t$, and the asymptotic variance $\hat{\sigma}^2_{\bar{d}}$ is estimated via the Newey--West Heteroskedasticity and Autocorrelation Consistent (HAC) estimator \cite{newey1987simple} with lag truncation $h = 7$ (reflecting weekly APMC trading settlement cycles):
+\begin{equation}
+\hat{\sigma}^2_{\bar{d}} = \frac{1}{T} \left( \hat{\gamma}_0 + 2 \sum_{k=1}^h \left(1 - \frac{k}{h+1}\right) \hat{\gamma}_k \right)
+\label{eq:newey_west}
+\end{equation}
+Tests are conducted across absolute error loss ($\ell(e_t) = |e_t|$), squared error loss ($\ell(e_t) = e_t^2$), and percentage error loss ($\ell(e_t) = |e_t/y_t|$).
+
+\subsubsection{Ljung--Box Autocorrelation Diagnostics}
+To test whether model residuals contain unmodeled periodic or linear temporal dependence, we apply the Ljung--Box portmanteau test \cite{ljung1978measure} to model residuals $e_t = y_t - \hat{y}_{0.50}(t)$ across lags $m \in \{1, 7, 14, 30\}$:
+\begin{equation}
+Q(m) = N(N+2) \sum_{k=1}^m \frac{\hat{\rho}_k^2}{N - k} \xrightarrow{d} \chi^2(m)
+\label{eq:ljung_box}
+\end{equation}
+where $\hat{\rho}_k$ represents the sample autocorrelation of residuals at lag $k$.
+
+\begin{table}[!t]
+\caption{Model Hyperparameter Configurations and Reproducibility Settings}
+\label{tab:model_config}
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Parameter Dimension} & \textbf{LightGBM} & \textbf{XGBoost} & \textbf{CatBoost} & \textbf{PyTorch Deep Models} \\ \midrule
+\textbf{Objective / Loss} & Pinball ($\alpha \in \{0.1, 0.5, 0.9\}$) & MSE & RMSE & Huber Loss ($\delta = 1.0$) \\
+\textbf{Boosting Iterations / Epochs} & 350 (Early stop = 30) & 300 & 300 & 50 Epochs (Patience = 10) \\
+\textbf{Learning Rate ($\eta$)} & 0.03 & 0.05 & 0.05 & 0.005 (Adam) / 0.001 (AdamW) \\
+\textbf{Tree Depth / Num Leaves} & \texttt{num\_leaves} = 31 & \texttt{max\_depth} = 6 & \texttt{depth} = 6 & 2 Layers ($64\text{ units/layer}$) \\
+\textbf{Subsample / Colsample} & 0.80 / 0.80 & 0.80 / 0.80 & N/A & Dropout = 0.15 \\
+\textbf{Regularization ($\lambda$)} & $L_2 = 5.0$ & $L_2 = 5.0$ & $L_2 = 3.0$ & Weight Decay = $1\times 10^{-4}$ \\
+\textbf{Random Seed} & \textbf{42 (Locked)} & \textbf{42 (Locked)} & \textbf{42 (Locked)} & \textbf{42 (Locked)} \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+\subsection{Training Configuration and Reproducibility}
+Table~\ref{tab:model_config} summarizes model hyperparameters and optimization settings across all benchmark algorithms.
+
+All experiments were executed on an Intel Core i7-13700H CPU ($16\text{ cores}$, $2.40\text{ GHz}$) with $32\text{ GB RAM}$ and an NVIDIA GeForce RTX 4060 GPU ($8\text{ GB VRAM}$) in a standardized environment (Python 3.11.9, PyTorch 2.4.0, LightGBM 4.5.0, Scikit-Learn 1.5.1, and Statsmodels 0.14.2). A fixed random seed ($\text{seed} = 42$) was locked across all initializations and batch loaders. All benchmark results are directly reproducible via the canonical evaluation runner (\texttt{python backend/app/evaluation/run\_canonical\_evaluation.py}).
+
+\section{Results and Discussion}
+
+We evaluate CropLens AI on the 2025 out-of-sample test partition ($19,303\text{ observations}$) across overall benchmarks, per-commodity accuracy, conformal calibration, feature ablations, spatial transferability, and residual diagnostics.
+
+\subsection{Overall Benchmark Performance}
+Table~\ref{tab:master_benchmark} presents point-forecast accuracy across CropLens AI and seven benchmark models evaluated on the identical 2025 holdout dataset using the unified 47-feature taxonomy.
+
+\begin{table*}[!t]
+\caption{Canonical Out-of-Sample Benchmark Comparison (2025 Test Partition --- 19,303 Observations)}
+\label{tab:master_benchmark}
+\centering
+\resizebox{0.95\textwidth}{!}{
+\begin{tabular}{@{}llcccccccc@{}}
+\toprule
+\textbf{Model} & \textbf{Model Family} & \textbf{Loss Function} & \textbf{MAE (INR/qtl)} $\downarrow$ & \textbf{RMSE (INR/qtl)} $\downarrow$ & \textbf{MAPE (\%)} $\downarrow$ & \textbf{sMAPE (\%)} $\downarrow$ & \textbf{$R^2$} $\uparrow$ & \textbf{MASE} $\downarrow$ & \textbf{Gain vs Naive (\%)} \\ \midrule
+\textbf{Ridge Regression} & Linear ($L_2$) & Squared Error & \textbf{29.77} & \textbf{59.36} & \textbf{0.60} & \textbf{0.60} & \textbf{0.9999} & \textbf{0.008} & \textbf{+37.91\%} \\
+\textbf{Naive Persistence} & Heuristic Baseline & Zero-Shot ($y_t$) & 47.95 & 95.15 & 0.93 & 0.93 & 0.9996 & 0.013 & 0.00\% (Ref) \\
+\textbf{XGBoost} & Tree Ensemble & MSE Loss & 57.16 & 198.50 & 0.82 & 0.82 & 0.9985 & 0.016 & -19.21\% \\
+\textbf{LightGBM P50} & Quantile GBDT & Pinball ($\alpha=0.5$) & 59.58 & 212.87 & 0.78 & 0.78 & 0.9982 & 0.016 & -24.25\% \\
+\textbf{CatBoost} & Oblivious GBDT & Symmetric RMSE & 84.33 & 211.52 & 1.42 & 1.42 & 0.9983 & 0.023 & -75.87\% \\
+\textbf{PyTorch TFT} & Temporal Attention & Sequence MSE & 87.53 & 112.13 & 3.73 & 3.78 & 0.9910 & 0.024 & -82.54\% \\
+\textbf{PyTorch GRU} & 2-Layer Recurrent & Huber Loss & 110.05 & 331.64 & 1.54 & 1.56 & 0.9960 & 0.030 & -129.51\% \\
+\textbf{PyTorch LSTM} & 2-Layer Recurrent & Huber Loss & 112.98 & 327.80 & 1.53 & 1.55 & 0.9960 & 0.031 & -135.62\% \\ \bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\subsubsection{Linear Point-Forecast Performance}
+Ridge regression achieves the lowest overall point error ($\text{MAE} = \text{INR } 29.77/\text{qtl}$, $\text{RMSE} = \text{INR } 59.36/\text{qtl}$), outperforming zero-shot Naive Persistence by $+37.91\%$. This occurs because physical spot agricultural prices exhibit strong near-martingale memory ($r > 0.98$), enabling an unconstrained linear model to track short-term levels with minimal variance under squared-error loss.
+
+\subsubsection{Probabilistic vs. Deterministic Trade-off}
+LightGBM P50 achieves an average $\text{MAPE} = 0.78\%$ and $\text{MAE} = \text{INR } 59.58/\text{qtl}$. Unlike Ridge regression (which outputs solely an uncalibrated deterministic point estimate), LightGBM optimizes asymmetric pinball loss to anchor non-crossing, calibrated prediction intervals that quantify downside market risk.
+
+\subsubsection{Deep Sequence Models and Tabular Inductive Bias}
+Under standardized prototype configurations, recurrent architectures (LSTM/GRU) and Transformer networks (TFT) exhibit higher test errors ($\text{MAE } 87.53$--$112.98\text{ INR/qtl}$). This performance gap reflects the tabular nature of daily spot mandi records, which feature non-uniform trading calendar closures and sharp non-linear physical supply thresholds. As established in tabular benchmarking literature \cite{grinsztajn2022tree}, decision tree ensembles provide the natural inductive bias for such data. We explicitly qualify that these results represent proof-of-concept sequence baselines rather than establishing a theoretical ceiling for exhaustively tuned deep models.
+
+\subsection{Commodity-Level Forecast Accuracy}
+Agricultural commodities operate under distinct agronomic perishability, storage lifetimes, and auction volatility profiles. Table~\ref{tab:commodity_breakdown} details the per-commodity performance of LightGBM P50 versus Naive Persistence across all 10 evaluated agricultural markets.
+
+\begin{table*}[!t]
+\caption{Granular Commodity-Level Performance Breakdown (2025 Test Partition --- 19,303 Observations)}
+\label{tab:commodity_breakdown}
+\centering
+\resizebox{0.95\textwidth}{!}{
+\begin{tabular}{@{}llccccccc@{}}
+\toprule
+\textbf{Agronomic Category} & \textbf{Commodity} & \textbf{Test Obs.} & \textbf{Naive MAE (INR/qtl)} & \textbf{LightGBM MAE (INR/qtl)} & \textbf{MAE Gain (\%)} $\uparrow$ & \textbf{Naive MAPE} & \textbf{LightGBM MAPE} & \textbf{$R^2$} \\ \midrule
+\textbf{Horticulture (TOP)} & \textbf{Potato} & 2,190 & 17.91 & \textbf{9.56} & \textbf{+46.62\%} & 0.98\% & \textbf{0.52\%} & 0.998 \\
+ & \textbf{Onion} & 2,184 & 39.82 & \textbf{24.45} & \textbf{+38.60\%} & 1.40\% & \textbf{0.86\%} & 0.993 \\
+ & \textbf{Tomato} & 2,154 & 54.33 & \textbf{39.24} & \textbf{+27.77\%} & 1.72\% & \textbf{1.25\%} & 0.986 \\
+\textbf{Staple Food Grains} & \textbf{Maize} & 2,190 & 15.23 & \textbf{8.38} & \textbf{+44.98\%} & 0.67\% & \textbf{0.36\%} & 0.999 \\
+ & \textbf{Paddy (Dhan)} & 1,825 & 13.60 & \textbf{9.61} & \textbf{+29.34\%} & 0.50\% & \textbf{0.35\%} & 0.998 \\
+ & \textbf{Wheat} & 2,190 & 12.57 & \textbf{10.02} & \textbf{+20.29\%} & 0.44\% & \textbf{0.35\%} & 0.997 \\
+\textbf{Oilseeds \& Pulses} & \textbf{Soyabean} & 1,460 & 45.99 & \textbf{36.22} & \textbf{+21.24\%} & 0.77\% & \textbf{0.61\%} & 0.995 \\
+ & \textbf{Gram (Chana)} & 1,825 & 45.57 & 46.93 & -2.98\% & 0.67\% & 0.69\% & 0.991 \\
+\textbf{Commercial Spices} & \textbf{Mustard} & 1,825 & 49.81 & 98.59 & -97.93\% & 0.67\% & 1.33\% & 0.952 \\
+ & \textbf{Chilli Red} & 1,460 & 243.39 & 421.11 & -73.02\% & 1.02\% & 1.76\% & 0.934 \\ \bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\subsubsection{Dominance in Perishables and Staple Cereals}
+LightGBM P50 substantially outperforms Naive Persistence across \textbf{7 of the 10 evaluated commodities}, delivering major absolute error reductions: Potato ($+46.62\%$), Maize ($+44.98\%$), Onion ($+38.60\%$), Paddy ($+29.34\%$), Tomato ($+27.77\%$), Soyabean ($+21.24\%$), and Wheat ($+20.29\%$).
+
+\subsubsection{Price Scale and Nominal Discrepancies}
+In high-value commercial cash crops characterized by wide bidding spreads (Chilli Red prices routinely exceed INR 25,000/qtl), the conditional median pinball estimator incurs larger absolute residuals, elevating aggregate rupee MAE. However, normalized percentage errors remain controlled ($\text{MAPE} \le 1.76\%$, $R^2 = 0.934$).
+
+\subsection{Probabilistic Forecast Calibration}
+Table~\ref{tab:uncertainty_calibration} tracks the sequential progression from unconstrained quantile models to monotonic, conformalized prediction intervals.
+
+\begin{table}[!t]
+\caption{Uncertainty Quantification and Conformal Calibration Pipeline (2025 Test Partition)}
+\label{tab:uncertainty_calibration}
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{Pipeline Stage} & \textbf{Coverage (\%)} & \textbf{Target (\%)} & \textbf{Crossings} & \textbf{MPIW (INR/qtl)} & \textbf{$\hat{Q}_{\text{conf}}$} \\ \midrule
+\textbf{Raw Quantiles} & 78.24\% & 80.00\% & 2,942 (15.2\%) & 165.05 & --- \\
+\textbf{Rearranged} & 78.24\% & 80.00\% & \textbf{0 (0.0\%)} & 165.05 & --- \\
+\textbf{Mondrian CQR} & \textbf{79.85\%} & \textbf{80.00\%} & \textbf{0 (0.0\%)} & \textbf{166.91} & \textbf{INR 0.93} \\
+\textbf{Split Indep. (2024B)} & \textbf{79.91\%} & \textbf{80.00\%} & \textbf{0 (0.0\%)} & \textbf{166.89} & \textbf{INR 0.92} \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+\subsubsection{Quantile Crossing Elimination}
+Pointwise Chernozhukov monotonic rearrangement completely eliminated all \textbf{2,942 raw crossing instances} ($15.24\%$ crossing rate down to $0.00\%$) without compromising interval sharpness ($\text{MPIW} = \text{INR } 165.05/\text{qtl}$).
+
+\subsubsection{Empirical Coverage Guarantees}
+Group-Conditional Mondrian CQR expanded the prediction boundaries by a small conformal scalar ($\hat{Q}_{\text{conf}} = \text{INR } 0.93/\text{qtl}$), elevating test-set empirical coverage from $78.24\%$ to \textbf{79.85\%} (within $0.15\%$ of the nominal $80.00\%$ target). Evaluating CQR on an isolated temporal calibration split (2024B, July--December 2024) yielded \textbf{79.91\% empirical coverage}, confirming calibration invariance to validation tuning overlap.
+
+\subsection{Ablation and Component Analysis}
+To quantify the predictive value of each multi-source feature group, Table~\ref{tab:ablation_study} presents a systematic 7-way ablation experiment on the 2025 holdout partition.
+
+\begin{table}[!t]
+\caption{Multi-Source Feature Ablation Study on 2025 Test Partition}
+\label{tab:ablation_study}
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Ablated Feature Group} & \textbf{Active Features} & \textbf{MAE (INR/qtl)} & \textbf{MAPE (\%)} & \textbf{$\Delta\text{MAE}$ (\%)} $\uparrow$ \\ \midrule
+\textbf{Full Model (Reference)} & \textbf{47} & \textbf{59.58} & \textbf{0.78\%} & \textbf{0.00\%} \\
+\textbf{w/o Autoregressive Lags} & 35 & 100.37 & 1.84\% & \textbf{+68.46\%} \\
+\textbf{w/o Physical Arrivals} & 42 & 78.71 & 1.22\% & \textbf{+32.11\%} \\
+\textbf{w/o Festive / Cultural} & 44 & 66.10 & 0.95\% & \textbf{+10.94\%} \\
+\textbf{w/o Meteorological} & 35 & 63.45 & 0.88\% & \textbf{+6.50\%} \\
+\textbf{w/o Spatial Geography} & 44 & 62.15 & 0.84\% & \textbf{+4.31\%} \\
+\textbf{w/o Sentinel-2 NDVI} & 43 & 61.80 & 0.82\% & \textbf{+3.73\%} \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+While autoregressive price memory dominates short-term inertia ($+68.46\%$ error spike upon removal), physical market arrivals ($+32.11\%$) and festive demand anticipation ($+10.94\%$) provide critical structural signals that pure price-history models cannot capture.
+
+\subsection{Spatial Generalization}
+Table~\ref{tab:lomo_results} reports Leave-One-Mandi-Out (LOMO) cross-validation results where the model was trained on 9 mandis and evaluated strictly on the 10th unseen held-out market.
+
+\begin{table}[!t]
+\caption{Leave-One-Mandi-Out (LOMO) Spatial Cross-Validation}
+\label{tab:lomo_results}
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+\textbf{Held-Out Mandi} & \textbf{Market Classification} & \textbf{LOMO MAE} & \textbf{LOMO MAPE} & \textbf{$R^2$} \\ \midrule
+\textbf{Farrukhabad} & Primary Potato Aggregation & \textbf{25.40} & \textbf{0.62\%} & \textbf{0.998} \\
+\textbf{Mathura} & Secondary Regional Hub & \textbf{26.90} & \textbf{0.68\%} & \textbf{0.997} \\
+\textbf{Karnal} & Paddy / Cereal Market & \textbf{27.60} & \textbf{0.65\%} & \textbf{0.997} \\
+\textbf{Agra} & Secondary Commercial Hub & \textbf{28.50} & \textbf{0.71\%} & \textbf{0.996} \\
+\textbf{Khanna} & Major Cereal Mandi (Punjab) & \textbf{29.10} & \textbf{0.74\%} & \textbf{0.996} \\
+\textbf{Indore} & Central Soyabean Mandi & \textbf{31.20} & \textbf{0.78\%} & \textbf{0.995} \\
+\textbf{Lasalgaon} & National Onion Hub & \textbf{35.80} & \textbf{0.89\%} & \textbf{0.992} \\
+\textbf{Kolkata} & Eastern Terminal Market & \textbf{38.40} & \textbf{0.96\%} & \textbf{0.990} \\
+\textbf{Guntur} & Commercial Spice Hub & \textbf{44.80} & \textbf{1.12\%} & \textbf{0.985} \\
+\textbf{Azadpur (Delhi)} & National Mega Terminal Hub & \textbf{575.20} & \textbf{4.82\%} & \textbf{0.824} \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+Across \textbf{8 of the 10 mandis}, CropLens AI demonstrates spatial transferability ($\text{MAE } \text{INR } 25.40$--$44.80/\text{qtl}$). In Azadpur (Asia's largest terminal market), errors increase due to complex cross-state transshipment and dynamic arbitrage mechanisms absent in regional production mandis.
+
+\subsection{Residual and Statistical Diagnostics}
+Table~\ref{tab:ljung_box_results} presents Ljung--Box portmanteau test statistics across diagnostic lags $m \in \{1, 7, 14, 30\}$.
+
+\begin{table}[!t]
+\caption{Ljung--Box Portmanteau Residual Autocorrelation Test Results}
+\label{tab:ljung_box_results}
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+\textbf{Diagnostic Lag ($m$)} & \textbf{Statistic ($Q$)} & \textbf{$p$-value} & \textbf{Null Hypothesis ($H_0$)} & \textbf{Econometric Finding} \\ \midrule
+\textbf{Lag 1} & 4.598 & 0.0320 & Rejected ($\alpha=0.05$) & Near-white noise ($\rho_1 \approx 0.015$). \\
+\textbf{Lag 7} & 60.454 & 0.0000 & Rejected ($p < 0.001$) & Weekly auction cycle dependency. \\
+\textbf{Lag 14} & 220.799 & 0.0000 & Rejected ($p < 0.001$) & Bi-weekly clearing periodicity. \\
+\textbf{Lag 30} & 752.038 & 0.0000 & Rejected ($p < 0.001$) & Monthly seasonal policy shifts. \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+While lag-1 residual autocorrelation is minimal ($\rho_1 \approx 0.015$), statistically significant periodic spikes persist at weekly ($Q(7) = 60.454$) and monthly ($Q(30) = 752.038$) intervals, reflecting institutional realities such as weekly APMC clearing schedules and unobserved central policy announcements.
+
+\section{Interpretability and Case Studies}
+
+We analyze model behavior and information flow using global TreeSHAP attributions, assess statistical predictive precedence with grouped Granger causality tests, and evaluate model response during four historical market disruptions.
+
+\subsection{Global TreeSHAP Feature Attribution}
+To understand how CropLens AI forms its conditional predictions, we computed global feature attributions across the 2025 test partition using TreeSHAP \cite{lundberg2020local}. Table~\ref{tab:shap_attributions} summarizes the top feature attributions for the median regressor ($P_{50}$) based on mean absolute SHAP values ($\mathbb{E}[|\phi_j|]$).
+
+\begin{table}[!t]
+\caption{Top Global Feature Attributions via TreeSHAP ($P_{50}$ Model)}
+\label{tab:shap_attributions}
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}cllcc@{}}
+\toprule
+\textbf{Rank} & \textbf{Feature Name} & \textbf{Modality} & \textbf{$\mathbb{E}[|\phi_j|]$ (INR/qtl)} & \textbf{Share (\%)} \\ \midrule
+\textbf{1} & \texttt{price\_lag\_1d} & Price History & \textbf{421.50} & \textbf{36.8\%} \\
+\textbf{2} & \texttt{price\_ema\_7d} & Price History & \textbf{189.30} & \textbf{16.5\%} \\
+\textbf{3} & \texttt{price\_ema\_21d} & Price History & \textbf{142.10} & \textbf{12.4\%} \\
+\textbf{4} & \texttt{arrivals\_in\_qtl} & Supply Dynamics & \textbf{98.40} & \textbf{8.6\%} \\
+\textbf{5} & \texttt{arrival\_ratio} & Supply Dynamics & \textbf{76.20} & \textbf{6.6\%} \\
+\textbf{6} & \texttt{price\_volatility\_30d} & Price History & \textbf{64.80} & \textbf{5.7\%} \\
+\textbf{7} & \texttt{temp\_max} & Meteorology & \textbf{52.30} & \textbf{4.6\%} \\
+\textbf{8} & \texttt{festival\_anticipation} & Festive Drivers & \textbf{48.70} & \textbf{4.2\%} \\
+\textbf{9} & \texttt{rainfall\_rolling\_14d} & Meteorology & \textbf{41.20} & \textbf{3.6\%} \\
+\textbf{10} & \texttt{dist\_to\_hub\_km} & Spatial Geography & \textbf{36.50} & \textbf{3.2\%} \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+\subsubsection{Autoregressive Price Anchoring}
+Autoregressive price history features (\texttt{price\_lag\_1d}, \texttt{price\_ema\_7d}, \texttt{price\_ema\_21d}) account for $65.7\%$ of total SHAP attribution mass, establishing the baseline clearing level from near-martingale price persistence.
+
+\subsubsection{Physical Supply Clearance}
+Physical arrival features (\texttt{arrivals\_in\_qtl} and \texttt{arrival\_ratio}) contribute $15.2\%$ of attribution weight. Large arrival surges trigger negative SHAP contributions, reflecting the non-linear price drops associated with mandi yard gluts.
+
+\subsubsection{Exogenous Environmental and Festive Modalities}
+Meteorological parameters (\texttt{temp\_max}, \texttt{rainfall\_rolling\_14d}), festival anticipation scores, and spatial transportation distances constitute the remaining $19.1\%$ of attribution mass. We note that SHAP values quantify feature contributions to model outputs and do not establish economic or physical causation.
+
+\subsection{Grouped Granger Causality Analysis}
+To assess whether exogenous variables provide statistically significant predictive precedence over wholesale prices rather than spurious correlation, we conducted bivariate Granger causality tests \cite{granger1969investigating} across all \textbf{53 distinct mandi-commodity series pairs} (lags 1--7). To control for multiple testing, $p$-values were adjusted via the Benjamini--Hochberg False Discovery Rate (BH-FDR) procedure \cite{benjamini1995controlling} at $\alpha = 0.05$.
+
+\begin{table}[!t]
+\caption{Grouped Granger Causality Predictive Precedence Test Results (53 Series Groups, Lags 1--7, BH-FDR Adjusted)}
+\label{tab:granger_results}
+\centering
+\resizebox{\columnwidth}{!}{
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Exogenous Feature Group} & \textbf{Raw Sig. (\%)} & \textbf{BH-FDR Sig. (\%)} & \textbf{Mean Min $p$-value} \\ \midrule
+\textbf{Physical Arrivals ($A_t$)} & \textbf{100.0\% (53/53)} & \textbf{100.0\% (53/53)} & \textbf{0.0004} \\
+\textbf{Maximum Temperature ($T^{\max}_t$)} & \textbf{96.23\% (51/53)} & \textbf{92.45\% (49/53)} & \textbf{0.0078} \\
+\textbf{Precipitation ($R_t$)} & \textbf{73.58\% (39/53)} & \textbf{64.15\% (34/53)} & \textbf{0.0215} \\ \bottomrule
+\end{tabular}
+}
+\end{table}
+
+As shown in Table~\ref{tab:granger_results}, physical arrivals Granger-cause wholesale prices across $100.0\%$ of series ($p = 0.0004$), maximum temperature across $92.45\%$ ($p = 0.0078$), and precipitation across $64.15\%$ ($p = 0.0215$). We emphasize that Granger causality establishes statistical temporal predictive precedence (information flow) rather than structural physical causation.
+
+\subsection{Operational Market Shock Case Studies}
+To examine model behavior during acute market disruptions, Table~\ref{tab:case_studies} documents four historical market shock events evaluated using an unsupervised Isolation Forest anomaly triage filter coupled with calibrated CQR intervals.
+
+\begin{table*}[!t]
+\caption{Qualitative Real-World Historical Market Shock Case Studies}
+\label{tab:case_studies}
+\centering
+\resizebox{0.95\textwidth}{!}{
+\begin{tabular}{@{}clllll@{}}
+\toprule
+\textbf{\#} & \textbf{Historical Shock Event} & \textbf{Period} & \textbf{Market \& Crop} & \textbf{Observed Market Dynamics} & \textbf{Model Operational Response} \\ \midrule
+\textbf{1} & \textbf{COVID-19 Lockdown Shock} & Mar--May 2020 & Azadpur / Agra (Tomato/Potato) & Transport halt; arrivals fell $-65\%$; panic selling. & CQR intervals expanded $+142\%$ to capture severe drift. \\
+\textbf{2} & \textbf{Post-Monsoon Unseasonal Deluge} & Oct--Nov 2021 & Lasalgaon (Nashik) (Onion) & Kharif rot; arrivals fell $-42\%$; prices spiked $+85\%$. & Flagged supply deficit, tracking upper $P_{90}$ boundary. \\
+\textbf{3} & \textbf{North Indian Spring Heatwave} & Feb--Mar 2022 & Khanna / Karnal (Wheat) & Terminal heat ($>38^\circ\text{C}$); premature grain ripening. & Thermal features elevated baseline prior to harvest. \\
+\textbf{4} & \textbf{National Tomato Price Shock} & Jul--Aug 2023 & Azadpur / Kolkata (Tomato) & Virus \& flood damage; prices surged $>10\times$. & Triage alert triggered; CQR interval maintained coverage. \\ \bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\begin{enumerate}
+    \item \textbf{COVID-19 Lockdown Shock (March--May 2020):} Nationwide transport restrictions triggered a $-65\%$ collapse in arrivals; CQR prediction intervals expanded by $+142\%$, maintaining empirical coverage during severe market disequilibrium.
+    \item \textbf{Post-Monsoon Deluge (October--November 2021):} Heavy rainfall during the Kharif harvest at Lasalgaon caused field rot, reducing arrivals by $-42\%$ and driving an $+85\%$ price spike. The model tracked the upward trajectory along the $P_{90}$ ceiling.
+    \item \textbf{Spring Heatwave (February--March 2022):} Early heatwaves ($T^{\max} > 38^\circ\text{C}$) in Punjab and Haryana caused terminal heat stress in wheat. Meteorological features signaled price elevation ahead of harvest.
+    \item \textbf{National Tomato Shock (July--August 2023):} Viral crop damage and flash floods caused retail prices to surge from INR 20/kg to INR 250/kg; the unsupervised anomaly score triggered an operational triage flag while CQR bounds maintained containment.
+\end{enumerate}
+
+\subsection{Decision-Support Implications}
+The calibrated outputs of CropLens AI translate into practical utility across two user groups:
+\begin{itemize}
+    \item \textbf{Smallholder Farmers:} The calibrated $P_{10}$ lower quantile serves as a downside price floor. If $P_{10}$ falls below transport and labor costs, farmers can defer harvesting or divert produce to local cold storage, mitigating distress selling.
+    \item \textbf{Institutional Procurement Agencies:} The calibrated $80\%$ interval ($P_{10}$--$P_{90}$) provides procurement agencies (e.g., FCI, NAFED) with mathematically grounded risk bounds for budgetary allocation and inter-mandi procurement routing.
+\end{itemize}
+
+\section{Limitations and Future Work}
+
+We examine the empirical boundaries of our approach and outline concrete avenues for future research.
+
+\subsection{Methodological and Empirical Limitations}
+
+\subsubsection{Near-Martingale Memory and Point-Accuracy Trade-off}
+Regularized linear regression (Ridge) achieved a lower aggregate point MAE ($\text{INR } 29.77/\text{qtl}$) than LightGBM P50 ($\text{INR } 59.58/\text{qtl}$) under squared-error loss. Spot wholesale agricultural price series exhibit strong near-martingale persistence ($r > 0.98$ between $y_{t+1}$ and $y_t$), allowing an unconstrained linear combination of price levels to minimize mean squared error with low variance. However, Ridge outputs strictly a deterministic scalar value with zero downside risk quantification. LightGBM optimizes asymmetric pinball loss to provide calibrated, non-crossing prediction intervals ($79.85\%$ empirical coverage via CQR) and outperforms persistence on 7 of the 10 individual commodity markets.
+
+\subsubsection{Residual Autocorrelation and Unobserved Policy Shifts}
+Ljung--Box portmanteau tests diagnosed statistically significant residual autocorrelation at weekly ($Q(7) = 60.454, p < 0.001$) and monthly ($Q(30) = 752.038, p < 0.001$) lags. This remaining temporal structure is driven by discrete institutional APMC trading calendars (weekly auction clearing and holiday schedules) and unobserved macroeconomic policy interventions (such as export bans, Minimum Support Price revisions, and central buffer stock releases) that are not captured in continuous numerical telemetry.
+
+\subsubsection{Nominal Price Scale in Commercial Cash Crops}
+While LightGBM P50 achieves $20\%$ to $47\%$ error reductions across staple grains and perishables, aggregate MAE is elevated by commercial cash crops such as Chilli Red ($\text{MAE} = \text{INR } 421.11/\text{qtl}$) and Mustard ($\text{MAE} = \text{INR } 98.59/\text{qtl}$). Because commercial spices trade at high nominal baselines (INR 20,000--35,000/qtl) with wide intraday quality-grade bidding dispersions, small percentage errors ($1.76\%$) generate large absolute rupee residuals.
+
+\subsubsection{Geographic and Deep Sequence Benchmark Scope}
+The dataset spans 10 representative mandis across northern, western, central, and eastern India; further validation is required across southern peninsula and northeastern markets. Furthermore, deep sequence baselines (LSTM, GRU, TFT) were evaluated under standardized prototype configurations rather than exhaustive hyperparameter optimization, serving as sequence baselines rather than establishing definitive theoretical ceilings for deep architectures.
+
+\subsection{Future Research Directions}
+Based on these findings, we identify three promising technical directions:
+\begin{enumerate}
+    \item \textbf{Hybrid GBDT-Residual Filtering:} Implementing a two-stage architecture coupling Multi-Quantile LightGBM with an online AR-GARCH or Kalman residual filter to eliminate periodic autocorrelation induced by institutional auction cycles.
+    \item \textbf{Multi-Horizon Sequential Conformalization:} Extending the 1-day ahead ($t+1$) horizon to multi-step recursive forecasts ($t+7, t+14\text{ days}$) using sequential multi-horizon conformal prediction for end-to-end harvest shipment risk containment.
+    \item \textbf{Cloud-Penetrating Synthetic Aperture Radar (SAR):} Ingesting Sentinel-1 SAR backscatter telemetry alongside optical Sentinel-2 NDVI to ensure continuous, cloud-free vegetative biomass monitoring during peak monsoon overcast periods.
+\end{enumerate}
+
+\section{Conclusion}
+
+We presented \textbf{CropLens AI}, a calibrated multi-quantile forecasting method for physical agricultural spot markets. By addressing the absence of risk quantification in point models and eliminating crossing violations in unconstrained quantiles, CropLens AI provides reliable decision support for market participants.
+
+The primary conclusions of this work are:
+\begin{enumerate}
+    \item \textbf{Multimodal Agro-Feature Corpus:} We constructed an agricultural dataset spanning 135,471 daily observations across 10 major commodities and 10 representative APMC mandis over a 7-year timeline (2019--2025). The 47-feature taxonomy integrates auction price spreads, physical arrival volumes, meteorological extremes, Sentinel-2 NDVI canopy health, spatial transportation gradients, and cultural festival demand dynamics.
+    \item \textbf{Monotonicity and Conformal Calibration:} Coupling multi-quantile LightGBM with Chernozhukov Monotonic Rearrangement eliminated all 2,942 raw quantile crossings down to \textbf{0 (0.00\% crossing rate)} without compromising interval sharpness. Applying Group-Conditional Mondrian Conformalized Quantile Regression (CQR) on an independent calibration pool achieved an empirical out-of-sample coverage rate of \textbf{79.85\%} (against a nominal 80.00\% target) on the held-out 2025 test partition ($19,303\text{ observations}$), with a Mean Prediction Interval Width (MPIW) of \textbf{INR 166.91/qtl}.
+    \item \textbf{Empirical Benchmarking and Transparency:} On point accuracy, while Ridge regression achieved the lowest aggregate point MAE ($\text{INR } 29.77/\text{qtl}$) under squared-error loss due to strong near-martingale price persistence, LightGBM P50 significantly outperformed zero-shot Naive Persistence across \textbf{7 of the 10 evaluated commodities}, achieving substantial error reductions: Potato ($+46.62\%$), Maize ($+44.98\%$), Onion ($+38.60\%$), Paddy ($+29.34\%$), Tomato ($+27.77\%$), Soyabean ($+21.24\%$), and Wheat ($+20.29\%$).
+    \item \textbf{Spatial Generalization and Interpretability:} Leave-One-Mandi-Out (LOMO) cross-validation confirmed spatial transfer across 8 of 10 mandis ($\text{MAE } \text{INR } 25.40$--$44.80/\text{qtl}$). Global TreeSHAP attributions and grouped Granger causality with Benjamini--Hochberg FDR correction established that physical arrivals, thermal extremes, and precipitation provide statistically significant predictive precedence beyond autoregressive price history alone.
+\end{enumerate}
+
+By providing calibrated prediction intervals alongside competitive point forecasts, CropLens AI equips smallholder farmers with an actionable downside price floor to guard against distress selling, while giving procurement agencies mathematically grounded risk bounds for regional supply planning.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

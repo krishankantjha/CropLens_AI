@@ -1,0 +1,4 @@
+variable,raw_significant_percentage,fdr_adjusted_significant_percentage,avg_min_p_value,total_series_groups
+rainfall_mm,67.92,64.15,0.065,53
+arrivals_in_qtl,100.0,100.0,0.0,53
+temp_max,92.45,92.45,0.0163,53
