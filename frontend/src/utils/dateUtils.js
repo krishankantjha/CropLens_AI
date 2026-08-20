@@ -29,33 +29,3 @@ export function parseLocalDate(dateStr) {
   }
   return new Date(dateStr);
 }
-
-/**
- * Formats a Date object or YYYY-MM-DD string into short weekday name (Mon, Tue, etc.).
- * @param {Date|string} dateInput
- * @param {string} [locale='en-US']
- * @returns {string}
- */
-export function formatWeekday(dateInput, locale = 'en-US') {
-  const d = typeof dateInput === 'string' ? parseLocalDate(dateInput) : dateInput;
-  return d.toLocaleDateString(locale, { weekday: 'short' });
-}
-
-/**
- * Generates dynamic recent historical points for initial fallback state.
- * @param {number} days
- * @returns {Array<{date: string, modal_price: number, arrivals_in_qtl: number}>}
- */
-export function getRecentHistoricalSequence(days = 7) {
-  const list = [];
-  const today = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
-    list.push({
-      date: getTodayDateString(d),
-      modal_price: Math.round(2000 + (7 - i) * 18.5),
-      arrivals_in_qtl: Math.round(1100 + (7 - i) * 25)
-    });
-  }
-  return list;
-}

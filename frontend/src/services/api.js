@@ -4,6 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 45000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -11,7 +12,7 @@ const api = axios.create({
 
 // Attach JWT Authorization header if stored token exists
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('croplens_jwt');
+  const token = localStorage.getItem('croplens_jwt') || sessionStorage.getItem('croplens_jwt');
   if (token && !token.startsWith('demo_jwt_token')) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -44,67 +45,7 @@ export const fetchMeApi = async () => {
   return response.data;
 };
 
-// Multi-Channel WhatsApp & Telegram Alert Service Endpoints
-export const sendWhatsappAdvisoryApi = async (payload) => {
-  const response = await api.post('/api/v1/alerts/send-whatsapp', payload);
-  return response.data;
-};
-
-export const testWhatsappAlertApi = async (payload) => {
-  const response = await api.post('/api/v1/alerts/test-whatsapp', payload);
-  return response.data;
-};
-
-export const subscribeAlertApi = async (payload) => {
-  const response = await api.post('/api/v1/alerts/subscribe', payload);
-  return response.data;
-};
-
-export const fetchSubscriptionsApi = async (mobile_number) => {
-  const query = mobile_number ? `?mobile_number=${encodeURIComponent(mobile_number)}` : '';
-  const response = await api.get(`/api/v1/alerts/subscriptions${query}`);
-  return response.data;
-};
-
-export const deleteSubscriptionApi = async (subscriptionId) => {
-  const response = await api.delete(`/api/v1/alerts/subscriptions/${subscriptionId}`);
-  return response.data;
-};
-
-export const testTelegramAlertApi = async (payload) => {
-  const response = await api.post('/api/v1/alerts/telegram/test', payload);
-  return response.data;
-};
-
-export const fetchTelegramStatusApi = async () => {
-  const response = await api.get('/api/v1/alerts/telegram/status');
-  return response.data;
-};
-
-export const dispatchAlertsNowApi = async () => {
-  const response = await api.post('/api/v1/alerts/dispatch-now');
-  return response.data;
-};
-
-export const fetchAlertLogsApi = async (limit = 20) => {
-  const response = await api.get(`/api/v1/alerts/logs?limit=${limit}`);
-  return response.data;
-};
-
-export const activateAlertsApi = async (payload) => {
-  return subscribeAlertApi(payload);
-};
-
-export const fetchHealthCheck = async () => {
-  try {
-    const response = await api.get('/health');
-    return response.data;
-  } catch (error) {
-    console.error('Health check failed:', error);
-    return null;
-  }
-};
-
+// Core Market Intelligence & Forecasting Endpoints
 export const fetchPricePrediction = async (params) => {
   try {
     const response = await api.post('/api/v1/predict/price', params);
@@ -176,18 +117,6 @@ export const fetchAnalyticsTrends = async (commodity, market, days = 30) => {
     console.error('Analytics trend fetch error:', error);
     throw error;
   }
-};
-
-export const downloadProcurementPdfApi = async (commodity, market) => {
-  const queryParams = new URLSearchParams({
-    commodity: commodity || 'Potato',
-    market: market || 'Agra',
-  });
-
-  const response = await api.get(`/api/v1/procurement/pdf?${queryParams.toString()}`, {
-    responseType: 'blob'
-  });
-  return response;
 };
 
 export default api;
