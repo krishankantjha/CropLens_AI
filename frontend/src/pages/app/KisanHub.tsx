@@ -23,14 +23,30 @@ export default function KisanHub() {
   const [showProof, setShowProof] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
 
-  const loadForecast = useCallback(async () => {
-    const data = await cropLensService.getForecast(cropKey, user.homeMandi);
-    setForecast(data);
-  }, [cropKey, user.homeMandi]);
+  const [signals, setSignals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [forecastData, signalData] = await Promise.all([
+        cropLensService.getForecast(cropKey, user.homeMandi),
+        cropLensService.getMarketSignals(user.primaryCrop, user.homeMandi)
+      ]);
+      setForecast(forecastData);
+      setSignals(signalData);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to communicate with CropLens AI backend.');
+    } finally {
+      setLoading(false);
+    }
+  }, [cropKey, user.homeMandi, user.primaryCrop]);
 
   useEffect(() => {
-    loadForecast();
-  }, [loadForecast]);
+    loadData();
+  }, [loadData]);
 
   const handleRecalculate = async () => {
     setRecalculating(true);
@@ -81,7 +97,9 @@ export default function KisanHub() {
               <Sparkles className="size-5 text-[#176B45]" />
             </div>
             <div className="mt-6">
-              {demoSignals.map((signal, index) => (
+              {loading && <p className="text-xs text-[#66716A]">Analyzing live market indicators...</p>}
+              {error && <p className="text-xs text-rose-700">{error}</p>}
+              {!loading && !error && signals.map((signal, index) => (
                 <SignalRow key={signal.label} signal={signal} active={activeSignal === index} onClick={() => setActiveSignal(activeSignal === index ? null : index)} />
               ))}
             </div>

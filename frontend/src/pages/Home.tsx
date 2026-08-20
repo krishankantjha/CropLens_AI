@@ -6,7 +6,8 @@ import { BrandMark } from "@/components/brand/BrandMark";
 import { DecisionCard, SectionHeading, SignalRow, StatusBadge } from "@/components/landing/LandingPrimitives";
 import { ProductPreview } from "@/components/landing/ProductPreview";
 import { MandiMap } from "@/components/mandi/MandiMap";
-import { demoMandis, demoSignals, demoTicker, decisionCards } from "@/data/demo";
+import { decisionCards } from "@/data/demo";
+import { cropLensService } from "@/services/cropLensService";
 import { useAuth } from "@/contexts/AuthContext";
 
 const money = (value: number) => `₹${value.toLocaleString("en-IN")}`;
@@ -34,11 +35,20 @@ export default function Home() {
   const [currentLang, setCurrentLang] = useState(user?.language || "English");
 
   const isAuthenticated = status === "authenticated" || status === "guest";
+  const [tickerItems, setTickerItems] = useState<any[]>([]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
+    
+    // Fetch live ticker spot prices
+    cropLensService.getTicker().then((items) => {
+      setTickerItems(items);
+    }).catch(() => {
+      setTickerItems([]);
+    });
+
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -221,9 +231,9 @@ export default function Home() {
         </section>
 
         {/* Live APMC Market Ticker */}
-        <section aria-label="Demo market ticker" className="overflow-hidden border-y border-[#DDE4DE] bg-[#0E4D35] py-3.5 text-white">
+        <section aria-label="Live market ticker" className="overflow-hidden border-y border-[#DDE4DE] bg-[#0E4D35] py-3.5 text-white">
           <div className="flex min-w-max ticker-track items-center gap-8">
-            {[...demoTicker, ...demoTicker].map((item, index) => (
+            {(tickerItems.length > 0 ? [...tickerItems, ...tickerItems] : []).map((item, index) => (
               <div key={`${item.market}-${index}`} className="flex items-center gap-3 text-sm">
                 <span className="inline-flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#B8D8C5]">
                   <span className="size-1.5 rounded-full bg-[#B8D8C5]" />APMC Spot
@@ -235,6 +245,9 @@ export default function Home() {
                 </span>
               </div>
             ))}
+            {tickerItems.length === 0 && (
+              <div className="px-4 text-xs text-[#B8D8C5]">Loading live APMC spot market rates...</div>
+            )}
           </div>
         </section>
 
