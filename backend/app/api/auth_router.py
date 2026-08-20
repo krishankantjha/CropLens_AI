@@ -12,7 +12,7 @@ from typing import Optional, Dict, Any, List
 from backend.app.db.database import get_db
 from backend.app.db.models import User
 from backend.app.core.config import ENVIRONMENT
-from backend.app.core.security import hash_password, verify_password, create_access_token, decode_access_token
+from backend.app.core.security import hash_password, verify_password, create_access_token, decode_access_token, create_refresh_token
 from backend.app.core.redis_client import redis_store
 from backend.app.schemas import (
     UserRegisterRequest,
@@ -22,6 +22,7 @@ from backend.app.schemas import (
     UserPreferencesRequest,
     UserResponse,
     TokenResponse,
+    TokenRefreshRequest,
 )
 
 auth_router = APIRouter(prefix="/auth", tags=["Authentication & User Profile"])
@@ -98,9 +99,13 @@ def register_user(payload: UserRegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    token = create_access_token(data={"sub": new_user.mobile_number, "role": new_user.role})
+    token_data = {"sub": new_user.mobile_number, "role": new_user.role}
+    access_token = create_access_token(data=token_data)
+    refresh_token = create_refresh_token(data=token_data)
+    
     return {
-        "access_token": token,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": new_user.to_dict()
     }
@@ -118,9 +123,13 @@ def login_user(payload: UserLoginRequest, db: Session = Depends(get_db)):
             detail="Invalid mobile number or password."
         )
 
-    token = create_access_token(data={"sub": user.mobile_number, "role": user.role})
+    token_data = {"sub": user.mobile_number, "role": user.role}
+    access_token = create_access_token(data=token_data)
+    refresh_token = create_refresh_token(data=token_data)
+    
     return {
-        "access_token": token,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": user.to_dict()
     }
@@ -189,9 +198,42 @@ def verify_otp(payload: UserOTPVerifyRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
-    token = create_access_token(data={"sub": user.mobile_number, "role": user.role})
+    token_data = {"sub": user.mobile_number, "role": user.role}
+    access_token = create_access_token(data=token_data)
+    refresh_token = create_refresh_token(data=token_data)
+    
     return {
-        "access_token": token,
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "user": user.to_dict()
+    }
+
+
+@auth_router.post("/refresh", response_model=TokenResponse)
+def refresh_token(payload: TokenRefreshRequest, db: Session = Depends(get_db)):
+    """Issues new access token using a valid refresh token."""
+    decoded = decode_access_token(payload.refresh_token)
+    if not decoded or decoded.get("type") != "refresh":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
+    
+    mobile_number = decoded.get("sub")
+    user = db.query(User).filter(User.mobile_number == mobile_number).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User no longer exists"
+        )
+        
+    token_data = {"sub": user.mobile_number, "role": user.role}
+    new_access_token = create_access_token(data=token_data)
+    
+    return {
+        "access_token": new_access_token,
+        "refresh_token": payload.refresh_token,
         "token_type": "bearer",
         "user": user.to_dict()
     }

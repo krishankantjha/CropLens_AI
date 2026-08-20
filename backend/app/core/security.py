@@ -9,7 +9,7 @@ from typing import Optional
 import bcrypt
 import jwt
 
-from backend.app.core.config import JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from backend.app.core.config import JWT_SECRET_KEY, JWT_ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
 
 logger = logging.getLogger("croplens.security")
 
@@ -39,7 +39,17 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = now_utc + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
+    encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return encoded_jwt
+
+
+def create_refresh_token(data: dict) -> str:
+    """Generates signed JWT refresh token with longer expiration."""
+    to_encode = data.copy()
+    now_utc = datetime.now(timezone.utc)
+    expire = now_utc + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
     return encoded_jwt
 

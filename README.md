@@ -6,11 +6,34 @@
 
 ## 📌 Project Overview
 
-CropLens AI is an enterprise-grade, production-hardened decision-support platform designed to eliminate price asymmetry across Indian APMC mandis. By fusing open government agricultural records (Agmarknet), meteorological indices (NASA POWER), and vegetative health metrics (Sentinel-2 NDVI), CropLens AI provides farmers, traders, and agricultural cooperatives with probabilistic price forecasts, spatial arbitrage opportunities, and automated supply shock alerts.
+**CropLens AI** is an enterprise-grade, production-hardened decision-support platform engineered to eliminate price asymmetry across Indian Agricultural Produce Market Committee (APMC) mandis. By fusing open government market records (Agmarknet), meteorological indices (NASA POWER), and vegetative health satellite data (Sentinel-2 NDVI), CropLens AI provides farmers, traders, and agricultural cooperatives with probabilistic price forecasts, spatial arbitrage opportunities, and automated supply shock alerts.
 
 ---
 
-## 🏗 System Architecture & Technology Stack
+## 🎯 Problem Statement & Solution
+
+### The Challenge
+Indian agricultural markets suffer from severe information asymmetry. Farmers frequently experience distress selling during harvest gluts due to a lack of forward-looking price visibility, while traders and cooperatives lack real-time visibility into regional arrival shocks and transport cost gradients across mandis.
+
+### The CropLens AI Solution
+CropLens AI bridges this gap through an end-to-end intelligence pipeline:
+1. **Multimodal Data Ingestion:** Automated synchronization of daily market data, NASA POWER indices, and Sentinel-2 NDVI metrics.
+2. **Canonical Feature Engineering:** Unified transformation logic ensuring training/inference consistency across 47 agricultural features.
+3. **Probabilistic Price Forecasting:** LightGBM quantile regression models estimating $P_{10}$ floors, $P_{50}$ medians, and $P_{90}$ ceilings.
+4. **Model Registry:** Versioned model management allowing configuration-driven deployment of LightGBM and anomaly detection artifacts.
+5. **Spatial Arbitrage & Supply Shock Detection:** Real-time cross-mandi profit calculations and Isolation Forest anomaly flagging.
+
+---
+
+## 👥 Target Users
+
+* **Farmers:** Receive daily actionable advisories ("Wait 3 days", "Sell now at Azadpur Mandi") and probabilistic price outlooks to maximize harvest revenue.
+* **Traders & Cooperatives:** Access spatial arbitrage matrices, supply shock alert feeds, and automated procurement PDF reports.
+* **Agricultural Analysts:** Utilize reproducible research notebooks, SHAP explainability models, and rigorous evaluation metrics (MAE, RMSE, Pinball Loss, Winkler Score).
+
+---
+
+## 🏗 System Architecture
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -20,7 +43,7 @@ CropLens AI is an enterprise-grade, production-hardened decision-support platfor
                                     │
                                     ▼
                   ┌───────────────────────────────────┐
-                  │    FastAPI BACKEND (Python)       │
+                  │    FastAPI BACKEND (Python 3.12)  │
                   │    REST API / SQLAlchemy / Redis  │
                   └─────────────────┬─────────────────┘
                                     │
@@ -32,70 +55,100 @@ CropLens AI is an enterprise-grade, production-hardened decision-support platfor
 └──────────────────┘       └──────────────────┘       └──────────────────┘
 ```
 
-### Verified Technology Inventory
+---
 
-| Layer | Technology | Purpose |
-| :--- | :--- | :--- |
-| **Frontend** | React 19, Vite, TypeScript, Tailwind CSS v4, Wouter, Radix UI | Responsive Single Page Application (SPA) with multi-language support. |
-| **Backend** | FastAPI, Python 3.12, SQLAlchemy, Alembic | High-performance asynchronous REST API with database migrations. |
-| **Database & Cache** | SQLite (Local/Dev) / PostgreSQL (Production), Redis | Relational data persistence, OTP session storage, and distributed rate limiting. |
-| **Machine Learning** | LightGBM, Scikit-learn, PyTorch, Joblib | Quantile regression price forecasting ($P_{10}$, $P_{50}$, $P_{90}$) and Isolation Forest anomaly detection. |
-| **DevOps & Testing** | Docker, Nginx, Pytest, Playwright | Containerized deployment, structured JSON logging, and E2E test suites. |
+## 🛠 Complete Technology Inventory
+
+| Layer | Technology | Version | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Frontend** | React, Vite, TypeScript, Tailwind CSS, Wouter, Radix UI | React 19 / Vite 7 | Responsive, accessible Single Page Application (SPA). |
+| **Backend** | FastAPI, Python, SQLAlchemy, Alembic | FastAPI 0.115 / SQLAlchemy 2.0 | High-performance asynchronous REST API with database migrations. |
+| **Database & Cache** | SQLite / PostgreSQL, Redis | Redis 5.0+ | Relational persistence, OTP session storage, distributed rate limiting, and refresh token rotation. |
+| **Machine Learning** | LightGBM, Scikit-learn, PyTorch, Joblib | LightGBM 4.7 | Quantile regression price forecasting and Isolation Forest anomaly detection. |
+| **DevOps & Testing** | Docker, Nginx, Pytest, Playwright | Pytest 8.3 / Playwright 1.50 | Containerization, structured JSON logging, and E2E test suites. |
 
 ---
 
-## 🚀 Key Features & Modules
+## 🚀 Complete Feature Inventory
 
-1. **Authentication & Security:** Mobile OTP passwordless login and registration backed by Redis TTL sessions and distributed sliding-window rate limiting.
-2. **Kisan Hub Dashboard:** Real-time commodity price tracking, weather impact summaries, 7-day price trajectory outlooks, and market-shift simulation.
-3. **Mandi Workspace (Spatial Arbitrage):** Dynamic freight and net-profit calculation across regional APMC mandis with instant PDF report generation.
-4. **Supply Shock & Alert Feed:** Automated anomaly detection flagging sudden volume gluts or price drops.
-5. **Internationalization:** Full multi-language support across 9 regional Indian languages (Hindi, Marathi, Kannada, Telugu, Tamil, Gujarati, Bengali, Punjabi, English).
+| Feature | Module | Backend Endpoint | Frontend Page / Component | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Mobile OTP Auth** | Authentication | `/api/v1/auth/otp/*` | `Login.tsx`, `Verify.tsx` | Fully Implemented |
+| **Onboarding Wizard** | Onboarding | `/api/v1/auth/preferences` | `Onboarding.tsx` | Fully Implemented |
+| **Kisan Hub Dashboard** | Advisory | `/api/v1/predict/forecast-7d` | `KisanHub.tsx` | Fully Implemented |
+| **Mandi Arbitrage** | Procurement | `/api/v1/procurement/arbitrage` | `MandiWorkspace.tsx` | Fully Implemented |
+| **PDF Procurement Reports**| Reporting | `/api/v1/procurement/pdf` | `MandiWorkspace.tsx` | Fully Implemented |
+| **Supply Shock Alerts** | Alerts | `/api/v1/predict/shocks` | `AlertsPage.tsx` | Fully Implemented |
+| **Regional Localization** | i18n | N/A (Client-side) | `translations.ts` (9 Languages) | Fully Implemented |
+| **Automated Sync** | Scheduler | `/api/v1/system/trigger-sync` | APScheduler Background Worker | Fully Implemented |
+
+---
+
+## 📡 Core API Reference
+
+### Authentication & User Management
+* `POST /api/v1/auth/otp/send` — Dispatches 6-digit verification code to mobile number.
+* `POST /api/v1/auth/otp/verify` — Validates OTP, consumes code, and issues JWT Access + Refresh tokens.
+* `POST /api/v1/auth/refresh` — Rotates access tokens using a valid refresh token.
+* `GET /api/v1/auth/me` — Returns authenticated user profile and preferences.
+
+### Forecasting & Analytics
+* `POST /api/v1/predict/forecast-7d` — Generates 7-day quantile price forecasts ($P_{10}$, $P_{50}$, $P_{90}$) and actionable recommendations.
+* `GET /api/v1/predict/analytics-trends` — Retrieves 30-day price trends, volatility metrics, and arrival volume statistics.
+
+### Procurement & Arbitrage
+* `GET /api/v1/procurement/arbitrage` — Computes cross-mandi net revenue and transport cost differentials.
+* `GET /api/v1/procurement/pdf` — Generates professional downloadable PDF procurement reports.
 
 ---
 
 ## 🛠 Setup & Installation Guide
+
+### Prerequisites
+* Python 3.12+
+* Node.js 22+ & npm/pnpm
+* Redis (Optional: falls back to in-memory store if unconfigured)
 
 ### 1. Backend Setup (FastAPI)
 ```bash
 # Navigate to backend directory
 cd backend
 
-# Install Python dependencies
+# Install dependencies
 pip install -r requirements.txt
 
 # Run database migrations
 alembic upgrade head
 
-# Start FastAPI development server
+# Start FastAPI server
 python app/main.py
 ```
 * API Base URL: `http://localhost:8000`
-* Interactive API Documentation (Swagger): `http://localhost:8000/docs` (Enabled in development mode)
+* Interactive API Documentation (Swagger): `http://localhost:8000/docs`
 
 ### 2. Frontend Setup (React SPA)
 ```bash
 # Navigate to frontend directory
 cd frontend
 
-# Install Node dependencies
+# Install dependencies
 npm install
 
 # Start Vite development server
 npm run dev
 ```
-* Frontend Local URL: `http://localhost:5173`
+* Local App URL: `http://localhost:5173`
 
 ---
 
-## 🧪 Running Automated Tests
+## 🧪 Automated Testing
 
-* **Backend Tests (`pytest`):**
+* **Backend Unit & Integration Tests (`pytest`):**
   ```bash
   cd backend
   pytest
   ```
-* **Frontend E2E Tests (`Playwright`):**
+* **Frontend End-to-End Tests (`Playwright`):**
   ```bash
   cd frontend
   npx playwright test

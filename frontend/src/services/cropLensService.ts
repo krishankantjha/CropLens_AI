@@ -23,6 +23,40 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Response interceptor for proactive token refresh
+apiClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If error is 401 and we haven't tried to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      const refreshToken = localStorage.getItem('croplens_refresh_token');
+      
+      if (refreshToken) {
+        try {
+          const res = await axios.post(`${API_BASE}/auth/refresh`, { refresh_token: refreshToken });
+          if (res.status === 200 || res.status === 201) {
+            const { access_token } = res.data;
+            localStorage.setItem('croplens_jwt', access_token);
+            apiClient.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+            originalRequest.headers['Authorization'] = `Bearer ${access_token}`;
+            return apiClient(originalRequest);
+          }
+        } catch (refreshError) {
+          // Refresh failed, clear tokens and redirect to login
+          localStorage.removeItem('croplens_jwt');
+          localStorage.removeItem('croplens_refresh_token');
+          window.location.href = '/login';
+          return Promise.reject(refreshError);
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const cropLensService = {
   // Authentication & OTP Methods
   async sendOtp(mobile: string): Promise<{ success: boolean; message: string }> {
@@ -36,6 +70,9 @@ export const cropLensService = {
     const res = await apiClient.post('/auth/otp/verify', { mobile_number: cleanMobile, otp_code: otp });
     if (res.data?.access_token) {
       localStorage.setItem('croplens_jwt', res.data.access_token);
+      if (res.data.refresh_token) {
+        localStorage.setItem('croplens_refresh_token', res.data.refresh_token);
+      }
     }
     return { success: true, token: res.data?.access_token, user: res.data?.user };
   },
@@ -48,6 +85,9 @@ export const cropLensService = {
     const res = await apiClient.post('/auth/register', payload);
     if (res.data?.access_token) {
       localStorage.setItem('croplens_jwt', res.data.access_token);
+      if (res.data.refresh_token) {
+        localStorage.setItem('croplens_refresh_token', res.data.refresh_token);
+      }
     }
     return { success: true, token: res.data?.access_token };
   },
