@@ -10,7 +10,7 @@ import { getLoginUrl } from "@/const";
 export default function Login() {
   const [, setLocation] = useLocation();
   const { login, continueAsGuest } = useAuth();
-  const [mobile, setMobile] = useState("9876543210");
+  const [mobile, setMobile] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

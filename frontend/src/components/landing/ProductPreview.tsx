@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronDown, Leaf, Sparkles, TriangleAlert } from "lucide-react";
 import { useState } from "react";
-import { demoForecasts } from "@/data/demo";
-import type { CropKey } from "@/types/demo";
+import { useEffect } from "react";
+import { cropLensService } from "@/services/cropLensService";
+import type { CropKey, CropForecast } from "@/types/demo";
 
 const crops: Array<{ key: CropKey; label: string; color: string }> = [
   { key: "potato", label: "Potato", color: "#C48B4A" },
@@ -15,7 +16,22 @@ const money = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 export function ProductPreview() {
   const [activeCrop, setActiveCrop] = useState<CropKey>("potato");
   const [showTechnical, setShowTechnical] = useState(false);
-  const forecast = demoForecasts[activeCrop];
+  const [forecast, setForecast] = useState<CropForecast | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    cropLensService.getForecast(activeCrop, "Agra").then((data) => {
+      if (mounted) {
+        setForecast(data);
+        setLoading(false);
+      }
+    }).catch(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => { mounted = false; };
+  }, [activeCrop]);
 
   return (
     <div className="product-shell relative overflow-hidden rounded-[28px] border border-[#DDE4DE] bg-white shadow-[0_26px_80px_rgba(23,107,69,0.16)]">
@@ -60,48 +76,57 @@ export function ProductPreview() {
           transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
           className="relative px-5 pb-5 pt-5 sm:px-6"
         >
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-sm font-bold text-[#0E4D35]">
-                <Leaf className="size-4 text-[#176B45]" />
-                {forecast.name} · {forecast.market}
-              </div>
-              <p className="mt-1 text-xs text-[#66716A]">{forecast.variety}</p>
+          {loading || !forecast ? (
+            <div className="py-16 text-center">
+              <div className="mx-auto size-8 rounded-full border-2 border-[#176B45] border-t-transparent animate-spin" />
+              <p className="mt-3 text-xs font-bold text-[#66716A]">Fetching live 7-day model forecast...</p>
             </div>
-            <div className="text-right">
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#66716A]">Today</p>
-              <motion.p key={forecast.today} initial={{ opacity: 0.3 }} animate={{ opacity: 1 }} className="mt-0.5 text-[30px] font-extrabold leading-none tracking-[-0.05em] text-[#17201B]">
-                {money(forecast.today)}
-              </motion.p>
-              <p className="mt-1 text-[11px] text-[#66716A]">per quintal</p>
-            </div>
-          </div>
-
-          <div className="mt-6 rounded-2xl bg-[#F8F7F2] p-4">
-            <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#66716A]">
-              <span>7-day price outlook</span>
-              <span className="rounded-full bg-white px-2.5 py-1 text-[#176B45] font-extrabold">Forecast Model</span>
-            </div>
-            <div className="relative mt-5 grid grid-cols-3 gap-2">
-              <div className="absolute left-[9%] right-[9%] top-[27px] h-px bg-[#B8D8C5]" aria-hidden="true" />
-              {forecast.outlook.map((point) => (
-                <div key={point.day} className="relative z-10 text-center">
-                  <div className={`mx-auto grid size-3 place-items-center rounded-full border-[3px] border-[#F8F7F2] ${point.recommended ? "bg-[#176B45] ring-4 ring-[#D1E6D9]" : "bg-[#9DBDA8]"}`} aria-hidden="true" />
-                  <p className="mt-3 text-[11px] font-bold text-[#66716A]">{point.label}{point.recommended ? " · peak" : ""}</p>
-                  <p className={`mt-1 text-sm font-extrabold ${point.recommended ? "text-[#176B45]" : "text-[#17201B]"}`}>{money(point.price)}</p>
+          ) : (
+            <>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-bold text-[#0E4D35]">
+                    <Leaf className="size-4 text-[#176B45]" />
+                    {forecast.name} · {forecast.market}
+                  </div>
+                  <p className="mt-1 text-xs text-[#66716A]">{forecast.variety}</p>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#66716A]">Today</p>
+                  <motion.p key={forecast.today} initial={{ opacity: 0.3 }} animate={{ opacity: 1 }} className="mt-0.5 text-[30px] font-extrabold leading-none tracking-[-0.05em] text-[#17201B]">
+                    {money(forecast.today)}
+                  </motion.p>
+                  <p className="mt-1 text-[11px] text-[#66716A]">per quintal</p>
+                </div>
+              </div>
 
-          <div className={`mt-4 flex items-start gap-3 rounded-2xl border px-4 py-3 ${forecast.recommendationTone === "caution" ? "border-[#F0D9B0] bg-[#FFF8E8]" : "border-[#CBE3D3] bg-[#F1F8F3]"}`}>
-            {forecast.recommendationTone === "caution" ? <TriangleAlert className="mt-0.5 size-4 shrink-0 text-[#D99A21]" /> : <Check className="mt-0.5 size-4 shrink-0 text-[#176B45]" />}
-            <div>
-              <p className="text-sm font-extrabold text-[#17201B]">{forecast.recommendation}</p>
-              <p className="mt-1 text-xs text-[#66716A]">{forecast.potentialUpside >= 0 ? `Potential upside: +${money(forecast.potentialUpside)}/qtl` : `Projected downside risk: ${money(Math.abs(forecast.potentialUpside))}/qtl`}</p>
-            </div>
-            <Sparkles className="ml-auto size-4 shrink-0 text-[#9DBDA8]" />
-          </div>
+              <div className="mt-6 rounded-2xl bg-[#F8F7F2] p-4">
+                <div className="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#66716A]">
+                  <span>7-day price outlook</span>
+                  <span className="rounded-full bg-white px-2.5 py-1 text-[#176B45] font-extrabold">LightGBM Model</span>
+                </div>
+                <div className="relative mt-5 grid grid-cols-3 gap-2">
+                  <div className="absolute left-[9%] right-[9%] top-[27px] h-px bg-[#B8D8C5]" aria-hidden="true" />
+                  {forecast.outlook.slice(0, 3).map((point) => (
+                    <div key={point.day} className="relative z-10 text-center">
+                      <div className={`mx-auto grid size-3 place-items-center rounded-full border-[3px] border-[#F8F7F2] ${point.recommended ? "bg-[#176B45] ring-4 ring-[#D1E6D9]" : "bg-[#9DBDA8]"}`} aria-hidden="true" />
+                      <p className="mt-3 text-[11px] font-bold text-[#66716A]">{point.label}{point.recommended ? " · peak" : ""}</p>
+                      <p className={`mt-1 text-sm font-extrabold ${point.recommended ? "text-[#176B45]" : "text-[#17201B]"}`}>{money(point.price)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className={`mt-4 flex items-start gap-3 rounded-2xl border px-4 py-3 ${forecast.recommendationTone === "caution" ? "border-[#F0D9B0] bg-[#FFF8E8]" : "border-[#CBE3D3] bg-[#F1F8F3]"}`}>
+                {forecast.recommendationTone === "caution" ? <TriangleAlert className="mt-0.5 size-4 shrink-0 text-[#D99A21]" /> : <Check className="mt-0.5 size-4 shrink-0 text-[#176B45]" />}
+                <div>
+                  <p className="text-sm font-extrabold text-[#17201B]">{forecast.recommendation}</p>
+                  <p className="mt-1 text-xs text-[#66716A]">{forecast.potentialUpside >= 0 ? `Potential upside: +${money(forecast.potentialUpside)}/qtl` : `Projected downside risk: ${money(Math.abs(forecast.potentialUpside))}/qtl`}</p>
+                </div>
+                <Sparkles className="ml-auto size-4 shrink-0 text-[#9DBDA8]" />
+              </div>
+            </>
+          )}
 
           <button type="button" onClick={() => setShowTechnical((value) => !value)} aria-expanded={showTechnical} className="mt-4 flex w-full items-center justify-between border-t border-[#EDF0EB] pt-4 text-left text-xs font-bold text-[#176B45] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#176B45] focus-visible:ring-offset-4 cursor-pointer">
             <span>Technical details →</span>

@@ -11,28 +11,28 @@ const navItems = [
   { label: "Profile", href: "/profile", icon: User },
 ];
 
-const CROPS = [
-  { id: "Potato", label: "🥔 Potato" },
-  { id: "Onion", label: "🧅 Onion" },
-  { id: "Tomato", label: "🍅 Tomato" },
-];
-
-const MANDIS = [
-  "Agra",
-  "Mathura",
-  "Azadpur",
-  "Lasalgaon",
-  "Indore",
-  "Khanna",
-  "Farrukhabad",
-  "Karnal",
-  "Guntur",
-  "Kolkata"
-];
+import { useState, useEffect } from "react";
+import { cropLensService } from "@/services/cropLensService";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { status, user, logout, updateProfile } = useAuth();
+  const [crops, setCrops] = useState<Array<{ id: string; label: string; variety: string }>>([
+    { id: "Potato", label: "🥔 Potato", variety: "Desi" },
+    { id: "Onion", label: "🧅 Onion", variety: "Red/Nashik" },
+    { id: "Tomato", label: "🍅 Tomato", variety: "Hybrid" }
+  ]);
+  const [mandis, setMandis] = useState<string[]>([
+    "Agra", "Khanna", "Azadpur", "Mathura", "Lasalgaon", 
+    "Karnal", "Indore", "Farrukhabad", "Guntur", "Kolkata"
+  ]);
+
+  useEffect(() => {
+    cropLensService.getResources().then((res) => {
+      if (res && res.commodities) setCrops(res.commodities);
+      if (res && res.mandis) setMandis(res.mandis);
+    }).catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F8F7F2] pb-[calc(6rem+env(safe-area-inset-bottom))] text-[#17201B] lg:pb-0 font-['Manrope']">
@@ -48,7 +48,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               className="bg-transparent text-xs font-black text-[#0E4D35] outline-none cursor-pointer"
               aria-label="Select Commodity"
             >
-              {CROPS.map((c) => (
+              {crops.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.label}
                 </option>
@@ -63,7 +63,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
               className="bg-transparent text-xs font-black text-[#0E4D35] outline-none cursor-pointer"
               aria-label="Select Mandi"
             >
-              {MANDIS.map((m) => (
+              {mandis.map((m) => (
                 <option key={m} value={m}>
                   📍 {m} Mandi
                 </option>

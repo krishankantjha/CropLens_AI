@@ -114,6 +114,35 @@ def get_7day_forecast(
 
 
 @api_router.get(
+    "/system/resources",
+    status_code=status.HTTP_200_OK,
+    summary="Get Supported Commodities and Mandis",
+    description="Returns the complete 10x10 catalog of supported agricultural commodities and APMC mandi hubs.",
+    tags=["System Operations"]
+)
+def get_system_resources() -> dict:
+    return {
+        "status": "success",
+        "commodities": [
+            {"id": "Potato", "label": "🥔 Potato", "variety": "Desi"},
+            {"id": "Onion", "label": "🧅 Onion", "variety": "Red/Nashik"},
+            {"id": "Tomato", "label": "🍅 Tomato", "variety": "Hybrid"},
+            {"id": "Wheat", "label": "🌾 Wheat", "variety": "Dara/Sharbati"},
+            {"id": "Paddy(Dhan)", "label": "🌾 Paddy (Dhan)", "variety": "Basmati/Common"},
+            {"id": "Maize", "label": "🌽 Maize", "variety": "Yellow"},
+            {"id": "Soyabean", "label": "🌱 Soyabean", "variety": "Yellow"},
+            {"id": "Mustard", "label": "🌻 Mustard", "variety": "Black/Yellow"},
+            {"id": "Gram(Chana)", "label": "🥜 Gram (Chana)", "variety": "Desi"},
+            {"id": "Chilli Red", "label": "🌶️ Chilli Red", "variety": "Teja/Guntur"}
+        ],
+        "mandis": [
+            "Agra", "Khanna", "Azadpur", "Mathura", "Lasalgaon", 
+            "Karnal", "Indore", "Farrukhabad", "Guntur", "Kolkata"
+        ]
+    }
+
+
+@api_router.get(
     "/system/scheduler-status",
     status_code=status.HTTP_200_OK,
     summary="APScheduler Background Jobs & Cache Status",

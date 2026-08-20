@@ -158,6 +158,11 @@ export const cropLensService = {
     return decisionCards;
   },
 
+  async getResources(): Promise<{ commodities: Array<{ id: string; label: string; variety: string }>; mandis: string[] }> {
+    const res = await apiClient.get('/system/resources');
+    return res.data;
+  },
+
   async recalculateAdvisory(_user: UserProfile): Promise<{ recommendation: string; tone: 'favorable' | 'caution' }> {
     return { recommendation: 'Watch market closely due to regional arrivals shift', tone: 'caution' };
   },
