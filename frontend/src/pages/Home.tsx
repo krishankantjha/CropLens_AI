@@ -36,6 +36,8 @@ export default function Home() {
 
   const isAuthenticated = status === "authenticated" || status === "guest";
   const [tickerItems, setTickerItems] = useState<any[]>([]);
+  const [signals, setSignals] = useState<any[]>([]);
+  const [mandis, setMandis] = useState<any[]>([]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -48,6 +50,10 @@ export default function Home() {
     }).catch(() => {
       setTickerItems([]);
     });
+
+    // Fetch dynamic signals and mandis for landing page preview
+    cropLensService.getMarketSignals("Potato", "Agra").then(setSignals).catch(() => setSignals([]));
+    cropLensService.getMandis("Potato", "Agra").then(setMandis).catch(() => setMandis([]));
 
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -381,9 +387,11 @@ export default function Home() {
                   <Sparkles className="size-5 text-[#176B45]" />
                 </div>
                 <div className="mt-5">
-                  {demoSignals.map((signal, index) => (
+                  {signals.length > 0 ? signals.map((signal, index) => (
                     <SignalRow key={signal.label} signal={signal} active={activeSignal === index} onClick={() => setActiveSignal(activeSignal === index ? -1 : index)} />
-                  ))}
+                  )) : (
+                    <p className="text-xs text-[#66716A]">Loading live market signals...</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -422,7 +430,7 @@ export default function Home() {
                       </tr>
                     </thead>
                     <tbody>
-                      {demoMandis.map((mandi) => (
+                      {mandis.length > 0 ? mandis.map((mandi) => (
                         <tr key={mandi.name} className="border-t border-white/10">
                           <td className="px-4 py-4 font-extrabold">
                             {mandi.name}
@@ -433,12 +441,14 @@ export default function Home() {
                           <td className="px-4 py-4 text-[#C5D9CA]">{money(mandi.transport)}</td>
                           <td className="px-4 py-4 font-extrabold text-[#B8D8C5]">{money(mandi.net)}</td>
                         </tr>
-                      ))}
+                      )) : (
+                        <tr><td colSpan={5} className="px-4 py-8 text-center text-xs text-[#C5D9CA]">Loading live mandi data...</td></tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
                 <div className="grid gap-3 sm:hidden">
-                  {demoMandis.map((mandi) => (
+                  {mandis.length > 0 ? mandis.map((mandi) => (
                     <div key={mandi.name} className="rounded-2xl border border-white/10 bg-white/[.06] p-4">
                       <div className="flex items-center justify-between">
                         <span className="font-extrabold">{mandi.name}</span>
@@ -448,10 +458,12 @@ export default function Home() {
                         <span>{mandi.distance}<b className="mt-1 block text-sm text-white">Distance</b></span>
                         <span>{money(mandi.rate)}<b className="mt-1 block text-sm text-white">Rate</b></span>
                         <span>{money(mandi.transport)}<b className="mt-1 block text-sm text-white">Transport</b></span>
-                        <span>{money(mandi.net)}<b className="mt-1 block text-sm text-[#B8D8C5]">Net money</b></span>
+                        <span className="col-span-2 border-t border-white/10 pt-3 font-extrabold text-[#B8D8C5]">{money(mandi.net)}<b className="mt-1 block text-[10px] font-bold uppercase tracking-[.1em] text-[#C5D9CA]">Estimated net realization</b></span>
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <p className="text-center text-xs text-[#C5D9CA]">Loading live mandi data...</p>
+                  )}
                 </div>
                 <p className="mt-4 text-[11px] font-semibold text-[#9DBDA8]">APMC mandi comparison after deducting distance-adjusted freight logistics.</p>
               </div>
