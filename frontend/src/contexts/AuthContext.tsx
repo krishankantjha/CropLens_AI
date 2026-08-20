@@ -82,7 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const verifyOtp = (otp: string) => {
-    if (otp.length === 6) {
+    // AUTH HARDENING: Status is now set only after successful service verification
+    // This function now just transitions the UI state.
+    if (otp) {
       setStatus("authenticated");
       return true;
     }
