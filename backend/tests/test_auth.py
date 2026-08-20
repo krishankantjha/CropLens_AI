@@ -84,7 +84,7 @@ def test_otp_flow():
     # Send OTP
     send_res = client.post("/api/v1/auth/otp/send", json={"mobile_number": test_mobile})
     assert send_res.status_code == 200
-    assert "demo_otp" in send_res.json()
+    assert "expires_in_seconds" in send_res.json()
 
     # Verify OTP
     verify_res = client.post("/api/v1/auth/otp/verify", json={
