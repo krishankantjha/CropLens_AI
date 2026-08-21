@@ -17,8 +17,8 @@ export default function KisanHub() {
   const { user, weather, marketChanged, simulateMarketChange, recalculate } = useAuth();
   const copy = getTranslation(user.language);
   const cropKey = (user.primaryCrop.toLowerCase() || 'potato') as CropKey;
-  const [forecast, setForecast] = useState<CropForecast>(() => demoForecasts[cropKey] ?? demoForecasts.potato);
-  const bestMandi = demoMandis.find((mandi) => mandi.featured) ?? demoMandis[0];
+  const [forecast, setForecast] = useState<CropForecast | null>(null);
+  const [bestMandi, setBestMandi] = useState<any | null>(null);
   const [activeSignal, setActiveSignal] = useState<number | null>(0);
   const [showProof, setShowProof] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
@@ -31,12 +31,16 @@ export default function KisanHub() {
     try {
       setLoading(true);
       setError(null);
-      const [forecastData, signalData] = await Promise.all([
+      const [forecastData, signalData, mandiData] = await Promise.all([
         cropLensService.getForecast(cropKey, user.homeMandi),
-        cropLensService.getMarketSignals(user.primaryCrop, user.homeMandi)
+        cropLensService.getMarketSignals(user.primaryCrop, user.homeMandi),
+        cropLensService.getMandis(user.primaryCrop, user.homeMandi)
       ]);
       setForecast(forecastData);
       setSignals(signalData);
+      if (mandiData && mandiData.length > 0) {
+        setBestMandi(mandiData[0]);
+      }
     } catch (err: any) {
       setError(err?.message || 'Failed to communicate with CropLens AI backend.');
     } finally {
@@ -50,7 +54,7 @@ export default function KisanHub() {
 
   const handleRecalculate = async () => {
     setRecalculating(true);
-    await loadForecast();
+    await loadData();
     recalculate();
     setRecalculating(false);
   };

@@ -20,8 +20,8 @@ interface AuthContextType {
 }
 
 const defaultUser: UserProfile = {
-  name: "Rajesh Kumar",
-  mobile: "+91 98765 43210",
+  name: "Guest Farmer",
+  mobile: "Not logged in",
   language: "English",
   homeMandi: "Agra",
   primaryCrop: "Potato",
@@ -74,11 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [status, user]);
 
   const login = (mobile: string) => {
-    setUser((prev) => ({ ...prev, mobile: mobile.startsWith("+91") ? mobile : `+91 ${mobile}` }));
+    const cleanMobile = mobile.startsWith("+91") ? mobile : `+91 ${mobile}`;
+    setUser((prev) => ({ ...prev, mobile: cleanMobile, name: `Farmer (${cleanMobile.slice(-4)})` }));
   };
 
   const signup = (mobile: string) => {
-    setUser((prev) => ({ ...prev, mobile: mobile.startsWith("+91") ? mobile : `+91 ${mobile}` }));
+    const cleanMobile = mobile.startsWith("+91") ? mobile : `+91 ${mobile}`;
+    setUser((prev) => ({ ...prev, mobile: cleanMobile, name: `Farmer (${cleanMobile.slice(-4)})` }));
   };
 
   const verifyOtp = (otp: string) => {

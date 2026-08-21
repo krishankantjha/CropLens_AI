@@ -28,10 +28,18 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   ]);
 
   useEffect(() => {
-    cropLensService.getResources().then((res) => {
-      if (res && res.commodities) setCrops(res.commodities);
-      if (res && res.mandis) setMandis(res.mandis);
-    }).catch(() => {});
+    let isMounted = true;
+    cropLensService.getResources()
+      .then((res) => {
+        if (isMounted && res) {
+          if (res.commodities && res.commodities.length > 0) setCrops(res.commodities);
+          if (res.mandis && res.mandis.length > 0) setMandis(res.mandis);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load dynamic resources:", err);
+      });
+    return () => { isMounted = false; };
   }, []);
 
   return (

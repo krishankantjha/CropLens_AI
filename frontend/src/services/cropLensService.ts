@@ -146,10 +146,10 @@ export const cropLensService = {
 
     return res.data.opportunities.map((r) => ({
       name: r.destination_market,
-      distance: 'N/A',
+      distance: 'Calculating...',
       rate: r.destination_price,
-      transport: 0,
-      net: r.destination_price * 50,
+      transport: Math.abs(r.gross_price_difference),
+      net: r.destination_price * 50, // Default to 50qtl if not provided
       x: 0,
       y: 0,
       featured: r.gross_price_difference > 200,
@@ -160,7 +160,7 @@ export const cropLensService = {
   async getMarketSignals(crop = 'Potato', market = 'Agra'): Promise<MarketSignal[]> {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const res = await apiClient.get('/predict/analytics-trends', {
+      const res = await apiClient.get('/analytics/trends', {
         params: { commodity: crop, market, days: 30 }
       });
       const data = res.data;

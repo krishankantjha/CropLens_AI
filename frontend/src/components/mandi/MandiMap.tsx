@@ -5,9 +5,14 @@ import { demoMandis } from "@/data/demo";
 
 const money = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 
-export function MandiMap() {
-  const [selectedName, setSelectedName] = useState("Mathura");
-  const selected = demoMandis.find((mandi) => mandi.name === selectedName) ?? demoMandis[1];
+interface MandiMapProps {
+  mandis?: any[];
+  userMandi?: string;
+}
+
+export function MandiMap({ mandis = demoMandis, userMandi = "Agra" }: MandiMapProps) {
+  const [selectedName, setSelectedName] = useState(mandis[0]?.name || "Agra");
+  const selected = mandis.find((mandi) => mandi.name === selectedName) ?? mandis[0] ?? demoMandis[0];
 
   return (
     <div className="overflow-hidden rounded-[24px] border border-[#DDE4DE] bg-white paper-shadow">
@@ -21,16 +26,21 @@ export function MandiMap() {
         <div className="absolute left-[9%] top-[73%] -translate-x-1/2 -translate-y-1/2">
           <span className="map-pulse absolute inset-0 rounded-full bg-[#176B45]/25" aria-hidden="true" />
           <span className="relative grid size-9 place-items-center rounded-full border-4 border-white bg-[#176B45] text-white shadow-lg"><Navigation className="size-4 fill-current" /></span>
-          <span className="absolute left-1/2 top-11 -translate-x-1/2 whitespace-nowrap rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-[#0E4D35] shadow-sm">You · Agra</span>
+          <span className="absolute left-1/2 top-11 -translate-x-1/2 whitespace-nowrap rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-extrabold text-[#0E4D35] shadow-sm">You · {userMandi}</span>
         </div>
-        {demoMandis.map((mandi) => (
-          <button key={mandi.name} type="button" aria-label={`Select ${mandi.name} mandi`} onClick={() => setSelectedName(mandi.name)} className={`absolute -translate-x-1/2 -translate-y-1/2 transition-transform duration-200 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#176B45] focus-visible:ring-offset-2 ${selectedName === mandi.name ? "z-10" : "z-[1]"}`} style={{ left: `${mandi.x}%`, top: `${mandi.y}%` }}>
-            <span className={`grid size-9 place-items-center rounded-full border-4 border-white shadow-md ${selectedName === mandi.name ? "bg-[#D99A21] text-white" : "bg-white text-[#176B45]"}`}>
-              {mandi.featured ? <Star className="size-4 fill-current" /> : <MapPin className="size-4" />}
-            </span>
-            <span className={`mt-1 block whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-extrabold shadow-sm ${selectedName === mandi.name ? "bg-[#0E4D35] text-white" : "bg-white/90 text-[#0E4D35]"}`}>{mandi.name}</span>
-          </button>
-        ))}
+        {mandis.map((mandi, idx) => {
+          const xPos = mandi.x || (50 + 30 * Math.cos(2 * Math.PI * idx / mandis.length));
+          const yPos = mandi.y || (50 + 30 * Math.sin(2 * Math.PI * idx / mandis.length));
+          
+          return (
+            <button key={mandi.name} type="button" aria-label={`Select ${mandi.name} mandi`} onClick={() => setSelectedName(mandi.name)} className={`absolute -translate-x-1/2 -translate-y-1/2 transition-transform duration-200 hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#176B45] focus-visible:ring-offset-2 ${selectedName === mandi.name ? "z-10" : "z-[1]"}`} style={{ left: `${xPos}%`, top: `${yPos}%` }}>
+              <span className={`grid size-9 place-items-center rounded-full border-4 border-white shadow-md ${selectedName === mandi.name ? "bg-[#D99A21] text-white" : "bg-white text-[#176B45]"}`}>
+                {mandi.featured ? <Star className="size-4 fill-current" /> : <MapPin className="size-4" />}
+              </span>
+              <span className={`mt-1 block whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-extrabold shadow-sm ${selectedName === mandi.name ? "bg-[#0E4D35] text-white" : "bg-white/90 text-[#0E4D35]"}`}>{mandi.name}</span>
+            </button>
+          );
+        })}
         <div className="absolute left-4 top-4 rounded-xl border border-white/70 bg-white/75 px-3 py-2 text-[10px] font-extrabold text-[#0E4D35] backdrop-blur-sm">Interactive APMC Route Map</div>
       </div>
       <div className="grid gap-4 border-t border-[#EDF0EB] p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6">

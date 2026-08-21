@@ -8,8 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { getTranslation } from "@/i18n/translations";
 
 const languages = ["English", "हिन्दी", "मराठी", "ಕನ್ನಡ", "తెలుగు", "தமிழ்", "ગુજરાતી", "বাংলা", "ਪੰਜਾਬੀ"];
-const mandis = ["Agra", "Mathura", "Azadpur", "Lasalgaon", "Indore", "Khanna"];
-const crops = [
+// Fallback resources if dynamic loading fails
+const DEFAULT_MANDIS = ["Agra", "Mathura", "Azadpur", "Lasalgaon", "Indore", "Khanna"];
+const DEFAULT_CROPS = [
   { label: "Potato", icon: "🥔", variety: "Table potato" },
   { label: "Onion", icon: "🧅", variety: "Red onion" },
   { label: "Tomato", icon: "🍅", variety: "Hybrid tomato" },
@@ -28,6 +29,24 @@ export default function Onboarding() {
   const [storage, setStorage] = useState(user.storage);
   const [loading, setLoading] = useState(false);
   const copy = getTranslation(lang);
+
+  const [dynamicMandis, setDynamicMandis] = useState<string[]>(DEFAULT_MANDIS);
+  const [dynamicCrops, setDynamicCrops] = useState<any[]>(DEFAULT_CROPS);
+
+  useEffect(() => {
+    cropLensService.getResources().then((res) => {
+      if (res) {
+        if (res.mandis && res.mandis.length > 0) setDynamicMandis(res.mandis);
+        if (res.commodities && res.commodities.length > 0) {
+          setDynamicCrops(res.commodities.map(c => ({
+            label: c.id,
+            icon: c.label.split(' ')[0],
+            variety: c.variety
+          })));
+        }
+      }
+    }).catch(err => console.error("Onboarding resource load failed:", err));
+  }, []);
 
   const handleFinish = () => {
     updateProfile({ language: lang, homeMandi: mandi, primaryCrop: crop, quantity: qty, storage: storage });
@@ -87,7 +106,7 @@ export default function Onboarding() {
                 <h1 className="mt-2 text-2xl font-extrabold tracking-[-.04em] text-[#0E4D35] sm:text-3xl">Where is your home mandi?</h1>
                 <p className="mt-2 text-sm text-[#66716A]">This is your primary baseline for price forecasts and transport comparison.</p>
                 <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {mandis.map((m) => (
+                  {dynamicMandis.map((m) => (
                     <button key={m} type="button" onClick={() => setMandi(m)} className={`flex items-center justify-between rounded-2xl border p-4 text-left font-bold transition-all ${mandi === m ? "border-[#176B45] bg-[#E8F4ED] text-[#0E4D35]" : "border-[#DDE4DE] bg-white text-[#17201B] hover:border-[#9DBDA8]"}`}>
                       <span>{m}</span>{mandi === m && <Check className="size-4 text-[#176B45]" />}
                     </button>
@@ -102,7 +121,7 @@ export default function Onboarding() {
                 <h1 className="mt-2 text-2xl font-extrabold tracking-[-.04em] text-[#0E4D35] sm:text-3xl">What crop do you usually sell?</h1>
                 <p className="mt-2 text-sm text-[#66716A]">Select your main harvest for signature decision tracking.</p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                  {crops.map((c) => (
+                  {dynamicCrops.map((c) => (
                     <button key={c.label} type="button" onClick={() => setCrop(c.label)} className={`flex flex-col items-center justify-between rounded-2xl border p-5 text-center transition-all ${crop === c.label ? "border-[#176B45] bg-[#E8F4ED] text-[#0E4D35]" : "border-[#DDE4DE] bg-white text-[#17201B] hover:border-[#9DBDA8]"}`}>
                       <span className="text-3xl">{c.icon}</span>
                       <span className="mt-3 font-extrabold">{c.label}</span>

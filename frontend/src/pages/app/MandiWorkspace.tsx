@@ -129,7 +129,7 @@ export default function MandiWorkspace() {
           </div>
 
           <div>
-            <MandiMap />
+            <MandiMap mandis={mandis} userMandi={user.homeMandi} />
           </div>
         </div>
       </div>
