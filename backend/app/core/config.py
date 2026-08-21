@@ -5,6 +5,10 @@ import from this file instead of calling os.getenv() directly.
 """
 
 import os
+import warnings
+from requests.exceptions import RequestsDependencyWarning
+warnings.simplefilter('ignore', RequestsDependencyWarning)
+
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env file if present
@@ -57,7 +61,7 @@ AGMARKNET_API_PAGE_SIZE: int = min(
 )
 AGMARKNET_MAX_PAGES: int = max(int(os.getenv("AGMARKNET_MAX_PAGES", "10")), 1)
 AGMARKNET_TIMEOUT_SECONDS: int = max(
-    int(os.getenv("AGMARKNET_TIMEOUT_SECONDS", "20")),
+    int(os.getenv("AGMARKNET_TIMEOUT_SECONDS", "40")),
     5,
 )
 NASA_POWER_TIMEOUT_SECONDS: int = max(
