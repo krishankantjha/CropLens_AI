@@ -1,69 +1,248 @@
 """
-agmarknet_sync.py — Government Agmarknet Mandi Live Sync Service
-Syncs daily wholesale prices and arrival volumes from Agmarknet API into SQLite DB.
+Agmarknet/Data.gov.in live mandi-price ingestion.
+
+The connector intentionally does not fabricate market prices. A valid
+AGMARKNET_API_KEY must be supplied through the environment. When the upstream
+service is unavailable or not configured, the sync reports that state and
+leaves the last known persisted data untouched.
 """
 
-import sqlite3
-import datetime
-import os
-from backend.app.core.constants import VALID_COMMODITIES as ALLOWED_COMMODITIES, VALID_MARKETS as ALLOWED_MANDIS
+import datetime as dt
+import logging
+from typing import Any, Dict, Optional
 
-DB_PATH = os.path.join("backend", "app", "croplens.db")
+import pandas as pd
+import requests
+from sqlalchemy.orm import Session
 
-def init_db():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS mandi_prices (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            commodity TEXT NOT NULL,
-            market TEXT NOT NULL,
-            modal_price REAL NOT NULL,
-            arrivals_in_qtl REAL NOT NULL,
-            date TEXT NOT NULL
+from backend.app.core.config import (
+    AGMARKNET_API_KEY,
+    AGMARKNET_API_PAGE_SIZE,
+    AGMARKNET_MAX_PAGES,
+    AGMARKNET_TIMEOUT_SECONDS,
+)
+from backend.app.core.constants import VALID_COMMODITIES, VALID_MARKETS
+from backend.app.db.database import SessionLocal
+from backend.app.db.models import MarketData
+
+logger = logging.getLogger("croplens.agmarknet")
+
+AGMARKNET_RESOURCE_ID = "9ef84268-d588-465a-a308-a864a43d0070"
+AGMARKNET_API_URL = f"https://api.data.gov.in/resource/{AGMARKNET_RESOURCE_ID}"
+
+# Backwards-compatible names used by the scheduler.
+ALLOWED_COMMODITIES = VALID_COMMODITIES
+ALLOWED_MANDIS = VALID_MARKETS
+
+
+def _normalise(value: Any) -> str:
+    return " ".join(str(value or "").strip().lower().split())
+
+
+def _field(record: Dict[str, Any], *names: str) -> Any:
+    """Return a field while tolerating capitalization and whitespace changes."""
+    lookup = {_normalise(key): value for key, value in record.items()}
+    for name in names:
+        value = lookup.get(_normalise(name))
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _to_float(value: Any) -> Optional[float]:
+    if value in (None, ""):
+        return None
+    try:
+        parsed = float(str(value).replace(",", "").strip())
+        return parsed if parsed >= 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _to_iso_date(value: Any) -> Optional[str]:
+    if value in (None, ""):
+        return None
+    parsed = pd.to_datetime(str(value).strip(), dayfirst=True, errors="coerce")
+    return None if pd.isna(parsed) else parsed.date().isoformat()
+
+
+def _fetch_live_records() -> tuple[list[Dict[str, Any]], Dict[str, Any]]:
+    """Fetch current records with bounded pagination from the official OGD API."""
+    api_key = AGMARKNET_API_KEY
+    if not api_key:
+        return [], {
+            "status": "not_configured",
+            "message": "Set AGMARKNET_API_KEY to enable live Agmarknet ingestion.",
+        }
+
+    records: list[Dict[str, Any]] = []
+    try:
+        # Query once per supported commodity so the first API page cannot hide
+        # a mandi that happens to sort later in the national result set.
+        for commodity in VALID_COMMODITIES:
+            for page in range(AGMARKNET_MAX_PAGES):
+                response = requests.get(
+                    AGMARKNET_API_URL,
+                    params={
+                        "api-key": api_key,
+                        "format": "json",
+                        "filters[commodity]": commodity,
+                        "offset": page * AGMARKNET_API_PAGE_SIZE,
+                        "limit": AGMARKNET_API_PAGE_SIZE,
+                    },
+                    timeout=AGMARKNET_TIMEOUT_SECONDS,
+                )
+                if response.status_code != 200:
+                    return [], {
+                        "status": "upstream_error",
+                        "http_status": response.status_code,
+                        "message": f"Data.gov.in returned HTTP {response.status_code} for {commodity}.",
+                    }
+
+                payload = response.json()
+                page_records = payload.get("records", []) if isinstance(payload, dict) else []
+                if not isinstance(page_records, list):
+                    return [], {
+                        "status": "upstream_error",
+                        "message": "Data.gov.in response did not contain a records list.",
+                    }
+                records.extend(page_records)
+                if len(page_records) < AGMARKNET_API_PAGE_SIZE:
+                    break
+
+        return records, {"status": "success", "raw_records": len(records)}
+    except (requests.RequestException, ValueError) as exc:
+        logger.warning("Agmarknet API request failed: %s", exc)
+        return [], {"status": "upstream_error", "message": str(exc)}
+
+
+def sync_live_agmarknet_prices(db: Optional[Session] = None) -> Dict[str, Any]:
+    """Fetch, validate, and upsert current Agmarknet records into ``market_data``."""
+    owns_session = db is None
+    db = db or SessionLocal()
+
+    try:
+        records, fetch_status = _fetch_live_records()
+        if fetch_status["status"] != "success":
+            logger.warning("Agmarknet sync skipped: %s", fetch_status)
+            return {"status": fetch_status["status"], "records_synced": 0, **fetch_status}
+
+        commodity_lookup = {_normalise(value): value for value in VALID_COMMODITIES}
+        market_lookup = {_normalise(value): value for value in VALID_MARKETS}
+        accepted: Dict[tuple[str, str, str], Dict[str, Any]] = {}
+        rejected = 0
+
+        for record in records:
+            commodity = commodity_lookup.get(_normalise(_field(record, "commodity")))
+            market = market_lookup.get(_normalise(_field(record, "market")))
+            date_value = _to_iso_date(
+                _field(record, "arrival_date", "arrival date", "date")
+            )
+            modal_price = _to_float(
+                _field(record, "modal_price", "modal price", "modal")
+            )
+            arrivals = _to_float(
+                _field(
+                    record,
+                    "arrivals_in_qtl",
+                    "arrival_in_qtl",
+                    "arrivals in qtl",
+                    "arrival in qtl",
+                    "arrival in quintal",
+                    "arrival",
+                )
+            )
+            min_price = _to_float(_field(record, "min_price", "min price"))
+            max_price = _to_float(_field(record, "max_price", "max price"))
+
+            if not commodity or not market or not date_value or modal_price is None:
+                rejected += 1
+                continue
+
+            accepted[(commodity, market, date_value)] = {
+                "commodity": commodity,
+                "market": market,
+                "modal_price": modal_price,
+                "arrivals_in_qtl": arrivals if arrivals is not None else 0.0,
+                "date": date_value,
+                "state": _field(record, "state", "state name"),
+                "district": _field(record, "district", "district name"),
+                "variety": _field(record, "variety"),
+                "grade": _field(record, "grade"),
+                "min_price": min_price,
+                "max_price": max_price,
+            }
+
+        if not accepted:
+            return {
+                "status": "empty",
+                "records_synced": 0,
+                "raw_records": len(records),
+                "rejected_records": rejected,
+                "message": "No API records matched the configured commodity/market contract.",
+            }
+
+        for item in accepted.values():
+            existing = (
+                db.query(MarketData)
+                .filter(
+                    MarketData.commodity == item["commodity"],
+                    MarketData.market == item["market"],
+                    MarketData.date == item["date"],
+                )
+                .first()
+            )
+            if existing:
+                for field in (
+                    "modal_price",
+                    "arrivals_in_qtl",
+                    "state",
+                    "district",
+                    "variety",
+                    "grade",
+                    "min_price",
+                    "max_price",
+                ):
+                    value = item.get(field)
+                    if value is not None:
+                        setattr(existing, field, value)
+            else:
+                db.add(MarketData(**item))
+
+        db.commit()
+        synced_at = dt.datetime.now(dt.timezone.utc).isoformat()
+        logger.info(
+            "Agmarknet sync completed: %s records upserted, %s rejected",
+            len(accepted),
+            rejected,
         )
-    """)
-    conn.commit()
-    conn.close()
+        return {
+            "status": "success",
+            "records_synced": len(accepted),
+            "raw_records": len(records),
+            "rejected_records": rejected,
+            "synced_at": synced_at,
+        }
+    except Exception as exc:
+        db.rollback()
+        logger.exception("Agmarknet sync failed")
+        return {"status": "error", "records_synced": 0, "message": str(exc)}
+    finally:
+        if owns_session:
+            db.close()
 
-def sync_live_agmarknet_prices():
-    init_db()
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-
-    today_str = datetime.date.today().isoformat()
-
-    # Live sync batch covering all 10 commodities across active regional trading hubs
-    sample_sync_records = [
-        ("Potato", "Agra", 1480.0, 1420.0, today_str),
-        ("Onion", "Lasalgaon", 2250.0, 3100.0, today_str),
-        ("Tomato", "Azadpur", 2420.0, 1850.0, today_str),
-        ("Wheat", "Khanna", 2180.0, 4500.0, today_str),
-        ("Paddy(Dhan)", "Karnal", 2120.0, 3800.0, today_str),
-        ("Maize", "Farrukhabad", 1890.0, 1200.0, today_str),
-        ("Soyabean", "Indore", 4650.0, 2100.0, today_str),
-        ("Mustard", "Mathura", 5350.0, 1600.0, today_str),
-        ("Gram(Chana)", "Indore", 5280.0, 1400.0, today_str),
-        ("Chilli Red", "Guntur", 16800.0, 850.0, today_str)
-    ]
-
-    # Whitelist Guard: Only insert verified 10 commodities and 10 mandis
-    valid_records = [
-        r for r in sample_sync_records 
-        if r[0] in ALLOWED_COMMODITIES and r[1] in ALLOWED_MANDIS
-    ]
-
-    cursor.executemany("""
-        INSERT INTO mandi_prices (commodity, market, modal_price, arrivals_in_qtl, date)
-        VALUES (?, ?, ?, ?, ?)
-    """, valid_records)
-
-    conn.commit()
-    conn.close()
-    return {"status": "success", "records_synced": len(valid_records), "synced_at": today_str}
 
 if __name__ == "__main__":
-    res = sync_live_agmarknet_prices()
-    print("Agmarknet Live Sync Result:", res)
+    logging.basicConfig(level=logging.INFO)
+    print(sync_live_agmarknet_prices())
 
+
+__all__ = [
+    "AGMARKNET_API_URL",
+    "ALLOWED_COMMODITIES",
+    "ALLOWED_MANDIS",
+    "sync_live_agmarknet_prices",
+]
+
+
+# End of module.

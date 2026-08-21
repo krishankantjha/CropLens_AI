@@ -31,7 +31,27 @@ CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "")
 GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
 
 # --- Database ---
-DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./croplens.db")
+BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+DATABASE_URL: str = os.getenv(
+    "DATABASE_URL",
+    f"sqlite:///{os.path.join(BACKEND_DIR, 'app', 'croplens.db')}",
+)
 
 # --- Redis ---
 REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+# --- Live data providers ---
+AGMARKNET_API_KEY: str = os.getenv("AGMARKNET_API_KEY", "").strip()
+AGMARKNET_API_PAGE_SIZE: int = min(
+    max(int(os.getenv("AGMARKNET_API_PAGE_SIZE", "1000")), 1),
+    1000,
+)
+AGMARKNET_MAX_PAGES: int = max(int(os.getenv("AGMARKNET_MAX_PAGES", "10")), 1)
+AGMARKNET_TIMEOUT_SECONDS: int = max(
+    int(os.getenv("AGMARKNET_TIMEOUT_SECONDS", "20")),
+    5,
+)
+NASA_POWER_TIMEOUT_SECONDS: int = max(
+    int(os.getenv("NASA_POWER_TIMEOUT_SECONDS", "20")),
+    5,
+)
