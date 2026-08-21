@@ -30,6 +30,7 @@ from backend.app.services.pdf_generator import generate_procurement_pdf
 
 from backend.app.api.auth_router import auth_router, get_current_user
 from backend.app.api.alerts_router import alerts_router
+from backend.app.core.constants import VALID_COMMODITIES, VALID_MARKETS
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_router)
@@ -117,28 +118,33 @@ def get_7day_forecast(
     "/system/resources",
     status_code=status.HTTP_200_OK,
     summary="Get Supported Commodities and Mandis",
-    description="Returns the complete 10x10 catalog of supported agricultural commodities and APMC mandi hubs.",
+    description="Returns the complete catalog of supported agricultural commodities and APMC mandi hubs dynamically.",
     tags=["System Operations"]
 )
 def get_system_resources() -> dict:
+    # Mapping icons and varieties for a professional UI experience
+    RESOURCE_METADATA = {
+        "Potato": {"label": "🥔 Potato", "variety": "Desi"},
+        "Onion": {"label": "🧅 Onion", "variety": "Red/Nashik"},
+        "Tomato": {"label": "🍅 Tomato", "variety": "Hybrid"},
+        "Wheat": {"label": "🌾 Wheat", "variety": "Dara/Sharbati"},
+        "Paddy(Dhan)": {"label": "🌾 Paddy (Dhan)", "variety": "Basmati/Common"},
+        "Maize": {"label": "🌽 Maize", "variety": "Yellow"},
+        "Soyabean": {"label": "🌱 Soyabean", "variety": "Yellow"},
+        "Mustard": {"label": "🌻 Mustard", "variety": "Black/Yellow"},
+        "Gram(Chana)": {"label": "🥜 Gram (Chana)", "variety": "Desi"},
+        "Chilli Red": {"label": "🌶️ Chilli Red", "variety": "Teja/Guntur"}
+    }
+    
+    commodities = []
+    for c in VALID_COMMODITIES:
+        meta = RESOURCE_METADATA.get(c, {"label": c, "variety": "Common"})
+        commodities.append({"id": c, "label": meta["label"], "variety": meta["variety"]})
+        
     return {
         "status": "success",
-        "commodities": [
-            {"id": "Potato", "label": "🥔 Potato", "variety": "Desi"},
-            {"id": "Onion", "label": "🧅 Onion", "variety": "Red/Nashik"},
-            {"id": "Tomato", "label": "🍅 Tomato", "variety": "Hybrid"},
-            {"id": "Wheat", "label": "🌾 Wheat", "variety": "Dara/Sharbati"},
-            {"id": "Paddy(Dhan)", "label": "🌾 Paddy (Dhan)", "variety": "Basmati/Common"},
-            {"id": "Maize", "label": "🌽 Maize", "variety": "Yellow"},
-            {"id": "Soyabean", "label": "🌱 Soyabean", "variety": "Yellow"},
-            {"id": "Mustard", "label": "🌻 Mustard", "variety": "Black/Yellow"},
-            {"id": "Gram(Chana)", "label": "🥜 Gram (Chana)", "variety": "Desi"},
-            {"id": "Chilli Red", "label": "🌶️ Chilli Red", "variety": "Teja/Guntur"}
-        ],
-        "mandis": [
-            "Agra", "Khanna", "Azadpur", "Mathura", "Lasalgaon", 
-            "Karnal", "Indore", "Farrukhabad", "Guntur", "Kolkata"
-        ]
+        "commodities": commodities,
+        "mandis": VALID_MARKETS
     }
 
 

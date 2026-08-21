@@ -15,68 +15,7 @@ from backend.app.schemas import (
     ArbitrageResponse, ArbitrageOpportunityItem,
     AnalyticsTrendResponse, TrendPoint
 )
-
-
-def get_feature_vector(
-    req: PricePredictionRequest,
-    dataset: pd.DataFrame,
-    feature_cols: List[str]
-) -> tuple[pd.DataFrame, str]:
-    """
-    Extracts and prepares a single-row feature DataFrame matching the exact 47 features required by Phase 3 ML models.
-    Resolves historical context from master dataset and applies optional user overrides.
-    """
-    # Filter dataset for commodity and market
-    matched = dataset[(dataset['commodity'].str.lower() == req.commodity.lower()) & 
-                      (dataset['market'].str.lower() == req.market.lower())].copy()
-    if matched.empty:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No historical market records found for commodity '{req.commodity}' in market '{req.market}'."
-        )
-
-    matched = matched.sort_values('date')
-
-    # Date resolution
-    if req.date:
-        matched['date_str'] = matched['date'].dt.strftime('%Y-%m-%d')
-        exact = matched[matched['date_str'] == req.date]
-        if not exact.empty:
-            target_row = exact.iloc[-1].copy()
-            forecast_date = req.date
-        else:
-            # Fallback to latest row and update calendar date features for requested future date
-            target_row = matched.iloc[-1].copy()
-            forecast_date = req.date
-            try:
-                dt_val = pd.to_datetime(req.date)
-                target_row['sin_month'] = float(np.sin(2 * np.pi * dt_val.month / 12.0))
-                target_row['cos_month'] = float(np.cos(2 * np.pi * dt_val.month / 12.0))
-                target_row['sin_dow'] = float(np.sin(2 * np.pi * dt_val.dayofweek / 7.0))
-                target_row['cos_dow'] = float(np.cos(2 * np.pi * dt_val.dayofweek / 7.0))
-            except Exception:
-                pass
-    else:
-        target_row = matched.iloc[-1].copy()
-        forecast_date = target_row['date'].strftime('%Y-%m-%d')
-
-    # Apply user feature overrides if supplied
-    if req.arrivals_in_qtl is not None:
-        target_row['arrivals_in_qtl'] = float(req.arrivals_in_qtl)
-    if req.rainfall_mm is not None:
-        target_row['rainfall_mm'] = float(req.rainfall_mm)
-    if req.temp_max is not None:
-        target_row['temp_max'] = float(req.temp_max)
-
-    # Construct single-row DataFrame with exact feature columns in order
-    X_single = pd.DataFrame([target_row[feature_cols].to_dict()], columns=feature_cols)
-
-    # Impute missing values with commodity-specific median first, then global dataset median
-    comm_median = matched[feature_cols].median(numeric_only=True)
-    global_median = dataset[feature_cols].median(numeric_only=True)
-    X_single = X_single.fillna(comm_median).fillna(global_median).fillna(0.0)
-
-    return X_single, forecast_date
+from backend.app.services.data_resolver import DataResolver
 
 
 def predict_price_service(
@@ -93,7 +32,19 @@ def predict_price_service(
             detail="Model metadata missing required 'feature_cols' definition."
         )
 
-    X_input, forecast_date = get_feature_vector(req, dataset, feature_cols)
+    overrides = {
+        'arrivals_in_qtl': req.arrivals_in_qtl,
+        'rainfall_mm': req.rainfall_mm,
+        'temp_max': req.temp_max
+    }
+    X_input, forecast_date = DataResolver.resolve_feature_vector(
+        commodity=req.commodity,
+        market=req.market,
+        dataset=dataset,
+        feature_cols=feature_cols,
+        target_date=req.date,
+        overrides={k: v for k, v in overrides.items() if v is not None}
+    )
 
     # Run pre-loaded models
     raw_p10 = float(models['p10'].predict(X_input)[0])
@@ -138,15 +89,7 @@ def predict_7day_forecast_service(
         )
 
     # Filter historical dataset for commodity and market
-    matched = dataset[(dataset['commodity'].str.lower() == req.commodity.lower()) & 
-                      (dataset['market'].str.lower() == req.market.lower())].copy()
-    if matched.empty:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No historical market records found for commodity '{req.commodity}' in market '{req.market}'."
-        )
-
-    matched = matched.sort_values('date')
+    matched = DataResolver.get_market_data(dataset, req.commodity, req.market)
 
     # Resolve reference date
     if req.start_date:
@@ -324,11 +267,14 @@ def detect_supply_shocks_service(
     dataset: pd.DataFrame
 ) -> SupplyShockResponse:
     """Uses Isolation Forest to detect potential supply shock anomalies across recent mandi records."""
-    df = dataset.copy()
-    if commodity:
-        df = df[df['commodity'].str.title() == commodity.strip().title()]
-    if market:
-        df = df[df['market'].str.title() == market.strip().title()]
+    if commodity and market:
+        df = DataResolver.get_market_data(dataset, commodity, market)
+    else:
+        df = dataset.copy()
+        if commodity:
+            df = df[df['commodity'].str.title() == commodity.strip().title()]
+        if market:
+            df = df[df['market'].str.title() == market.strip().title()]
 
     if df.empty:
         raise HTTPException(
@@ -403,6 +349,9 @@ def calculate_arbitrage_service(
     """Calculates spatial wholesale mandi price gradients to identify potential selling market opportunities."""
     c_title = commodity.strip().title()
     m_title = base_market.strip().title()
+
+    # Ensure base market data exists
+    DataResolver.get_market_data(dataset, commodity, base_market)
 
     df = dataset[dataset['commodity'] == c_title].copy()
     if df.empty:
@@ -482,12 +431,7 @@ def get_analytics_trends_service(
     c_title = commodity.strip().title()
     m_title = market.strip().title()
 
-    df = dataset[(dataset['commodity'] == c_title) & (dataset['market'] == m_title)].copy()
-    if df.empty:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No dataset records found for commodity '{c_title}' in market '{m_title}'."
-        )
+    df = DataResolver.get_market_data(dataset, commodity, market)
 
     df = df.sort_values('date').tail(days)
 
