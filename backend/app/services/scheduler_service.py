@@ -241,11 +241,15 @@ def _calendar_values(date_value: pd.Timestamp, commodity: str) -> Dict[str, Any]
 def _build_live_rows(
     market_rows: List[MarketData],
     weather_rows: List[WeatherData],
+    ndvi_rows: List[Any],
     dataset: pd.DataFrame,
 ) -> pd.DataFrame:
     """Enrich persisted upstream records with the canonical raw-data contract."""
     weather_lookup = {
         (row.market, row.date): row for row in weather_rows
+    }
+    ndvi_lookup = {
+        (row.market, row.date): row.ndvi_mean for row in ndvi_rows
     }
     output: List[Dict[str, Any]] = []
 
@@ -291,7 +295,9 @@ def _build_live_rows(
             enriched["temp_max"] = _first_present(reference.get("temp_max"), 30.0)
             enriched["temp_min"] = _first_present(reference.get("temp_min"), 20.0)
             enriched["rainfall_mm"] = _first_present(reference.get("rainfall_mm"), 0.0)
-        enriched["ndvi_mean"] = _first_present(enriched.get("ndvi_mean"), reference.get("ndvi_mean"), 0.5)
+        
+        live_ndvi = ndvi_lookup.get((row.market, row.date))
+        enriched["ndvi_mean"] = _first_present(live_ndvi, reference.get("ndvi_mean"), 0.5)
         output.append(enriched)
 
     if not output:
@@ -307,9 +313,12 @@ def refresh_application_dataset(app: Any) -> Dict[str, Any]:
 
     db = SessionLocal()
     try:
+        from backend.app.db.ndvi_model import NdviData
+
         market_rows = db.query(MarketData).all()
         weather_rows = db.query(WeatherData).all()
-        live_rows = _build_live_rows(market_rows, weather_rows, current_dataset)
+        ndvi_rows = db.query(NdviData).all()
+        live_rows = _build_live_rows(market_rows, weather_rows, ndvi_rows, current_dataset)
         if live_rows.empty:
             return {"status": "skipped", "reason": "No persisted live market rows"}
 
@@ -381,6 +390,25 @@ async def scheduled_nasa_weather_sync() -> None:
         print(f"[Scheduler Error] NASA weather sync failed: {exc}")
 
 
+async def scheduled_ndvi_sync() -> None:
+    """Daily job for Sentinel-2 NDVI observations at supported mandi coordinates."""
+    try:
+        from backend.app.services.sentinel_hub_sync import fetch_live_ndvi
+
+        results = [
+            fetch_live_ndvi(market=market)
+            for market in MANDI_COORDINATES
+        ]
+        if _app_instance is not None and any(
+            result.get("status") == "success" for result in results
+        ):
+            refresh_application_dataset(_app_instance)
+        successful = sum(result.get("status") == "success" for result in results)
+        print(f"[Scheduler] Sentinel Hub NDVI sync completed for {successful} mandis.")
+    except Exception as exc:
+        print(f"[Scheduler Error] NDVI sync failed: {exc}")
+
+
 async def scheduled_cache_warming() -> None:
     """Daily job for warming forecasts from the latest serving dataset."""
     if _app_instance is not None:
@@ -423,6 +451,15 @@ def init_scheduler(app: Any) -> AsyncIOScheduler:
         trigger=CronTrigger(hour=18, minute=30),
         id="daily_weather_sync",
         name="Daily NASA POWER Meteorological Ingestion",
+        replace_existing=True,
+        coalesce=True,
+        max_instances=1,
+    )
+    scheduler.add_job(
+        scheduled_ndvi_sync,
+        trigger=CronTrigger(hour=18, minute=15),
+        id="daily_ndvi_sync",
+        name="Daily Sentinel-2 NDVI Remote Sensing Ingestion",
         replace_existing=True,
         coalesce=True,
         max_instances=1,
@@ -491,9 +528,15 @@ def trigger_manual_sync(app: Any) -> Dict[str, Any]:
     """Run both upstream syncs, refresh serving state, and warm caches."""
     db = SessionLocal()
     try:
+        from backend.app.services.sentinel_hub_sync import fetch_live_ndvi
+
         market_result = sync_live_agmarknet_prices(db=db)
         weather_results = [
             fetch_live_nasa_weather(market=market, days=7, db=db)
+            for market in MANDI_COORDINATES
+        ]
+        ndvi_results = [
+            fetch_live_ndvi(market=market, db=db)
             for market in MANDI_COORDINATES
         ]
         refresh_result = refresh_application_dataset(app)
@@ -505,7 +548,14 @@ def trigger_manual_sync(app: Any) -> Dict[str, Any]:
         successful_weather = sum(
             result.get("status") == "success" for result in weather_results
         )
-        upstream_success = market_result.get("status") == "success" or successful_weather > 0
+        successful_ndvi = sum(
+            result.get("status") == "success" for result in ndvi_results
+        )
+        upstream_success = (
+            market_result.get("status") == "success"
+            or successful_weather > 0
+            or successful_ndvi > 0
+        )
         overall_status = (
             "success"
             if upstream_success and refresh_result.get("status") == "success"
