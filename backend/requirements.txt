@@ -41,3 +41,6 @@ redis>=5.0.0
 
 # Database Migrations
 alembic>=1.14.0
+
+# Environment Variable Management
+python-dotenv==1.0.1
