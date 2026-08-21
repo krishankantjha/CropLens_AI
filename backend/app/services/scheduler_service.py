@@ -531,6 +531,7 @@ def trigger_manual_sync(app: Any) -> Dict[str, Any]:
         from backend.app.services.sentinel_hub_sync import fetch_live_ndvi
 
         market_result = sync_live_agmarknet_prices(db=db)
+        print(f"[Sync Debug] Agmarknet result: {market_result}")
         weather_results = [
             fetch_live_nasa_weather(market=market, days=7, db=db)
             for market in MANDI_COORDINATES
@@ -540,7 +541,9 @@ def trigger_manual_sync(app: Any) -> Dict[str, Any]:
             for market in MANDI_COORDINATES
         ]
         refresh_result = refresh_application_dataset(app)
+        print(f"[Sync Debug] Refresh result: {refresh_result}")
         cache_result = warm_prediction_cache(app)
+        print(f"[Sync Debug] Cache result: {cache_result}")
         _CACHE_STATS["last_sync_at"] = datetime.datetime.now(
             datetime.timezone.utc
         ).isoformat()

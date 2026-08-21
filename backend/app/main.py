@@ -7,6 +7,9 @@ Exposes root documentation and health check endpoints.
 import os
 import json
 import time
+import warnings
+from requests.exceptions import RequestsDependencyWarning
+warnings.simplefilter('ignore', RequestsDependencyWarning)
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from typing import Dict, Any, List
