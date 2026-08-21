@@ -95,7 +95,7 @@ export const cropLensService = {
   // Advisory & 7-Day Forecast Methods
   async getForecast(cropKey: CropKey, mandi = 'Agra'): Promise<CropForecast> {
     const today = new Date().toISOString().split('T')[0];
-    const res = await apiClient.post<Forecast7DayResponse>('/predict/forecast-7d', {
+    const res = await apiClient.post<Forecast7DayResponse>('/predict/forecast', {
       commodity: cropKey,
       market: mandi,
       start_date: today,
@@ -182,8 +182,15 @@ export const cropLensService = {
       const markets = ["Agra", "Azadpur", "Lasalgaon", "Indore", "Khanna"];
       const results = await Promise.all(markets.map(async (m) => {
         try {
-          const res = await apiClient.post('/predict/price', { commodity: "Potato", market: m, date: new Date().toISOString().split('T')[0] });
-          return { market: m, price: `₹${Math.round(res.data.p50_median_price).toLocaleString('en-IN')}`, change: "↑", tone: "up" };
+          // Using consolidated forecast endpoint with horizon=1 for spot price
+          const res = await apiClient.post('/predict/forecast', { 
+            commodity: "Potato", 
+            market: m, 
+            start_date: new Date().toISOString().split('T')[0],
+            horizon_days: 1
+          });
+          const spotPrice = res.data.forecasts[0].price;
+          return { market: m, price: `₹${Math.round(spotPrice).toLocaleString('en-IN')}`, change: "↑", tone: "up" };
         } catch {
           return { market: m, price: "₹1,500", change: "→", tone: "steady" };
         }

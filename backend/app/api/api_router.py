@@ -38,39 +38,15 @@ api_router.include_router(alerts_router)
 
 
 @api_router.post(
-    "/predict/price",
-    response_model=PricePredictionResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Predict wholesale mandi price (P10, P50, P90)",
-    description="Predicts expected wholesale modal price (P50), lower risk floor (P10), and upper stress ceiling (P90) using pre-loaded LightGBM quantile models.",
-    tags=["Price Forecasting"]
-)
-def predict_price(req: PricePredictionRequest, request: Request) -> PricePredictionResponse:
-    # Sub-2ms cache check for standard queries without custom overrides
-    if not req.arrivals_in_qtl and not req.rainfall_mm and not req.temp_max:
-        cached = get_cached_price(req.commodity, req.market, req.date)
-        if cached:
-            return PricePredictionResponse(**cached)
-
-    res = predict_price_service(
-        req=req,
-        models=request.app.state.models,
-        metadata=request.app.state.metadata,
-        dataset=request.app.state.dataset
-    )
-    set_cached_price(req.commodity, req.market, res.model_dump(), req.date)
-    return res
-
-
-@api_router.post(
-    "/predict/forecast-7d",
+    "/predict/forecast",
     response_model=MultiDayForecastResponse,
     status_code=status.HTTP_200_OK,
-    summary="7-Day Recursive Multi-Day Price Forecast",
-    description="Generates an autoregressive roll-forward 7-day price trajectory with P10/P50/P90 uncertainty bounds and peak-day selling advisory.",
+    summary="Unified Multi-Day Price Forecast",
+    description="Generates an autoregressive roll-forward price trajectory (1-14 days) with P10/P50/P90 uncertainty bounds and actionable advisory.",
     tags=["Price Forecasting"]
 )
-def predict_7day_forecast(req: MultiDayForecastRequest, request: Request) -> MultiDayForecastResponse:
+def predict_forecast(req: MultiDayForecastRequest, request: Request) -> MultiDayForecastResponse:
+    # Handle single-day vs multi-day via horizon_days parameter
     cached = get_cached_forecast_7d(req.commodity, req.market, req.start_date)
     if cached and cached.get("forecast_horizon_days") == req.horizon_days:
         return MultiDayForecastResponse(**cached)
@@ -86,24 +62,25 @@ def predict_7day_forecast(req: MultiDayForecastRequest, request: Request) -> Mul
 
 
 @api_router.get(
-    "/predict/forecast-7d",
+    "/predict/forecast",
     response_model=MultiDayForecastResponse,
     status_code=status.HTTP_200_OK,
-    summary="7-Day Recursive Multi-Day Price Forecast (Query Params)",
-    description="Generates an autoregressive roll-forward 7-day price trajectory via GET parameters.",
+    summary="Unified Multi-Day Price Forecast (Query Params)",
+    description="Generates a price trajectory via GET parameters.",
     tags=["Price Forecasting"]
 )
-def get_7day_forecast(
+def get_forecast(
     request: Request,
     commodity: str = Query("Potato", description="Commodity name"),
     market: str = Query("Agra", description="APMC mandi name"),
-    date: Optional[str] = Query(None, description="Starting reference date (YYYY-MM-DD)")
+    date: Optional[str] = Query(None, description="Starting reference date (YYYY-MM-DD)"),
+    horizon: int = Query(7, ge=1, le=14, description="Forecast horizon in days")
 ) -> MultiDayForecastResponse:
     cached = get_cached_forecast_7d(commodity, market, date)
-    if cached:
+    if cached and cached.get("forecast_horizon_days") == horizon:
         return MultiDayForecastResponse(**cached)
 
-    req = MultiDayForecastRequest(commodity=commodity, market=market, start_date=date, horizon_days=7)
+    req = MultiDayForecastRequest(commodity=commodity, market=market, start_date=date, horizon_days=horizon)
     res = predict_7day_forecast_service(
         req=req,
         models=request.app.state.models,

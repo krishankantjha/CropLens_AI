@@ -121,65 +121,14 @@ def predict_7day_forecast_service(
 
     for k in range(1, horizon + 1):
         target_dt = start_dt + pd.Timedelta(days=k)
-        target_date_str = target_dt.strftime('%Y-%m-%d')
-        dow = target_dt.dayofweek
-
-        # Update calendar & seasonality features matching model feature definitions
-        if 'sin_month' in feature_cols:
-            rolling_row['sin_month'] = float(np.sin(2 * np.pi * target_dt.month / 12.0))
-        if 'cos_month' in feature_cols:
-            rolling_row['cos_month'] = float(np.cos(2 * np.pi * target_dt.month / 12.0))
-        if 'sin_dow' in feature_cols:
-            rolling_row['sin_dow'] = float(np.sin(2 * np.pi * dow / 7.0))
-        if 'cos_dow' in feature_cols:
-            rolling_row['cos_dow'] = float(np.cos(2 * np.pi * dow / 7.0))
-
-        # Diurnal temperature fluctuation & rainfall shock dissipation over forecast horizon
-        if 'temp_max' in feature_cols:
-            base_tmax = float(base_row.get('temp_max', 30.0))
-            rolling_row['temp_max'] = round(base_tmax + 1.2 * np.sin(2 * np.pi * k / 7.0), 2)
-        if 'rainfall_mm' in feature_cols:
-            base_rain = float(base_row.get('rainfall_mm', 0.0))
-            rolling_row['rainfall_mm'] = max(0.0, round(base_rain * (0.7 ** k), 2))
-
-        # Update historical price lags matching feature_cols
-        if 'price_lag_1d' in feature_cols:
-            rolling_row['price_lag_1d'] = float(history_prices[-1])
-        if 'price_lag_2d' in feature_cols:
-            rolling_row['price_lag_2d'] = float(history_prices[-2]) if len(history_prices) >= 2 else float(history_prices[-1])
-        if 'price_lag_3d' in feature_cols:
-            rolling_row['price_lag_3d'] = float(history_prices[-3]) if len(history_prices) >= 3 else float(history_prices[-1])
-        if 'price_lag_1w' in feature_cols:
-            rolling_row['price_lag_1w'] = float(history_prices[-7]) if len(history_prices) >= 7 else float(history_prices[0])
-        if 'price_lag_4w' in feature_cols:
-            rolling_row['price_lag_4w'] = float(history_prices[-28]) if len(history_prices) >= 28 else float(history_prices[0])
-
-        # Dynamic Exponential Moving Averages (EMAs)
-        p_ema7 = float(pd.Series(history_prices[-14:]).ewm(span=7, adjust=False).mean().iloc[-1])
-        p_ema21 = float(pd.Series(history_prices[-30:]).ewm(span=21, adjust=False).mean().iloc[-1])
-        if 'price_ema_7d' in feature_cols:
-            rolling_row['price_ema_7d'] = p_ema7
-        if 'price_ema_21d' in feature_cols:
-            rolling_row['price_ema_21d'] = p_ema21
-
-        # 7-day rolling channel width and velocity (divided by 7.0 to match training)
-        p_slice7 = history_prices[-7:]
-        if 'price_channel_width_7d' in feature_cols:
-            rolling_row['price_channel_width_7d'] = float(np.max(p_slice7) - np.min(p_slice7))
-        if 'price_velocity_7d' in feature_cols:
-            rolling_row['price_velocity_7d'] = float((history_prices[-1] - history_prices[-7]) / 7.0)
-
-        # 30-day volatility
-        p_slice30 = history_prices[-30:] if len(history_prices) >= 30 else history_prices
-        if 'price_volatility_30d' in feature_cols:
-            rolling_row['price_volatility_30d'] = float(np.std(p_slice30))
-
-        if 'price_regime_indicator' in feature_cols:
-            rolling_row['price_regime_indicator'] = 1.0 if p_ema7 > p_ema21 else 0.0
-
-        # Construct single-row DataFrame for model scoring
-        X_df = pd.DataFrame([{col: rolling_row.get(col, 0.0) for col in feature_cols}], columns=feature_cols)
-        X_df = X_df.fillna(0.0)
+        
+        # Unified dynamic feature calculation via DataResolver
+        X_df = DataResolver.compute_dynamic_features(
+            base_row=base_row.to_dict(),
+            history_prices=history_prices,
+            target_dt=target_dt,
+            feature_cols=feature_cols
+        )
 
         # Score multi-quantile LightGBM models
         p10_raw = float(models['p10'].predict(X_df)[0])
@@ -192,6 +141,9 @@ def predict_7day_forecast_service(
 
         # Roll forward predicted P50 price into historical memory for step k+1
         history_prices.append(p50_val)
+
+        target_date_str = target_dt.strftime('%Y-%m-%d')
+        dow = target_dt.dayofweek
 
         daily_forecasts.append(DailyForecastPoint(
             day_index=k,
