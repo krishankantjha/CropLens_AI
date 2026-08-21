@@ -6,14 +6,16 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
 
-# Add backend directory to sys.path
+# Add the repository root and backend directory to sys.path.
 current_dir = os.path.dirname(os.path.abspath(__file__))
 backend_dir = os.path.abspath(os.path.join(current_dir, ".."))
-if backend_dir not in sys.path:
-    sys.path.insert(0, backend_dir)
+project_root = os.path.abspath(os.path.join(backend_dir, ".."))
+for path in (project_root, backend_dir):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 from backend.app.db.database import Base, DATABASE_URL
-from backend.app.db.models import User, AlertSubscription, AlertLog  # noqa
+from backend.app.db.models import User, AlertSubscription, AlertLog, MarketData, WeatherData  # noqa
 
 config = context.config
 
@@ -43,7 +45,7 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     connectable = engine_from_config(
-        config.get_section(config.config_section_name, {}),
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )

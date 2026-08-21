@@ -4,7 +4,8 @@ Stores user profile, credentials, role (farmer vs trader), and saved preferences
 """
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float, Index
+
 from sqlalchemy.orm import relationship
 from backend.app.db.database import Base
 
@@ -115,3 +116,52 @@ class AlertLog(Base):
             "status": self.status,
             "dispatched_at": self.dispatched_at.isoformat() if self.dispatched_at else None,
         }
+
+
+class MarketData(Base):
+    """
+    Live market data ingested from Agmarknet.
+    """
+    __tablename__ = "market_data"
+
+    id = Column(Integer, primary_key=True, index=True)
+    commodity = Column(String, nullable=False, index=True)
+    market = Column(String, nullable=False, index=True)
+    modal_price = Column(Float, nullable=False)
+    arrivals_in_qtl = Column(Float, nullable=False)
+    date = Column(String, nullable=False, index=True)
+    state = Column(String, nullable=True)
+    district = Column(String, nullable=True)
+    variety = Column(String, nullable=True)
+    grade = Column(String, nullable=True)
+    min_price = Column(Float, nullable=True)
+    max_price = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+    __table_args__ = (
+        Index(
+            "uq_market_data_commodity_market_date",
+            "commodity", "market", "date",
+            unique=True,
+        ),
+    )
+
+
+class WeatherData(Base):
+    """
+    Live weather data ingested from NASA POWER.
+    """
+    __tablename__ = "weather_data"
+
+    id = Column(Integer, primary_key=True, index=True)
+    market = Column(String, nullable=False, index=True)
+    temp_max = Column(Float, nullable=False)
+    temp_min = Column(Float, nullable=False)
+    rainfall_mm = Column(Float, nullable=False)
+    solar_radiation = Column(Float, nullable=True)
+    date = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=utc_now)
+
+    __table_args__ = (
+        Index("uq_weather_data_market_date", "market", "date", unique=True),
+    )
