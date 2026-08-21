@@ -36,15 +36,40 @@ class FeatureExtractor:
             _compute_price_features,
             _compute_supply_features,
             _compute_weather_features,
-            _compute_festival_features
+            _compute_festival_features,
+            _compute_spatial_features,
+            _compute_market_features,
         )
-        
+
         df = df.copy()
+        required_columns = {
+            "date", "market", "commodity", "district", "modal_price",
+            "arrivals_in_qtl", "min_price", "max_price", "temp_max",
+            "temp_min", "rainfall_mm", "ndvi_mean", "is_festive_season",
+            "festival_name", "latitude", "longitude",
+        }
+        missing = sorted(required_columns.difference(df.columns))
+        if missing:
+            raise ValueError(
+                "Canonical feature extraction requires columns: " + ", ".join(missing)
+            )
+
+        df = df.sort_values(["market", "commodity", "date"]).reset_index(drop=True)
+        # These two columns are recreated by the function below. Dropping them
+        # prevents pandas from creating _x/_y duplicates during its date merges.
+        df = df.drop(
+            columns=[
+                "festival_price_anticipation_score",
+                "post_festival_demand_hangover",
+            ],
+            errors="ignore",
+        )
         df = _compute_price_features(df)
         df = _compute_supply_features(df)
         df = _compute_weather_features(df)
         df = _compute_festival_features(df)
-        
+        df = _compute_spatial_features(df)
+        df = _compute_market_features(df)
         return df
 
     @staticmethod
