@@ -8,7 +8,12 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env file if present
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+env_path = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
+loaded = load_dotenv(env_path)
+if loaded or os.path.exists(env_path):
+    print(f"[INFO] Loaded environment variables from {os.path.abspath(env_path)}")
+else:
+    print(f"[WARNING] .env file not found at {os.path.abspath(env_path)}")
 
 # --- Environment Mode ---
 ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development").lower()

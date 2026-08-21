@@ -166,8 +166,14 @@ async def lifespan(app: FastAPI):
         app.state.startup_duration_ms = round((time.time() - start_time) * 1000, 2)
 
         # Initialize and start APScheduler background worker
-        from backend.app.services.scheduler_service import init_scheduler, warm_prediction_cache, scheduler as bg_scheduler
+        from backend.app.services.scheduler_service import init_scheduler, warm_prediction_cache, trigger_manual_sync, scheduler as bg_scheduler
         init_scheduler(app)
+        print("[INFO] Initializing startup live-data synchronization...")
+        try:
+            sync_res = trigger_manual_sync(app)
+            print(f"[INFO] Startup live sync result: {sync_res.get('status', 'unknown')}")
+        except Exception as sync_err:
+            print(f"[WARNING] Startup live sync skipped or failed: {str(sync_err)}")
         warm_prediction_cache(app)
     except Exception as e:
         # DEGRADED MODE: Log the error but allow the server to start so /docs and /health are accessible.
