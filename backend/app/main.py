@@ -138,7 +138,19 @@ async def lifespan(app: FastAPI):
             alembic_cfg = Config(alembic_ini_path)
             from backend.app.db.database import DATABASE_URL
             alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
-            command.upgrade(alembic_cfg, "head")
+            try:
+                command.upgrade(alembic_cfg, "head")
+            except Exception as migration_error:
+                # If migration fails because tables already exist, try to 'stamp' it as current
+                # and then upgrade. This handles the transition from static mocks to Alembic.
+                if "already exists" in str(migration_error).lower():
+                    try:
+                        command.stamp(alembic_cfg, "001_initial")
+                        command.upgrade(alembic_cfg, "head")
+                    except Exception:
+                        raise migration_error
+                else:
+                    raise migration_error
         else:
             from backend.app.db.database import engine, Base
             from backend.app.db.models import User
