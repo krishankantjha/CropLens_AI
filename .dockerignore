@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+
+# Environment & Secrets
+.env
+backend/.env
+frontend/.env
+*.key
+*.pem
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.venv
+.tox
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Databases
+*.db
+*.sqlite3
+backend/app/croplens.db
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.cache/
+
+# Research & Notebooks
+research/
+notebooks/
+reports/research_results/
+research-requirements.txt
+
+# OS & IDE
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo

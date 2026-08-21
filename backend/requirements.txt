@@ -18,7 +18,7 @@ joblib==1.5.3
 # Machine Learning & Deep Learning Models
 scikit-learn==1.8.0
 lightgbm==4.7.0
-shap==0.51.0
+# shap moved to research-requirements.txt
 
 # Utilities & Reporting
 reportlab==4.3.1
