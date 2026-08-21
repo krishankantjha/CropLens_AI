@@ -344,15 +344,15 @@ export default function Home() {
                 </div>
                 <div className="mt-10 grid grid-cols-3 gap-2">
                   <div>
-                    <p className="data-mono text-xl font-extrabold text-[#66716A] sm:text-2xl">{ticker[2]?.price || '₹1,360'}</p>
+                    <p className="data-mono text-xl font-extrabold text-[#66716A] sm:text-2xl">{tickerItems[2]?.price || '₹1,360'}</p>
                     <p className="mt-2 text-[11px] font-bold uppercase tracking-[.12em] text-[#66716A]">Safety floor</p>
                   </div>
                   <div className="border-l border-[#DDE4DE] pl-3 sm:pl-5">
-                    <p className="data-mono text-xl font-extrabold text-[#176B45] sm:text-2xl">{ticker[0]?.price || '₹1,480'}</p>
+                    <p className="data-mono text-xl font-extrabold text-[#176B45] sm:text-2xl">{tickerItems[0]?.price || '₹1,480'}</p>
                     <p className="mt-2 text-[11px] font-bold uppercase tracking-[.12em] text-[#66716A]">Expected price</p>
                   </div>
                   <div className="border-l border-[#DDE4DE] pl-3 sm:pl-5">
-                    <p className="data-mono text-xl font-extrabold text-[#0E4D35] sm:text-2xl">{ticker[1]?.price || '₹1,620'}</p>
+                    <p className="data-mono text-xl font-extrabold text-[#0E4D35] sm:text-2xl">{tickerItems[1]?.price || '₹1,620'}</p>
                     <p className="mt-2 text-[11px] font-bold uppercase tracking-[.12em] text-[#66716A]">Potential upside</p>
                   </div>
                 </div>
