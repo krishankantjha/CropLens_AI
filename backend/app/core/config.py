@@ -55,3 +55,10 @@ NASA_POWER_TIMEOUT_SECONDS: int = max(
     int(os.getenv("NASA_POWER_TIMEOUT_SECONDS", "20")),
     5,
 )
+
+# --- Sentinel Hub Live NDVI ---
+SENTINEL_HUB_API_KEY: str = os.getenv("SENTINEL_HUB_API_KEY", "").strip()
+SENTINEL_HUB_TIMEOUT_SECONDS: int = max(
+    int(os.getenv("SENTINEL_HUB_TIMEOUT_SECONDS", "25")),
+    5,
+)
