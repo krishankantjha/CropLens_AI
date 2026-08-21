@@ -51,7 +51,7 @@ def fetch_live_ndvi(
     bbox = _bounding_box_for_coords(coords["lat"], coords["lon"])
 
     end_date = dt.date.today()
-    start_date = end_date - dt.timedelta(days=10)
+    start_date = end_date - dt.timedelta(days=14)
 
     evalscript = """
     //VERSION=3
@@ -91,8 +91,10 @@ def fetch_live_ndvi(
         "calculations": {"default": {"statistics": {"mean": {"am": [0, 1]} } } },
     }
 
+    # Support both OAuth2 Bearer tokens and direct API Keys from Planet/Sentinel Hub
+    auth_header = f"Bearer {api_key}" if len(api_key) > 40 else f"apikey {api_key}"
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "Authorization": auth_header,
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
