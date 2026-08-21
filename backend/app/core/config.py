@@ -8,7 +8,7 @@ import os
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env file if present
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
 
 # --- Environment Mode ---
 ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development").lower()
