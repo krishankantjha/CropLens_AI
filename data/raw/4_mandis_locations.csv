@@ -1,6 +1,11 @@
 market_id,market,district,state,latitude,longitude
-MANDI_001,Lasalgaon,Nashik,Maharashtra,20.1477,74.2252
-MANDI_002,Agra,Agra,Uttar Pradesh,27.1767,78.0081
-MANDI_003,Kolar,Kolar,Karnataka,13.1367,78.1292
-MANDI_004,Narayangaon,Pune,Maharashtra,19.1225,73.9782
-MANDI_005,Azadpur,Delhi,Delhi,28.7041,77.1725
+MANDI_001,Agra,Agra,Uttar Pradesh,27.1767,78.0081
+MANDI_002,Khanna,Ludhiana,Punjab,30.7071,76.2167
+MANDI_003,Azadpur,Delhi,Delhi,28.7041,77.1725
+MANDI_004,Mathura,Mathura,Uttar Pradesh,27.4924,77.6737
+MANDI_005,Lasalgaon,Nashik,Maharashtra,20.1477,74.2252
+MANDI_006,Karnal,Karnal,Haryana,29.6857,76.9905
+MANDI_007,Indore,Indore,Madhya Pradesh,22.7196,75.8577
+MANDI_008,Farrukhabad,Farrukhabad,Uttar Pradesh,27.3826,79.583
+MANDI_009,Guntur,Guntur,Andhra Pradesh,16.3067,80.4365
+MANDI_010,Kolkata,Kolkata,West Bengal,22.5726,88.3639
