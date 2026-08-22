@@ -232,3 +232,41 @@ df_prices = pd.DataFrame(price_records)
 prices_path = os.path.join(RAW_DIR, "1_agmarknet_prices.csv")
 df_prices.to_csv(prices_path, index=False)
 print(f"Generated Agmarknet Daily Trade Records: {len(df_prices)} rows across 10 commodities and 10 mandis -> {prices_path}")
+
+# --- Step D: Generate Mandi Location Directory ---
+mandi_records = [
+    {
+        "market_id": f"MANDI_{i+1:03d}",
+        "market": name,
+        "district": info["district"],
+        "state": info["state"],
+        "latitude": info["lat"],
+        "longitude": info["lon"]
+    }
+    for i, (name, info) in enumerate(MANDIS.items())
+]
+df_mandis = pd.DataFrame(mandi_records)
+mandis_path = os.path.join(RAW_DIR, "4_mandis_locations.csv")
+df_mandis.to_csv(mandis_path, index=False)
+print(f"Generated Mandi Location Records: {len(df_mandis)} rows -> {mandis_path}")
+
+# --- Step E: Generate Festival Calendar ---
+import holidays
+india_holidays = holidays.India(years=range(2019, 2026))
+calendar_records = []
+for d in dates:
+    month = d.month
+    d_date = d.date()
+    is_holiday = 1 if d_date in india_holidays else (1 if month in [9, 10, 11] else 0)
+    fest_name = india_holidays.get(d_date, "None")
+    harvest_season = "Kharif Harvest" if month in [9, 10, 11] else ("Rabi Harvest" if month in [3, 4, 5] else "Zaid Lean Season")
+    calendar_records.append({
+        "date": d.strftime("%Y-%m-%d"),
+        "is_festive_season": is_holiday,
+        "festival_name": fest_name,
+        "harvest_season_type": harvest_season
+    })
+df_calendar = pd.DataFrame(calendar_records)
+calendar_path = os.path.join(RAW_DIR, "5_festivals_calendar.csv")
+df_calendar.to_csv(calendar_path, index=False)
+print(f"Generated Festival Calendar Records: {len(df_calendar)} rows -> {calendar_path}")
