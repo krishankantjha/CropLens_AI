@@ -31,17 +31,17 @@ def test_get_market_data_not_found(mock_dataset):
     assert exc.value.status_code == 404
 
 def test_resolve_feature_vector(mock_dataset):
-    feature_cols = ['modal_price', 'arrivals_in_qtl', 'temp_max']
+    feature_cols = ['arrivals_in_qtl', 'temp_max']
     X, date_str = DataResolver.resolve_feature_vector(
         'Potato', 'Agra', mock_dataset, feature_cols
     )
     assert isinstance(X, pd.DataFrame)
-    assert X.shape == (1, 3)
-    assert date_str == '2026-08-10'
-    assert X.iloc[0]['modal_price'] == 1090
+    assert X.shape == (1, 2)
+    assert date_str == '2026-08-11'
+    assert X.iloc[0]['arrivals_in_qtl'] == 109
 
 def test_resolve_feature_vector_with_overrides(mock_dataset):
-    feature_cols = ['modal_price', 'arrivals_in_qtl']
+    feature_cols = ['arrivals_in_qtl']
     overrides = {'arrivals_in_qtl': 500.0}
     X, _ = DataResolver.resolve_feature_vector(
         'Potato', 'Agra', mock_dataset, feature_cols, overrides=overrides
@@ -64,5 +64,5 @@ def test_compute_dynamic_features():
     
     assert isinstance(X, pd.DataFrame)
     assert X.iloc[0]['price_lag_1d'] == 1000.0
-    assert X.iloc[0]['rainfall_mm'] == 7.0 # 10.0 * 0.7^1
+    assert X.iloc[0]['rainfall_mm'] == 10.0 # Latest observed weather is retained; no fabricated decay.
     assert 'sin_month' in X.columns
