@@ -60,7 +60,31 @@ class ModelTrainer:
 
         self.df = None
         self.feature_cols = None
-        self.target_col = 'modal_price'
+        # The model predicts the next calendar-day modal price from information
+        # available at the current cutoff. The raw modal_price remains a source
+        # column for lag construction and is never selected as a feature.
+        self.target_col = 'target_next_day_modal_price'
+        self.forecast_horizon_days = 1
+
+        # Explicit auditable model feature contract.
+        self.model_feature_cols = [
+            'arrivals_in_qtl', 'rainfall_mm', 'temp_max', 'temp_min', 'ndvi_mean',
+            'is_festive_season', 'price_lag_1d', 'price_lag_2d', 'price_lag_3d',
+            'price_lag_1w', 'price_lag_4w', 'price_lag_52w', 'price_ema_7d',
+            'price_ema_21d', 'price_channel_width_7d', 'price_velocity_7d',
+            'price_volatility_30d', 'price_spread', 'rolling_price_reversal_signal',
+            'modal_vs_midpoint_bias', 'commodity_price_percentile_rank',
+            'price_quality_premium', 'arrivals_rolling_mean_30d', 'arrival_ratio',
+            'arrival_velocity_7d', 'arrival_price_divergence_signal', 'temp_range',
+            'rainfall_rolling_sum_14d', 'rain_x_ndvi_interaction',
+            'temp_stress_days_7d', 'consecutive_dry_days', 'vegetative_stress_ratio',
+            'heat_wave_event_flag', 'ndvi_momentum_4w', 'harvest_glut_index',
+            'festival_price_anticipation_score', 'post_festival_demand_hangover',
+            'dist_to_hub_km', 'hub_price_diff', 'spatial_price_gradient',
+            'sin_month', 'cos_month', 'sin_dow', 'cos_dow',
+            'is_peak_harvest_month', 'market_seasonality_deviation',
+            'price_regime_indicator',
+        ]
 
         # Train, validation, and test datasets
         self.X_train, self.y_train = None, None
@@ -73,6 +97,7 @@ class ModelTrainer:
         self.metrics = {}
         self.shap_values = None
         self.xgb_imputer = None
+        self._optuna_n_trials = 0
 
     def _pinball_loss(self, y_true, y_pred, alpha: float) -> float:
         """Calculates pinball (quantile) loss for a given quantile alpha."""
@@ -83,18 +108,48 @@ class ModelTrainer:
         """Loads master dataset and splits it into train, validation, and test sets by date."""
         print(f"Loading dataset: {self.data_path}")
         self.df = pd.read_parquet(self.data_path)
-        self.df['date'] = pd.to_datetime(self.df['date'])
-        self.df = self.df.sort_values('date').reset_index(drop=True)
+        required_columns = {
+            'date', 'market', 'commodity', 'modal_price',
+            *self.model_feature_cols,
+        }
+        missing = sorted(required_columns.difference(self.df.columns))
+        if missing:
+            raise ValueError('Training dataset is missing required columns: ' + ', '.join(missing))
+        self.df['date'] = pd.to_datetime(self.df['date'], errors='coerce')
+        if self.df['date'].isna().any():
+            raise ValueError('Training dataset contains invalid dates.')
+        if self.df['modal_price'].isna().any() or not np.isfinite(self.df['modal_price']).all():
+            raise ValueError('Training dataset contains missing or non-finite modal prices.')
+        if (self.df['modal_price'] < 0).any():
+            raise ValueError('Training dataset contains negative modal prices.')
+        self.df = self.df.sort_values(['market', 'commodity', 'date']).reset_index(drop=True)
+        duplicate_keys = self.df.duplicated(['market', 'commodity', 'date'])
+        if duplicate_keys.any():
+            raise ValueError(f'Training dataset contains {int(duplicate_keys.sum())} duplicate market-commodity-date rows.')
 
-        # Exclude metadata and same-day target price columns
+        grouped = self.df.groupby(['market', 'commodity'], sort=False)
+        next_date = grouped['date'].shift(-1)
+        next_price = grouped['modal_price'].shift(-1)
+        valid_next_day = next_date.eq(self.df['date'] + pd.Timedelta(days=self.forecast_horizon_days))
+        self.df[self.target_col] = next_price.where(valid_next_day)
+        self.df = self.df[self.df[self.target_col].notna()].copy()
+        if self.df.empty:
+            raise ValueError('No valid next-calendar-day targets remain after target construction.')
+
+        # Exclude metadata and all target/source columns from model features.
         metadata_cols = [
             'state', 'district', 'market', 'commodity', 'variety',
             'market_id', 'harvest_season_type', 'festival_name', 'date',
             'latitude', 'longitude', 'modal_price', 'min_price', 'max_price'
         ]
 
-        # Select all numerical features for training
-        self.feature_cols = [c for c in self.df.select_dtypes(include=[np.number]).columns if c not in metadata_cols]
+        unexpected_contract = [c for c in self.model_feature_cols if c not in self.df.columns]
+        if unexpected_contract:
+            raise ValueError('Feature contract columns unavailable: ' + ', '.join(unexpected_contract))
+        self.feature_cols = list(self.model_feature_cols)
+        non_numeric = [c for c in self.feature_cols if not pd.api.types.is_numeric_dtype(self.df[c])]
+        if non_numeric:
+            raise TypeError('Model feature contract contains non-numeric columns: ' + ', '.join(non_numeric))
 
         print(f"Total Rows: {self.df.shape[0]:,} | Features: {len(self.feature_cols)}")
 
@@ -111,6 +166,12 @@ class ModelTrainer:
 
         self.X_test = self.df.loc[test_mask, self.feature_cols]
         self.y_test = self.df.loc[test_mask, self.target_col]
+        if any(len(part) == 0 for part in (self.X_train, self.X_val, self.X_test)):
+            raise ValueError('Train, validation, and test splits must all contain rows.')
+        for name, frame in [('train', self.X_train), ('validation', self.X_val), ('test', self.X_test)]:
+            numeric_values = frame.select_dtypes(include=[np.number]).to_numpy(dtype=float)
+            if np.isinf(numeric_values).any():
+                raise ValueError(f'{name} features contain infinite values.')
 
         print(f"Train Set (2019-2023): {self.X_train.shape[0]:,} rows")
         print(f"Val Set (2024): {self.X_val.shape[0]:,} rows")
@@ -212,14 +273,16 @@ class ModelTrainer:
 
         self.metrics['stationarity_tests'] = stat_results
 
-    def optimize_hyperparameters(self, n_trials: int = 35):
-        """Finds best LightGBM quantile hyperparameters on validation set with L1/L2 regularization."""
-        print(f"\nTuning LightGBM quantile hyperparameters with Optuna ({n_trials} trials)...")
+    def optimize_hyperparameters(self, n_trials: int = 35, alpha: float = 0.50):
+        """Finds LightGBM hyperparameters for one quantile on the validation set."""
+        if not 0.0 < alpha < 1.0:
+            raise ValueError('alpha must be strictly between 0 and 1')
+        print(f"\nTuning LightGBM quantile hyperparameters for alpha={alpha:.2f} with Optuna ({n_trials} trials)...")
 
         def objective(trial):
             params = {
                 'objective': 'quantile',
-                'alpha': 0.50,
+                'alpha': alpha,
                 'metric': 'quantile',
                 'boosting_type': 'gbdt',
                 'learning_rate': trial.suggest_float('learning_rate', 0.02, 0.15, log=True),
@@ -237,24 +300,30 @@ class ModelTrainer:
             model = lgb.LGBMRegressor(**params, n_estimators=250)
             model.fit(self.X_train, self.y_train)
             preds = model.predict(self.X_val)
-            val_pinball = self._pinball_loss(self.y_val, preds, alpha=0.50)
+            val_pinball = self._pinball_loss(self.y_val, preds, alpha=alpha)
             return val_pinball
 
         sampler = optuna.samplers.TPESampler(seed=42)
         study = optuna.create_study(direction='minimize', sampler=sampler)
         study.optimize(objective, n_trials=n_trials)
 
-        self.best_params = study.best_params
-        print(f"Best Validation Pinball Loss (alpha = 0.50): {study.best_value:.4f}")
-        print(f"Best Parameters: {self.best_params}")
+        self._optuna_n_trials = int(n_trials)
+        self.best_params_by_quantile = getattr(self, 'best_params_by_quantile', {})
+        q_name = f'p{int(alpha * 100)}'
+        self.best_params_by_quantile[q_name] = dict(study.best_params)
+        self.best_params = self.best_params_by_quantile.get('p50', study.best_params)
+        print(f"Best Validation Pinball Loss (alpha = {alpha:.2f}): {study.best_value:.4f}")
+        print(f"Best Parameters for {q_name.upper()}: {study.best_params}")
 
     def train_quantile_models(self):
         """Trains LightGBM quantile regression models for P10, P50, and P90 bounds."""
         print("\nTraining LightGBM quantile models (P10, P50, P90)...")
         quantiles = [0.10, 0.50, 0.90]
 
+        self.best_params_by_quantile = {}
         for q in quantiles:
             q_name = f"p{int(q*100)}"
+            self.optimize_hyperparameters(n_trials=getattr(self, '_optuna_n_trials', 35), alpha=q)
             params = {
                 'objective': 'quantile',
                 'alpha': q,
@@ -262,7 +331,7 @@ class ModelTrainer:
                 'n_estimators': 300,
                 'random_state': 42,
                 'verbose': -1,
-                **self.best_params
+                **self.best_params_by_quantile[q_name]
             }
 
             model = lgb.LGBMRegressor(**params)
@@ -275,76 +344,6 @@ class ModelTrainer:
             self.models[q_name] = model
             print(f"Trained {q_name.upper()} model (alpha = {q})")
 
-    def calibrate_conformal_quantiles(self):
-        """Executes Mondrian Group-Conditional Conformal Quantile Regression (M-CQR) calibration per sector and measures MPIW sharpness."""
-        print("\nRunning Mondrian Group-Conditional Conformal Quantile Regression (M-CQR)...")
-
-        val_df = self.df.loc[self.X_val.index].copy()
-        test_df = self.df.loc[self.X_test.index].copy()
-
-        val_p10 = self.models['p10'].predict(self.X_val)
-        val_p90 = self.models['p90'].predict(self.X_val)
-        y_val = np.array(self.y_val)
-
-        test_p10 = self.models['p10'].predict(self.X_test)
-        test_p90 = self.models['p90'].predict(self.X_test)
-        y_test = np.array(self.y_test)
-
-        # Map commodities to 5 agricultural sectors
-        sector_mapping = {
-            'Potato': 'Vegetables', 'Onion': 'Vegetables', 'Tomato': 'Vegetables',
-            'Wheat': 'Cereals', 'Paddy(Dhan)': 'Cereals', 'Maize': 'Cereals',
-            'Soyabean': 'Oilseeds', 'Mustard': 'Oilseeds',
-            'Gram(Chana)': 'Pulses',
-            'Chilli Red': 'Spices'
-        }
-        val_df['sector'] = val_df['commodity'].map(sector_mapping).fillna('Other')
-        test_df['sector'] = test_df['commodity'].map(sector_mapping).fillna('Other')
-
-        # Global non-conformity score
-        global_scores = np.maximum(val_p10 - y_val, y_val - val_p90)
-        n_val = len(global_scores)
-        q_val_level = np.ceil((n_val + 1) * 0.80) / n_val
-        q_conf_global = float(np.quantile(global_scores, min(1.0, q_val_level)))
-
-        # Sector-specific Mondrian non-conformity scores
-        q_conf_sectors = {}
-        for sec in ['Vegetables', 'Cereals', 'Oilseeds', 'Pulses', 'Spices']:
-            sec_mask = (val_df['sector'] == sec).values
-            if sec_mask.sum() > 30:
-                sec_scores = np.maximum(val_p10[sec_mask] - y_val[sec_mask], y_val[sec_mask] - val_p90[sec_mask])
-                n_s = len(sec_scores)
-                q_level_s = np.ceil((n_s + 1) * 0.80) / n_s
-                q_conf_sectors[sec] = float(np.quantile(sec_scores, min(1.0, q_level_s)))
-            else:
-                q_conf_sectors[sec] = q_conf_global
-
-        # Apply Mondrian offsets on test set
-        test_offsets = np.array([q_conf_sectors.get(s, q_conf_global) for s in test_df['sector']])
-        cal_p10 = test_p10 - test_offsets
-        cal_p90 = test_p90 + test_offsets
-
-        uncal_coverage = float(np.mean((y_test >= test_p10) & (y_test <= test_p90)) * 100)
-        cal_coverage = float(np.mean((y_test >= cal_p10) & (y_test <= cal_p90)) * 100)
-
-        uncal_mpiw = float(np.mean(test_p90 - test_p10))
-        cal_mpiw = float(np.mean(cal_p90 - cal_p10))
-
-        print(f"- Global Non-Conformity Offset (Q_conf): Rs {q_conf_global:.2f}/qtl")
-        print(f"- Sector Offsets: {q_conf_sectors}")
-        print(f"- Uncalibrated Test P10-P90 Coverage: {uncal_coverage:.2f}% (MPIW: Rs {uncal_mpiw:.2f}/qtl)")
-        print(f"- Mondrian Calibrated Test Coverage:   {cal_coverage:.2f}% (MPIW: Rs {cal_mpiw:.2f}/qtl | Target: 80.0% +/- 1.0%)")
-
-        self.metrics['conformal_quantile_regression'] = {
-            'target_coverage_percent': 80.0,
-            'global_non_conformity_offset_rs_per_qtl': round(q_conf_global, 2),
-            'sector_conformal_offsets_rs_per_qtl': {k: round(v, 2) for k, v in q_conf_sectors.items()},
-            'uncalibrated_coverage_percent': round(uncal_coverage, 2),
-            'calibrated_coverage_percent': round(cal_coverage, 2),
-            'uncalibrated_mpiw_rs_per_qtl': round(uncal_mpiw, 2),
-            'calibrated_mpiw_rs_per_qtl': round(cal_mpiw, 2),
-            'method': 'Mondrian Group-Conditional CQR (M-CQR)'
-        }
 
     def train_and_eval_ridge_baseline(self):
         """Trains Ridge regression with SimpleImputer and StandardScaler pipeline on training data as a fair baseline."""
@@ -359,6 +358,7 @@ class ModelTrainer:
         pipeline.fit(self.X_train, self.y_train)
 
         ridge_preds = pipeline.predict(self.X_test)
+        self._validate_predictions(self.y_test, ridge_preds, 'Ridge baseline')
         ridge_mape = mean_absolute_percentage_error(self.y_test, ridge_preds) * 100
         ridge_rmse = root_mean_squared_error(self.y_test, ridge_preds)
         ridge_mae = mean_absolute_error(self.y_test, ridge_preds)
@@ -380,15 +380,13 @@ class ModelTrainer:
         print("\nTraining Classical ARIMA Statistical Baseline per commodity-mandi series...")
         from statsmodels.tsa.arima.model import ARIMA
 
-        arima_preds_dict = {}
-        actuals_dict = {}
-
         # Train separate ARIMA(1,1,1) for each commodity-market series on train data (2019-2023)
         train_df = self.df.loc[self.X_train.index]
         test_df = self.df.loc[self.X_test.index]
 
         arima_predictions = []
         arima_actuals = []
+        arima_failures = []
 
         for (comm, mkt), grp_tr in train_df.groupby(['commodity', 'market']):
             grp_te = test_df[(test_df['commodity'] == comm) & (test_df['market'] == mkt)]
@@ -400,20 +398,27 @@ class ModelTrainer:
                 history = list(grp_tr[self.target_col].dropna().values)
                 test_vals = list(grp_te[self.target_col].dropna().values)
                 
-                # Rolling 1-step or batch forecast
-                model = ARIMA(history, order=(1, 1, 1))
-                fit_res = model.fit()
-                
-                # Forecast test length
-                forecast_res = fit_res.forecast(steps=len(test_vals))
-                
-                arima_predictions.extend(forecast_res)
-                arima_actuals.extend(test_vals)
-            except Exception:
-                # Fallback to mean persistence if ARIMA optimization diverges
+                # Genuine rolling one-step-ahead forecast. Each step is fitted
+                # only on history available before that step, then the observed
+                # test value is appended for the next forecast.
+                for actual_value in test_vals:
+                    fit_res = ARIMA(history, order=(1, 1, 1)).fit()
+                    forecast_value = float(fit_res.forecast(steps=1)[0])
+                    arima_predictions.append(forecast_value)
+                    arima_actuals.append(float(actual_value))
+                    history.append(float(actual_value))
+            except Exception as exc:
+                # Keep the benchmark complete but disclose every fallback group.
+                arima_failures.append({
+                    'commodity': str(comm),
+                    'market': str(mkt),
+                    'error': str(exc),
+                    'fallback': 'training_mean'
+                })
+                print(f"[WARNING] ARIMA fallback for {comm}/{mkt}: {exc}")
                 mean_val = float(grp_tr[self.target_col].mean())
-                arima_predictions.extend([mean_val] * len(grp_te))
-                arima_actuals.extend(grp_te[self.target_col].values)
+                arima_predictions.extend([mean_val] * len(test_vals))
+                arima_actuals.extend(test_vals)
 
         if len(arima_predictions) > 0:
             arima_actuals = np.array(arima_actuals)
@@ -435,7 +440,9 @@ class ModelTrainer:
                 'MAE (Rs/qtl)': round(arima_mae, 2),
                 'RMSE (Rs/qtl)': round(arima_rmse, 2),
                 'MAPE (%)': round(arima_mape, 2),
-                'R2': round(arima_r2, 3)
+                'R2': round(arima_r2, 3),
+                'failed_group_count': len(arima_failures),
+                'failed_groups': arima_failures
             }
 
     def train_catboost_and_xgboost(self):
@@ -462,12 +469,13 @@ class ModelTrainer:
         cb_preds = cb.predict(X_te_imp)
         cb_lat = ((time.time() - t0) / len(self.X_test)) * 1000
 
+        self._validate_predictions(self.y_test, cb_preds, 'CatBoost baseline')
         cb_r2 = r2_score(self.y_test, cb_preds)
         cb_rmse = root_mean_squared_error(self.y_test, cb_preds)
         cb_mae = mean_absolute_error(self.y_test, cb_preds)
         cb_mape = mean_absolute_percentage_error(self.y_test, cb_preds) * 100
 
-        self.models['catboost'] = cb
+        self.models['catboost'] = Pipeline([('imputer', imputer), ('model', cb)])
         self.metrics['catboost'] = {
             'R2': round(float(cb_r2), 3),
             'RMSE (Rs/qtl)': round(float(cb_rmse), 2),
@@ -486,12 +494,13 @@ class ModelTrainer:
         xgb_preds = xgb.predict(X_te_imp)
         xgb_lat = ((time.time() - t0) / len(self.X_test)) * 1000
 
+        self._validate_predictions(self.y_test, xgb_preds, 'XGBoost baseline')
         xgb_r2 = r2_score(self.y_test, xgb_preds)
         xgb_rmse = root_mean_squared_error(self.y_test, xgb_preds)
         xgb_mae = mean_absolute_error(self.y_test, xgb_preds)
         xgb_mape = mean_absolute_percentage_error(self.y_test, xgb_preds) * 100
 
-        self.models['xgboost'] = xgb
+        self.models['xgboost'] = Pipeline([('imputer', imputer), ('model', xgb)])
         self.metrics['xgboost'] = {
             'R2': round(float(xgb_r2), 3),
             'RMSE (Rs/qtl)': round(float(xgb_rmse), 2),
@@ -575,10 +584,13 @@ class ModelTrainer:
             random_state=42
         )
         iso_forest.fit(X_train_shock)
-        self.models['isolation_forest'] = iso_forest
+        self.models['isolation_forest'] = Pipeline([
+            ('imputer', imputer),
+            ('model', iso_forest),
+        ])
 
         # Unsupervised detection stats on 2025 test set
-        test_preds = iso_forest.predict(X_test_shock)
+        test_preds = self.models['isolation_forest'].predict(self.X_test[shock_features])
         flagged_anomalies = int(np.sum(test_preds == -1))
         total_test_rows = len(test_preds)
         flagged_pct = float((flagged_anomalies / total_test_rows) * 100)
@@ -673,7 +685,7 @@ class ModelTrainer:
 
         return p10_mono, p50_mono, p90_mono, diagnostics
 
-    def calibrate_conformal_quantiles(self):
+    def calibrate_conformal_quantiles(self, evaluate_test: bool = False):
         """Calibrates P10-P90 prediction intervals using Conformalized Quantile Regression (CQR) and calculates MPIW sharpness."""
         print("\nRunning Conformalized Quantile Regression (CQR) Calibration & MPIW Sharpness...")
         val_p10_raw = self.models['p10'].predict(self.X_val)
@@ -694,33 +706,32 @@ class ModelTrainer:
 
         print(f"- Validation Non-Conformity Offset (Q_conf): Rs {self.cqr_q_offset:.2f}/qtl")
 
-        # Evaluate on Test Set
-        raw_p10_te = self.models['p10'].predict(self.X_test)
-        raw_p50_te = self.models['p50'].predict(self.X_test)
-        raw_p90_te = self.models['p90'].predict(self.X_test)
-        
-        mono_p10_te, mono_p50_te, mono_p90_te, te_diag = self.apply_monotonic_rearrangement(raw_p10_te, raw_p50_te, raw_p90_te)
-        
-        cal_p10 = mono_p10_te - self.cqr_q_offset
-        cal_p90 = mono_p90_te + self.cqr_q_offset
-
-        raw_cov = float(np.mean((self.y_test >= mono_p10_te) & (self.y_test <= mono_p90_te)) * 100)
-        cal_cov = float(np.mean((self.y_test >= cal_p10) & (self.y_test <= cal_p90)) * 100)
-
-        raw_mpiw = float(np.mean(mono_p90_te - mono_p10_te))
-        cal_mpiw = float(np.mean(cal_p90 - cal_p10))
-
-        print(f"- Uncalibrated Test P10-P90 Coverage: {raw_cov:.2f}% (MPIW: Rs {raw_mpiw:.2f}/qtl)")
-        print(f"- Calibrated Test P10-P90 Coverage:   {cal_cov:.2f}% (MPIW: Rs {cal_mpiw:.2f}/qtl | Target: 80.0% +/- 1.0%)")
-
         self.metrics['conformal_calibration_cqr'] = {
             'target_nominal_coverage_pct': 80.0,
             'cqr_offset_qconf_rs_qtl': round(self.cqr_q_offset, 2),
-            'uncalibrated_test_coverage_pct': round(raw_cov, 2),
-            'uncalibrated_mpiw_rs_qtl': round(raw_mpiw, 2),
-            'calibrated_test_coverage_pct': round(cal_cov, 2),
-            'calibrated_mpiw_rs_qtl': round(cal_mpiw, 2)
+            'calibration_split': 'Validation 2024',
+            'test_evaluation_status': 'deferred_until_final_evaluation'
         }
+
+        if evaluate_test:
+            self._final_test_unlocked = True
+            raw_p10_te = self.models['p10'].predict(self.X_test)
+            raw_p50_te = self.models['p50'].predict(self.X_test)
+            raw_p90_te = self.models['p90'].predict(self.X_test)
+            mono_p10_te, mono_p50_te, mono_p90_te, _ = self.apply_monotonic_rearrangement(raw_p10_te, raw_p50_te, raw_p90_te)
+            cal_p10 = mono_p10_te - self.cqr_q_offset
+            cal_p90 = mono_p90_te + self.cqr_q_offset
+            raw_cov = float(np.mean((self.y_test >= mono_p10_te) & (self.y_test <= mono_p90_te)) * 100)
+            cal_cov = float(np.mean((self.y_test >= cal_p10) & (self.y_test <= cal_p90)) * 100)
+            raw_mpiw = float(np.mean(mono_p90_te - mono_p10_te))
+            cal_mpiw = float(np.mean(cal_p90 - cal_p10))
+            self.metrics['conformal_calibration_cqr'].update({
+                'uncalibrated_test_coverage_pct': round(raw_cov, 2),
+                'uncalibrated_test_mpiw_rs_qtl': round(raw_mpiw, 2),
+                'calibrated_test_coverage_pct': round(cal_cov, 2),
+                'calibrated_test_mpiw_rs_qtl': round(cal_mpiw, 2),
+                'test_evaluation_status': 'final_locked_evaluation'
+            })
 
     def run_purged_walk_forward_cv(self, n_splits: int = 5):
         """Executes 5-Fold Purged Walk-Forward Time-Series Cross-Validation strictly on Train+Val (2019-2024), leaving Test Set strictly untouched."""
@@ -733,10 +744,16 @@ class ModelTrainer:
         # STRICTLY 2019-2024 Data: Test set 2025 is NOT included to prevent leakage
         X_cv = pd.concat([self.X_train, self.X_val])
         y_cv = pd.concat([self.y_train, self.y_val])
+        cv_dates = self.df.loc[X_cv.index, 'date'].reset_index(drop=True)
 
         for fold, (train_idx, test_idx) in enumerate(tscv.split(X_cv), 1):
-            # Apply 7-day purging buffer: drop trailing 7 days of train index to prevent overlap leakage
-            purged_train_idx = train_idx[:-7] if len(train_idx) > 7 else train_idx
+            # Purge by actual dates, not row positions, so panel rows sharing a
+            # date cannot cross the intended seven-day temporal boundary.
+            test_start = cv_dates.iloc[test_idx].min()
+            cutoff = test_start - pd.Timedelta(days=7)
+            purged_train_idx = train_idx[cv_dates.iloc[train_idx] < cutoff]
+            if len(purged_train_idx) == 0:
+                continue
             
             X_tr, y_tr = X_cv.iloc[purged_train_idx], y_cv.iloc[purged_train_idx]
             X_te, y_te = X_cv.iloc[test_idx], y_cv.iloc[test_idx]
@@ -745,6 +762,7 @@ class ModelTrainer:
             m_p50 = lgb.LGBMRegressor(**params).fit(X_tr, y_tr)
             
             preds_p50 = m_p50.predict(X_te)
+            self._validate_predictions(y_te, preds_p50, f'Walk-forward fold {fold}')
             mae = mean_absolute_error(y_te, preds_p50)
             rmse = root_mean_squared_error(y_te, preds_p50)
             mape = mean_absolute_percentage_error(y_te, preds_p50) * 100
@@ -771,19 +789,34 @@ class ModelTrainer:
             'mean_mape_pct': round(mean_mape, 2)
         }
 
-    def run_diebold_mariano_tests(self):
+    def _get_evaluation_split(self, split: str = 'validation'):
+        """Return an explicitly selected evaluation split.
+
+        Development diagnostics default to validation so the 2025 holdout
+        remains reserved for final locked evaluation.
+        """
+        if split not in {'validation', 'test'}:
+            raise ValueError("split must be 'validation' or 'test'")
+        if split == 'validation':
+            return self.X_val, self.y_val, self.df.loc[self.X_val.index].copy()
+        if not getattr(self, '_final_test_unlocked', False):
+            raise RuntimeError('The 2025 test split is locked until final evaluation.')
+        return self.X_test, self.y_test, self.df.loc[self.X_test.index].copy()
+
+    def run_diebold_mariano_tests(self, split: str = 'validation'):
         """Calculates Diebold-Mariano (DM) pairwise statistical significance tests with Newey-West (HAC) robust standard errors.
         Evaluates under both Absolute Error Loss (appropriate for median/quantile models) and Squared Error Loss (MSE).
         """
+        X_eval, y_eval, eval_df = self._get_evaluation_split(split)
         print("\nRunning Diebold-Mariano (DM) Statistical Significance Tests (Newey-West HAC Corrected)...")
-        p50_preds = self.models['p50'].predict(self.X_test)
-        e_lgb = np.array(self.y_test) - np.array(p50_preds)
+        p50_preds = self.models['p50'].predict(X_eval)
+        e_lgb = np.array(y_eval) - np.array(p50_preds)
 
         dm_results = {}
         # Compare against Ridge
         if 'ridge_baseline' in self.models:
-            r_preds = self.models['ridge_baseline'].predict(self.X_test)
-            e_ridge = np.array(self.y_test) - np.array(r_preds)
+            r_preds = self.models['ridge_baseline'].predict(X_eval)
+            e_ridge = np.array(y_eval) - np.array(r_preds)
             
             # 1. Absolute Error Loss (MAE)
             d_mae = np.abs(e_ridge) - np.abs(e_lgb)
@@ -822,14 +855,14 @@ class ModelTrainer:
         # Compare against XGBoost
         if 'xgboost' in self.models:
             if hasattr(self, 'xgb_imputer') and self.xgb_imputer is not None:
-                X_te_imp = self.xgb_imputer.transform(self.X_test)
+                X_te_imp = self.xgb_imputer.transform(X_eval)
             else:
                 imputer = SimpleImputer(strategy='median')
                 imputer.fit(self.X_train)
-                X_te_imp = imputer.transform(self.X_test)
+                X_te_imp = imputer.transform(X_eval)
                 
             xgb_preds = self.models['xgboost'].predict(X_te_imp)
-            e_xgb = np.array(self.y_test) - np.array(xgb_preds)
+            e_xgb = np.array(y_eval) - np.array(xgb_preds)
             
             # 1. Absolute Error Loss (MAE)
             d_mae = np.abs(e_xgb) - np.abs(e_lgb)
@@ -867,36 +900,54 @@ class ModelTrainer:
 
         self.metrics['diebold_mariano_tests'] = dm_results
 
-    def run_ljung_box_test(self):
+    def run_ljung_box_test(self, split: str = 'validation'):
         """Tests residual autocorrelation of LightGBM P50 predictions across multiple lags to verify temporal white noise properties."""
-        print("\nRunning Ljung-Box Residual Autocorrelation Diagnostic...")
+        X_eval, y_eval, eval_df = self._get_evaluation_split(split)
+        print("\nRunning panel-aware Ljung-Box Residual Autocorrelation Diagnostic...")
         from statsmodels.stats.diagnostic import acorr_ljungbox
-        p50_preds = self.models['p50'].predict(self.X_test)
-        residuals = np.array(self.y_test) - np.array(p50_preds)
-
-        lb_df = acorr_ljungbox(residuals, lags=[1, 7, 14, 30], return_df=True)
-        lb_results = {}
-        for lag, row in lb_df.iterrows():
-            lb_results[f"lag_{lag}"] = {
-                'lb_stat': round(float(row['lb_stat']), 3),
-                'p_value': round(float(row['lb_pvalue']), 5)
+        p50_preds = self.models['p50'].predict(X_eval)
+        eval_df = eval_df.copy()
+        eval_df['_residual'] = np.asarray(y_eval) - np.asarray(p50_preds)
+        group_results = {}
+        lag_counts = {1: 0, 7: 0, 14: 0, 30: 0}
+        for (market, commodity), group in eval_df.groupby(['market', 'commodity']):
+            residuals = group.sort_values('date')['_residual'].to_numpy(dtype=float)
+            valid_lags = [lag for lag in lag_counts if lag < len(residuals)]
+            if not valid_lags:
+                continue
+            lb_df = acorr_ljungbox(residuals, lags=valid_lags, return_df=True)
+            group_key = f'{commodity}__{market}'
+            group_results[group_key] = {
+                f'lag_{lag}': {
+                    'lb_stat': round(float(row['lb_stat']), 3),
+                    'p_value': round(float(row['lb_pvalue']), 6)
+                }
+                for lag, row in lb_df.iterrows()
             }
-            print(f"- Lag {lag:2d} | LB Stat: {row['lb_stat']:7.3f} | p-value: {row['lb_pvalue']:.5f}")
-        self.metrics['ljung_box_residual_test'] = lb_results
+            for lag in valid_lags:
+                lag_counts[lag] += 1
 
-    def compute_bootstrap_confidence_intervals(self, n_bootstraps: int = 1000):
+        self.metrics['ljung_box_residual_test'] = {
+            'method': 'Per commodity-market series; residuals sorted by date',
+            'split': split,
+            'group_count': len(group_results),
+            'groups': group_results,
+            'groups_tested_by_lag': lag_counts
+        }
+
+    def compute_bootstrap_confidence_intervals(self, n_bootstraps: int = 1000, split: str = 'validation'):
         """Computes 95% non-parametric Circular Block Bootstrap confidence intervals on test set evaluation metrics."""
+        X_eval, y_eval, eval_df = self._get_evaluation_split(split)
         print(f"\nComputing 95% Circular Block Bootstrap Confidence Intervals ({n_bootstraps} resamples, 7-day blocks)...")
-        raw_p10 = self.models['p10'].predict(self.X_test)
-        raw_p50 = self.models['p50'].predict(self.X_test)
-        raw_p90 = self.models['p90'].predict(self.X_test)
+        raw_p10 = self.models['p10'].predict(X_eval)
+        raw_p50 = self.models['p50'].predict(X_eval)
+        raw_p90 = self.models['p90'].predict(X_eval)
         p10_preds, p50_preds, p90_preds = self.apply_monotonic_rearrangement(raw_p10, raw_p50, raw_p90, return_diagnostics=False)
-        y_true = np.array(self.y_test)
+        y_true = np.array(y_eval)
 
         n_samples = len(y_true)
         block_size = 7
-        num_blocks = int(np.ceil(n_samples / block_size))
-        np.random.seed(42)
+        rng = np.random.default_rng(42)
 
         boot_maes = []
         boot_mapes = []
@@ -904,11 +955,30 @@ class ModelTrainer:
         boot_r2s = []
         boot_coverages = []
 
+        self._validate_predictions(y_true, p10_preds, 'Bootstrap P10')
+        self._validate_predictions(y_true, p50_preds, 'Bootstrap P50')
+        self._validate_predictions(y_true, p90_preds, 'Bootstrap P90')
+
+        # Preserve temporal dependence within each commodity-market series;
+        # never create blocks that cross unrelated panel groups.
+        group_positions = []
+        for _, group in eval_df.reset_index(drop=True).sort_values('date').groupby(['market', 'commodity']):
+            positions = group.index.to_numpy(dtype=int)
+            if len(positions) > 0:
+                group_positions.append(positions)
+        if not group_positions:
+            raise ValueError('No valid commodity-market groups available for bootstrap evaluation.')
+
         for _ in range(n_bootstraps):
-            start_indices = np.random.randint(0, n_samples, size=num_blocks)
-            indices = np.concatenate([
-                np.arange(start, start + block_size) % n_samples for start in start_indices
-            ])[:n_samples]
+            sampled_indices = []
+            for positions in group_positions:
+                group_size = len(positions)
+                starts = rng.integers(0, group_size, size=int(np.ceil(group_size / block_size)))
+                local_indices = np.concatenate([
+                    (np.arange(start, start + block_size) % group_size) for start in starts
+                ])[:group_size]
+                sampled_indices.extend(positions[local_indices])
+            indices = np.asarray(sampled_indices, dtype=int)
 
             b_y = y_true[indices]
             b_p50 = p50_preds[indices]
@@ -936,9 +1006,11 @@ class ModelTrainer:
         print(f"- Coverage: {np.mean(boot_coverages):.2f}% (95% CI: [{ci_95['Coverage_CI_95'][0]}%, {ci_95['Coverage_CI_95'][1]}%])")
 
         self.metrics['bootstrap_confidence_intervals_95'] = {
-            'method': 'Circular Block Bootstrap (7-Day Temporal Blocks)',
+            'method': 'Panel-Aware Circular Block Bootstrap (7-Day Within-Series Blocks)',
             'block_length_days': 7,
             'n_bootstraps': n_bootstraps,
+            'split': split,
+            'group_count': len(group_positions),
             'random_seed': 42,
             **ci_95
         }
@@ -1026,6 +1098,7 @@ class ModelTrainer:
             
             m_lomo = lgb.LGBMRegressor(**params).fit(X_lomo_tr, y_lomo_tr)
             preds = m_lomo.predict(X_lomo_te)
+            self._validate_predictions(y_lomo_te, preds, f'LOMO {holdout_mandi}')
             
             mae = float(mean_absolute_error(y_lomo_te, preds))
             rmse = float(root_mean_squared_error(y_lomo_te, preds))
@@ -1043,17 +1116,37 @@ class ModelTrainer:
             
         self.metrics['leave_one_mandi_out_spatial_cv'] = lomo_results
 
+    @staticmethod
+    def _validate_predictions(y_true, predictions, label: str) -> None:
+        y_arr = np.asarray(y_true, dtype=float).reshape(-1)
+        p_arr = np.asarray(predictions, dtype=float).reshape(-1)
+        if len(y_arr) != len(p_arr):
+            raise ValueError(f'{label}: target/prediction length mismatch.')
+        if not np.isfinite(p_arr).all():
+            raise ValueError(f'{label}: predictions contain NaN or infinity.')
+        if (p_arr < 0).any():
+            raise ValueError(f'{label}: negative price predictions are invalid.')
+
     def evaluate_performance(self):
         """Calculates evaluation metrics (MAPE, RMSE, MAE, R2, sMAPE, MASE, Pinball Loss, Coverage) on validation and test sets."""
+        self._final_test_unlocked = True
+        self._final_test_unlocked = True
         print("\nEvaluating model performance...")
 
         eval_summary = {}
-        naive_train_diff = float(np.mean(np.abs(np.diff(self.y_train)))) if len(self.y_train) > 1 else 1.0
+        train_panel = self.df.loc[self.X_train.index, ['market', 'commodity', self.target_col]]
+        group_scales = train_panel.groupby(['market', 'commodity'])[self.target_col].apply(
+            lambda values: float(np.mean(np.abs(np.diff(values)))) if len(values) > 1 else np.nan
+        ).dropna()
+        naive_train_diff = float(group_scales.mean()) if not group_scales.empty else 1.0
 
-        for set_name, X, y in [('Validation (2024)', self.X_val, self.y_val), ('Test (2025)', self.X_test, self.y_test)]:
+        for set_name, X, y in [('Validation (2024)', self.X_val, self.y_val), ('Test (2025)', X_eval, y_eval)]:
             raw_p10 = self.models['p10'].predict(X)
             raw_p50 = self.models['p50'].predict(X)
             raw_p90 = self.models['p90'].predict(X)
+            self._validate_predictions(y, raw_p10, f'{set_name} P10')
+            self._validate_predictions(y, raw_p50, f'{set_name} P50')
+            self._validate_predictions(y, raw_p90, f'{set_name} P90')
 
             p10_preds, p50_preds, p90_preds, diag = self.apply_monotonic_rearrangement(raw_p10, raw_p50, raw_p90, return_diagnostics=True)
 
@@ -1095,7 +1188,7 @@ class ModelTrainer:
         # Compute per-commodity metrics breakdown on 2025 Test Set
         print("\nPer-Commodity Test Performance Breakdown (2025 Test Set):")
         per_commodity_metrics = {}
-        test_df_subset = self.df.loc[self.X_test.index].copy()
+        test_df_subset = eval_df.copy()
         test_df_subset['p50_pred'] = p50_preds
 
         for comm, group in test_df_subset.groupby('commodity'):
@@ -1140,16 +1233,20 @@ class ModelTrainer:
         eval_summary['Per_Mandi_Breakdown_2025'] = per_mandi_metrics
         self.metrics['performance'] = eval_summary
 
-    def check_quantile_crossings(self):
+    def check_quantile_crossings(self, split: str = 'validation'):
         """Verifies P10 <= P50 <= P90 monotonicity before and after Chernozhukov Monotonic Rearrangement."""
+        X_eval, y_eval, eval_df = self._get_evaluation_split(split)
         print("\nChecking P10 <= P50 <= P90 Quantile Crossings & Before-vs-After Validation...")
         
         crossing_results = {}
         
-        for set_name, X, key in [('Validation (2024)', self.X_val, 'val'), ('Test (2025)', self.X_test, 'test')]:
+        for set_name, X, key in [('Validation (2024)', self.X_val, 'val'), ('Test (2025)', X_eval, 'test')]:
             p10 = self.models['p10'].predict(X)
             p50 = self.models['p50'].predict(X)
             p90 = self.models['p90'].predict(X)
+            self._validate_predictions(self.y_val if key == 'val' else y_eval, p10, f'{set_name} P10')
+            self._validate_predictions(self.y_val if key == 'val' else y_eval, p50, f'{set_name} P50')
+            self._validate_predictions(self.y_val if key == 'val' else y_eval, p90, f'{set_name} P90')
             
             p10_mono, p50_mono, p90_mono, diag = self.apply_monotonic_rearrangement(p10, p50, p90, return_diagnostics=True)
             
@@ -1161,10 +1258,10 @@ class ModelTrainer:
             print(f"  Validation Shifts: Mean P50 Shift on Crossings = Rs {diag['mean_p50_shift_on_crossings_rs']:.2f}/qtl | Max Shift = Rs {diag['max_p50_shift_rs']:.2f}/qtl | Safety Status = {diag['safety_guard_status']}")
             
         # Breakdown by Commodity on Test Set
-        test_df_subset = self.df.loc[self.X_test.index].copy()
-        test_df_subset['p10'] = self.models['p10'].predict(self.X_test)
-        test_df_subset['p50'] = self.models['p50'].predict(self.X_test)
-        test_df_subset['p90'] = self.models['p90'].predict(self.X_test)
+        test_df_subset = eval_df.copy()
+        test_df_subset['p10'] = self.models['p10'].predict(X_eval)
+        test_df_subset['p50'] = self.models['p50'].predict(X_eval)
+        test_df_subset['p90'] = self.models['p90'].predict(X_eval)
         
         commodity_crossings = {}
         for comm, grp in test_df_subset.groupby('commodity'):
@@ -1260,11 +1357,8 @@ class ModelTrainer:
         print(f"Saved: {interval_fig_path}")
 
         # 3. Supply Shock Anomaly Score Distribution Plot
-        from sklearn.impute import SimpleImputer
         shock_features = [f for f in ['arrival_ratio', 'arrival_velocity_7d', 'price_volatility_30d', 'price_spread'] if f in self.feature_cols]
-        imputer = SimpleImputer(strategy='median')
-        X_test_shock = imputer.fit_transform(self.X_test[shock_features])
-        scores = self.models['isolation_forest'].decision_function(X_test_shock)
+        scores = self.models['isolation_forest'].decision_function(self.X_test[shock_features])
 
         fig, ax = plt.subplots(figsize=(8, 4), dpi=300)
         ax.hist(scores, bins=40, color='darkorange', edgecolor='white', alpha=0.85)
@@ -1289,6 +1383,14 @@ class ModelTrainer:
             joblib.dump(model, file_path)
             print(f"Saved: {file_path}")
 
+        production_version = os.getenv('PROD_MODEL_VERSION', 'v1.0.0')
+        version_dir = os.path.join(self.output_dir, production_version)
+        os.makedirs(version_dir, exist_ok=True)
+        for q in ('p10', 'p50', 'p90'):
+            version_path = os.path.join(version_dir, f'lgb_quantile_{q}.pkl')
+            joblib.dump(self.models[q], version_path)
+            print(f"Saved production artifact: {version_path}")
+
         metadata = {
             'project': 'CropLens AI',
             'phase': 'Phase 3 Core AI/ML Engine',
@@ -1302,16 +1404,19 @@ class ModelTrainer:
                 'val_rows_2024': self.X_val.shape[0],
                 'test_rows_2025': self.X_test.shape[0]
             },
-            'target_variable': self.target_col,
+            'target_variable': 'modal_price at t+1 (target_next_day_modal_price)',
+            'forecast_horizon_days': self.forecast_horizon_days,
+            'feature_contract_version': 'phase1-explicit-v1',
             'feature_count': len(self.feature_cols),
             'feature_cols': self.feature_cols,
             'random_seed': 42,
             'optuna_info': {
-                'n_trials': 15,
+                'n_trials': int(self._optuna_n_trials),
                 'objective': 'quantile',
-                'alpha': 0.50,
+                'alpha': 'quantile_specific',
                 'metric': 'quantile pinball loss',
                 'sampler': 'TPESampler(seed=42)',
+                'best_hyperparameters_by_quantile': getattr(self, 'best_params_by_quantile', {}),
                 'best_hyperparameters': self.best_params
             },
             'quantile_models': {
@@ -1324,8 +1429,14 @@ class ModelTrainer:
         }
 
         meta_path = os.path.join(self.output_dir, 'model_metadata.json')
-        with open(meta_path, 'w') as f:
-            json.dump(metadata, f, indent=4)
+        version_meta_path = os.path.join(version_dir, 'model_metadata.json')
+        for destination in (meta_path, version_meta_path):
+            temp_path = destination + '.tmp'
+            with open(temp_path, 'w') as f:
+                json.dump(metadata, f, indent=4)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_path, destination)
 
         print(f"Saved Metadata: {meta_path}")
 
@@ -1349,8 +1460,9 @@ class ModelTrainer:
         self.run_leave_one_mandi_out_validation()
         self.run_ljung_box_test()
         self.evaluate_performance()
-        self.check_quantile_crossings()
-        self.compute_bootstrap_confidence_intervals(n_bootstraps=1000)
+        self.check_quantile_crossings(split='validation')
+        self.compute_bootstrap_confidence_intervals(n_bootstraps=1000, split='validation')
+        self.calibrate_conformal_quantiles(evaluate_test=True)
         self.generate_explainability_and_plots()
         self.save_artifacts()
         print("\nModel training and evaluation completed successfully!")
