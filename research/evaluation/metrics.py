@@ -28,6 +28,10 @@ def calculate_point_metrics(
     """
     y_t = np.asarray(y_true, dtype=np.float64).ravel()
     y_p = np.asarray(y_pred, dtype=np.float64).ravel()
+    if len(y_t) != len(y_p) or len(y_t) == 0:
+        raise ValueError('y_true and y_pred must be non-empty arrays of equal length.')
+    if not np.isfinite(y_t).all() or not np.isfinite(y_p).all():
+        raise ValueError('y_true and y_pred must contain only finite values.')
 
     mae = float(mean_absolute_error(y_t, y_p))
     rmse = float(np.sqrt(mean_squared_error(y_t, y_p)))
@@ -59,10 +63,32 @@ def calculate_point_metrics(
     }
 
 
-def calculate_mase(y_true: np.ndarray, y_pred: np.ndarray, y_train: np.ndarray) -> float:
-    """Calculates Mean Absolute Scaled Error relative to naive train series differencing."""
-    mae = float(mean_absolute_error(y_true, y_pred))
-    train_diff = float(np.mean(np.abs(np.diff(y_train)))) if len(y_train) > 1 else 1.0
+def calculate_mase(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    y_train: np.ndarray,
+    train_groups: Optional[np.ndarray] = None,
+) -> float:
+    """Calculates MASE using within-series naive differences for panel data."""
+    y_t = np.asarray(y_true, dtype=np.float64).ravel()
+    y_p = np.asarray(y_pred, dtype=np.float64).ravel()
+    if len(y_t) != len(y_p) or len(y_t) == 0:
+        raise ValueError('y_true and y_pred must be non-empty arrays of equal length.')
+    mae = float(mean_absolute_error(y_t, y_p))
+    train_values = np.asarray(y_train, dtype=np.float64).ravel()
+    if train_groups is None:
+        scales = [float(np.mean(np.abs(np.diff(train_values))))] if len(train_values) > 1 else []
+    else:
+        groups = np.asarray(train_groups)
+        if len(groups) != len(train_values):
+            raise ValueError('train_groups must align with y_train.')
+        scales = []
+        for group in np.unique(groups):
+            values = train_values[groups == group]
+            if len(values) > 1:
+                scales.append(float(np.mean(np.abs(np.diff(values)))))
+    valid_scales = [scale for scale in scales if np.isfinite(scale) and scale > 0]
+    train_diff = float(np.mean(valid_scales)) if valid_scales else 1.0
     return float(mae / train_diff) if train_diff > 0 else 1.0
 
 
@@ -83,6 +109,12 @@ def calculate_quantile_metrics(
     p10 = np.asarray(p10_pred, dtype=np.float64).ravel()
     p50 = np.asarray(p50_pred, dtype=np.float64).ravel()
     p90 = np.asarray(p90_pred, dtype=np.float64).ravel()
+    if not (len(y_t) == len(p10) == len(p50) == len(p90)) or len(y_t) == 0:
+        raise ValueError('Quantile arrays must be non-empty and have equal length.')
+    if not all(np.isfinite(values).all() for values in (y_t, p10, p50, p90)):
+        raise ValueError('Quantile evaluation arrays must contain only finite values.')
+    if np.any(p10 > p50) or np.any(p50 > p90):
+        raise ValueError('Quantile predictions must satisfy P10 <= P50 <= P90.')
 
     p10_loss = calculate_pinball_loss(y_t, p10, 0.10)
     p50_loss = calculate_pinball_loss(y_t, p50, 0.50)

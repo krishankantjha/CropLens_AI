@@ -48,14 +48,12 @@ def test_openapi_documentation(client):
 
 
 def test_missing_model_raises_runtime_error(monkeypatch):
-    """Tests that missing model artifact causes a clear RuntimeError during load."""
-    def mock_exists(path):
-        if "p90.pkl" in path:
-            return False
-        return True
+    """Tests that an incomplete versioned model bundle fails clearly."""
+    def missing_bundle(self):
+        raise FileNotFoundError("missing quantile artifacts: ['p90']")
 
-    monkeypatch.setattr("os.path.exists", mock_exists)
+    monkeypatch.setattr("backend.app.main.ModelRegistry.load_model", missing_bundle)
     with pytest.raises(RuntimeError) as exc_info:
         load_model_artifacts()
     error_msg = str(exc_info.value)
-    assert any(term in error_msg for term in ["Missing required model artifact", "Model artifacts directory not found", "Failed to load model artifact"])
+    assert "Versioned production model bundle could not be loaded" in error_msg

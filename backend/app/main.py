@@ -16,6 +16,7 @@ from typing import Dict, Any, List
 
 import joblib
 import pandas as pd
+
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -39,9 +40,11 @@ if base_dir not in sys.path:
 try:
     from backend.app.api.api_router import api_router
     from backend.app.core.config import ENVIRONMENT
+    from backend.app.core.model_registry import ModelRegistry
 except ModuleNotFoundError:
     from app.api.api_router import api_router
     from app.core.config import ENVIRONMENT
+    from app.core.model_registry import ModelRegistry
 
 
 def load_model_artifacts() -> Dict[str, Any]:
@@ -51,51 +54,26 @@ def load_model_artifacts() -> Dict[str, Any]:
     """
     base_dir = get_base_dir()
 
-    # Model directory path resolution
-    possible_model_dirs = [
-        os.path.join(base_dir, "backend", "app", "models"),
-        os.path.join(base_dir, "app", "models"),
-        os.path.abspath(os.path.join(os.getcwd(), "backend", "app", "models")),
-        os.path.abspath(os.path.join(os.getcwd(), "models"))
-    ]
-
-    model_dir = None
-    for d in possible_model_dirs:
-        if os.path.exists(d) and os.path.exists(os.path.join(d, "p50.pkl")):
-            model_dir = d
-            break
-
-    if model_dir is None:
-        raise RuntimeError("Model artifacts directory not found. Expected trained .pkl files in backend/app/models/")
-
-    # Required model files
-    required_models = {
-        "p10": "p10.pkl",
-        "p50": "p50.pkl",
-        "p90": "p90.pkl",
-        "isolation_forest": "isolation_forest.pkl"
-    }
-
-    loaded_models = {}
-    for key, filename in required_models.items():
-        filepath = os.path.join(model_dir, filename)
-        if not os.path.exists(filepath):
-            raise RuntimeError(f"Missing required model artifact: {filename} at {filepath}")
-        try:
-            loaded_models[key] = joblib.load(filepath)
-        except Exception as e:
-            raise RuntimeError(f"Failed to load model artifact {filename}: {str(e)}")
-
-    # Load metadata JSON
-    meta_path = os.path.join(model_dir, "model_metadata.json")
-    if not os.path.exists(meta_path):
-        raise RuntimeError(f"Model metadata file missing: model_metadata.json at {meta_path}")
-
+    registry_path = os.path.join(base_dir, "backend", "app", "models", "registry.json")
+    registry = ModelRegistry(registry_path=registry_path)
     try:
-        with open(meta_path, "r") as f:
-            metadata = json.load(f)
+        registry_artifacts = registry.load_model()
     except Exception as e:
-        raise RuntimeError(f"Failed to read model metadata JSON: {str(e)}")
+        raise RuntimeError(f"Versioned production model bundle could not be loaded: {e}") from e
+
+    model_dir = registry.models_dir
+    loaded_models = dict(registry_artifacts["models"])
+    metadata = registry_artifacts["metadata"]
+
+    # Isolation Forest remains an operational auxiliary model. It is loaded
+    # from the same model root and must be present for the anomaly endpoint.
+    anomaly_path = os.path.join(model_dir, "isolation_forest.pkl")
+    if not os.path.isfile(anomaly_path):
+        raise RuntimeError(f"Missing required model artifact: {anomaly_path}")
+    try:
+        loaded_models["isolation_forest"] = joblib.load(anomaly_path)
+    except Exception as e:
+        raise RuntimeError(f"Failed to load model artifact isolation_forest.pkl: {e}") from e
 
     # Dataset path resolution
     possible_dataset_paths = [

@@ -30,18 +30,9 @@ class ModelRegistry:
                 logger.error(f"Failed to load model registry: {e}")
                 self._registry_cache = {"versions": {}, "active_version": "v1.0.0"}
         else:
-            # Default registry if none exists
-            self._registry_cache = {
-                "versions": {
-                    "v1.0.0": {
-                        "path": "v1.0.0",
-                        "description": "Initial production LightGBM model",
-                        "metrics": {"mae": 142.5, "rmse": 210.2}
-                    }
-                },
-                "active_version": "v1.0.0"
-            }
-            self._save_registry()
+            # Do not create a placeholder production version at runtime. A
+            # missing registry must remain an explicit missing-artifact state.
+            self._registry_cache = {"versions": {}, "active_version": None}
 
     def _save_registry(self):
         """Persists the registry index to disk."""
@@ -64,9 +55,7 @@ class ModelRegistry:
         ver_info = self._registry_cache.get("versions", {}).get(ver)
         
         if not ver_info:
-            logger.error(f"Model version {ver} not found in registry. Falling back to default.")
-            ver = "v1.0.0"
-            ver_info = self._registry_cache.get("versions", {}).get(ver, {})
+            raise FileNotFoundError(f"Model version {ver!r} is not registered in {self.registry_path}")
 
         ver_path = os.path.join(self.models_dir, ver_info.get("path", ver))
         
@@ -76,20 +65,28 @@ class ModelRegistry:
             "metadata": {}
         }
 
-        # Load LightGBM Quantile Models
-        for q in ["p10", "p50", "p90"]:
-            model_file = os.path.join(ver_path, f"lgb_quantile_{q}.pkl")
-            if os.path.exists(model_file):
-                artifacts["models"][q] = joblib.load(model_file)
-            else:
-                logger.warning(f"Model file {model_file} missing for version {ver}")
+        # Load the complete LightGBM quantile bundle atomically from the
+        # versioned directory. A partial bundle is not production-safe.
+        model_paths = {
+            q: os.path.join(ver_path, f"lgb_quantile_{q}.pkl")
+            for q in ("p10", "p50", "p90")
+        }
+        missing_models = [q for q, path in model_paths.items() if not os.path.isfile(path)]
+        if missing_models:
+            raise FileNotFoundError(
+                f"Model version {ver} is incomplete; missing quantile artifacts: {missing_models}"
+            )
+        artifacts["models"] = {q: joblib.load(path) for q, path in model_paths.items()}
 
-        # Load Metadata
+        # Metadata is required for feature ordering and inference semantics.
         meta_file = os.path.join(ver_path, "model_metadata.json")
-        if os.path.exists(meta_file):
-            with open(meta_file, 'r') as f:
-                artifacts["metadata"] = json.load(f)
-        
+        if not os.path.isfile(meta_file):
+            raise FileNotFoundError(f"Model version {ver} is missing metadata: {meta_file}")
+        with open(meta_file, 'r') as f:
+            artifacts["metadata"] = json.load(f)
+        if not artifacts["metadata"].get("feature_cols"):
+            raise ValueError(f"Model version {ver} metadata has no feature_cols contract")
+
         return artifacts
 
 model_registry = ModelRegistry()
