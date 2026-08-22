@@ -118,3 +118,6 @@ Table III summarizes the operational hyperparameters and reproducibility configu
 | **Random Initialization Seed** | **42 (Locked)** | **42 (Locked)** | **42 (Locked)** | **42 (Locked)** |
 
 All experiments were executed on an Intel Core i7-13700H CPU ($16\text{ cores}$, $2.40\text{ GHz}$) with $32\text{ GB RAM}$ and an NVIDIA GeForce RTX 4060 GPU ($8\text{ GB VRAM}$) running Python 3.11.9, PyTorch 2.4.0, LightGBM 4.5.0, Scikit-Learn 1.5.1, and Statsmodels 0.14.2. All numbers are reproducible via `python backend/app/evaluation/run_canonical_evaluation.py`.
+
+#### **Visual Reproducibility of the Temporal Protocol**
+The notebook exports `reports/eda_insights/chronological_train_validation_test_split.png` and the corresponding CSV boundary table. The visualization mirrors the strict calendar partition above: training covers 2019–2023, validation and conformal calibration cover 2024, and the untouched out-of-sample test period covers 2025. No random shuffling is used.

@@ -1,0 +1,24 @@
+filename,relative_path,artifact_type,purpose,source_section,size_bytes,generated_utc
+14_day_cumulative_rainfall_vs_modal_price.png,reports/eda_insights/14_day_cumulative_rainfall_vs_modal_price.png,png,EDA figure or diagnostic artifact,EDA notebook,717215,2026-08-22T16:43:46.867809+00:00
+7_day_price_velocity_distribution.png,reports/eda_insights/7_day_price_velocity_distribution.png,png,EDA figure or diagnostic artifact,EDA notebook,68700,2026-08-22T16:43:46.867809+00:00
+arrival_ratio_vs_7_day_price_velocity.png,reports/eda_insights/arrival_ratio_vs_7_day_price_velocity.png,png,EDA figure or diagnostic artifact,EDA notebook,600079,2026-08-22T16:43:46.867809+00:00
+average_modal_price_across_festival_phases.png,reports/eda_insights/average_modal_price_across_festival_phases.png,png,EDA figure or diagnostic artifact,EDA notebook,95616,2026-08-22T16:43:46.867809+00:00
+average_modal_price_on_normal_0_vs_heatwave_1_days_by_commodity.png,reports/eda_insights/average_modal_price_on_normal_0_vs_heatwave_1_days_by_commodity.png,png,EDA figure or diagnostic artifact,EDA notebook,119994,2026-08-22T16:43:46.867809+00:00
+daily_arrival_volume_vs_wholesale_price.png,reports/eda_insights/daily_arrival_volume_vs_wholesale_price.png,png,EDA figure or diagnostic artifact,EDA notebook,774050,2026-08-22T16:43:46.867809+00:00
+daily_intra_day_auction_spread_max_min_price.png,reports/eda_insights/daily_intra_day_auction_spread_max_min_price.png,png,EDA figure or diagnostic artifact,EDA notebook,104717,2026-08-22T16:43:46.867809+00:00
+distribution_of_wholesale_modal_price_target_variable.png,reports/eda_insights/distribution_of_wholesale_modal_price_target_variable.png,png,EDA figure or diagnostic artifact,EDA notebook,68595,2026-08-22T16:43:46.867809+00:00
+empirical_average_modal_price_by_commodity.png,reports/eda_insights/empirical_average_modal_price_by_commodity.png,png,EDA figure or diagnostic artifact,EDA notebook,135828,2026-08-22T16:43:46.867809+00:00
+empirical_average_modal_price_by_mandi.png,reports/eda_insights/empirical_average_modal_price_by_mandi.png,png,EDA figure or diagnostic artifact,EDA notebook,124086,2026-08-22T16:43:46.867809+00:00
+feature_correlation_matrix_with_target_modal_price.png,reports/eda_insights/feature_correlation_matrix_with_target_modal_price.png,png,EDA figure or diagnostic artifact,EDA notebook,499982,2026-08-22T16:43:46.867809+00:00
+intra_year_monthly_price_seasonality_pattern.png,reports/eda_insights/intra_year_monthly_price_seasonality_pattern.png,png,EDA figure or diagnostic artifact,EDA notebook,249989,2026-08-22T16:43:46.867809+00:00
+maximum_temperature_vs_modal_price.png,reports/eda_insights/maximum_temperature_vs_modal_price.png,png,EDA figure or diagnostic artifact,EDA notebook,1026694,2026-08-22T16:43:46.867809+00:00
+missing_value_percentage_by_column.png,reports/eda_insights/missing_value_percentage_by_column.png,png,EDA figure or diagnostic artifact,EDA notebook,108729,2026-08-22T16:43:46.867809+00:00
+modal_price_spread_outliers_by_commodity.png,reports/eda_insights/modal_price_spread_outliers_by_commodity.png,png,EDA figure or diagnostic artifact,EDA notebook,98659,2026-08-22T16:43:46.867809+00:00
+modal_vs_midpoint_auction_power_bias_distribution.png,reports/eda_insights/modal_vs_midpoint_auction_power_bias_distribution.png,png,EDA figure or diagnostic artifact,EDA notebook,73286,2026-08-22T16:43:46.867809+00:00
+multi_year_average_price_trends_2019_2025.png,reports/eda_insights/multi_year_average_price_trends_2019_2025.png,png,EDA figure or diagnostic artifact,EDA notebook,187183,2026-08-22T16:43:46.867809+00:00
+price_regime_indicator_distribution_lagged_7_day_vs_30_day_ma.png,reports/eda_insights/price_regime_indicator_distribution_lagged_7_day_vs_30_day_ma.png,png,EDA figure or diagnostic artifact,EDA notebook,80259,2026-08-22T16:43:46.867809+00:00
+price_standard_deviation_volatility_by_mandi.png,reports/eda_insights/price_standard_deviation_volatility_by_mandi.png,png,EDA figure or diagnostic artifact,EDA notebook,134947,2026-08-22T16:43:46.867809+00:00
+rainfall_price_cross_correlation.png,reports/eda_insights/rainfall_price_cross_correlation.png,png,Aggregate rainfall-price lag analysis,23.3,66523,2026-08-22T16:43:46.867809+00:00
+spatial_price_gradient_by_commodity_vs_regional_average.png,reports/eda_insights/spatial_price_gradient_by_commodity_vs_regional_average.png,png,EDA figure or diagnostic artifact,EDA notebook,112279,2026-08-22T16:43:46.867809+00:00
+time_aligned_ndvi_4_week_momentum_time_t_vs_arrivals_4_weeks_later_t_28.png,reports/eda_insights/time_aligned_ndvi_4_week_momentum_time_t_vs_arrivals_4_weeks_later_t_28.png,png,EDA figure or diagnostic artifact,EDA notebook,1563040,2026-08-22T16:43:46.867809+00:00
+top_positive_negative_feature_correlations.png,reports/eda_insights/top_positive_negative_feature_correlations.png,png,Feature-target correlation ranking,19,117968,2026-08-22T16:43:46.867809+00:00
