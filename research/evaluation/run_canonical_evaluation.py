@@ -30,25 +30,27 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from statsmodels.tsa.stattools import adfuller, kpss, acf
 
-# Add backend directory to sys.path
+# Add repository and backend directories to sys.path for both module and
+# direct-script execution.
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-APP_DIR = os.path.dirname(CURRENT_DIR)
-BACKEND_DIR = os.path.dirname(APP_DIR)
-BASE_DIR = os.path.dirname(BACKEND_DIR)
+RESEARCH_DIR = os.path.dirname(CURRENT_DIR)
+BASE_DIR = os.path.dirname(RESEARCH_DIR)
+BACKEND_DIR = os.path.join(BASE_DIR, 'backend')
+for import_root in (BASE_DIR, BACKEND_DIR):
+    if import_root not in sys.path:
+        sys.path.insert(0, import_root)
 
-if BACKEND_DIR not in sys.path:
-    sys.path.insert(0, BACKEND_DIR)
-
-from app.evaluation.metrics import (
+from research.evaluation.metrics import (
     calculate_point_metrics,
     calculate_quantile_metrics,
     calculate_diebold_mariano,
     calculate_ljung_box
 )
-from app.evaluation.baselines import (
+from research.evaluation.baselines import (
     evaluate_naive_persistence,
     compute_improvement_percentage
 )
+from app.core.model_registry import ModelRegistry
 
 warnings.filterwarnings('ignore')
 
@@ -127,16 +129,39 @@ def run_canonical_evaluation():
     # 1. Load dataset
     print(f"\nLoading master dataset from: {data_path}")
     df = pd.read_parquet(data_path)
-    df['date'] = pd.to_datetime(df['date'])
-    df = df.sort_values('date').reset_index(drop=True)
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
+    if df['date'].isna().any():
+        raise ValueError('Evaluation dataset contains invalid dates.')
+    df = df.sort_values(['market', 'commodity', 'date']).reset_index(drop=True)
 
-    metadata_cols = [
-        'state', 'district', 'market', 'commodity', 'variety',
-        'market_id', 'harvest_season_type', 'festival_name', 'date',
-        'latitude', 'longitude', 'modal_price', 'min_price', 'max_price'
+    feature_cols = [
+        'arrivals_in_qtl', 'rainfall_mm', 'temp_max', 'temp_min', 'ndvi_mean',
+        'is_festive_season', 'price_lag_1d', 'price_lag_2d', 'price_lag_3d',
+        'price_lag_1w', 'price_lag_4w', 'price_lag_52w', 'price_ema_7d',
+        'price_ema_21d', 'price_channel_width_7d', 'price_velocity_7d',
+        'price_volatility_30d', 'price_spread', 'rolling_price_reversal_signal',
+        'modal_vs_midpoint_bias', 'commodity_price_percentile_rank',
+        'price_quality_premium', 'arrivals_rolling_mean_30d', 'arrival_ratio',
+        'arrival_velocity_7d', 'arrival_price_divergence_signal', 'temp_range',
+        'rainfall_rolling_sum_14d', 'rain_x_ndvi_interaction',
+        'temp_stress_days_7d', 'consecutive_dry_days', 'vegetative_stress_ratio',
+        'heat_wave_event_flag', 'ndvi_momentum_4w', 'harvest_glut_index',
+        'festival_price_anticipation_score', 'post_festival_demand_hangover',
+        'dist_to_hub_km', 'hub_price_diff', 'spatial_price_gradient',
+        'sin_month', 'cos_month', 'sin_dow', 'cos_dow',
+        'is_peak_harvest_month', 'market_seasonality_deviation',
+        'price_regime_indicator',
     ]
-    feature_cols = [c for c in df.select_dtypes(include=[np.number]).columns if c not in metadata_cols]
-    target_col = 'modal_price'
+    missing_features = sorted(set(feature_cols).difference(df.columns))
+    if missing_features:
+        raise ValueError('Evaluation dataset is missing feature contract columns: ' + ', '.join(missing_features))
+
+    target_col = 'target_next_day_modal_price'
+    grouped = df.groupby(['market', 'commodity'], sort=False)
+    next_date = grouped['date'].shift(-1)
+    next_price = grouped['modal_price'].shift(-1)
+    df[target_col] = next_price.where(next_date.eq(df['date'] + pd.Timedelta(days=1)))
+    df = df[df[target_col].notna()].copy()
 
     train_mask = df['date'].dt.year <= 2023
     val_mask = df['date'].dt.year == 2024
@@ -171,22 +196,22 @@ def run_canonical_evaluation():
     # 3. Load Tabular Models
     print("\n2. Loading and Evaluating Tabular Models...")
     models = {}
-    model_files = {
-        'p50': 'p50.pkl',
-        'p10': 'p10.pkl',
-        'p90': 'p90.pkl',
+    registry_path = os.path.join(models_dir, 'registry.json')
+    registry = ModelRegistry(registry_path=registry_path)
+    registered = registry.load_model()
+    models.update(registered['models'])
+    print(f"Loaded LightGBM quantile bundle from version {registered['version']}")
+
+    benchmark_files = {
         'ridge': 'ridge_baseline.pkl',
         'xgboost': 'xgboost.pkl',
-        'catboost': 'catboost.pkl'
+        'catboost': 'catboost.pkl',
     }
-
-    for name, fname in model_files.items():
+    for name, fname in benchmark_files.items():
         fpath = os.path.join(models_dir, fname)
         if os.path.exists(fpath):
             models[name] = joblib.load(fpath)
             print(f"Loaded {name} from {fname}")
-        else:
-            print(f"Warning: {fname} not found in {models_dir}")
 
     # Generate Tabular Predictions
     preds = {}
@@ -212,9 +237,7 @@ def run_canonical_evaluation():
 
     # XGBoost
     if 'xgboost' in models:
-        train_meds = X_train.median()
-        X_test_imp = X_test.fillna(train_meds)
-        preds['XGBoost'] = models['xgboost'].predict(X_test_imp)
+        preds['XGBoost'] = models['xgboost'].predict(X_test)
 
     # CatBoost
     if 'catboost' in models:
