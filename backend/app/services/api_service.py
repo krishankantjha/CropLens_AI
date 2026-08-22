@@ -50,11 +50,18 @@ def predict_price_service(
     raw_p10 = float(models['p10'].predict(X_input)[0])
     raw_p50 = float(models['p50'].predict(X_input)[0])
     raw_p90 = float(models['p90'].predict(X_input)[0])
+    raw_predictions = np.array([raw_p10, raw_p50, raw_p90], dtype=float)
+    if not np.isfinite(raw_predictions).all() or (raw_predictions < 0).any():
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Model returned invalid price predictions.')
 
     # Chernozhukov Monotonic Rearrangement (Econometrica 2010): sorting guarantees P10 <= P50 <= P90
     sorted_quantiles = sorted([raw_p10, raw_p50, raw_p90])
     p10_val, p50_val, p90_val = sorted_quantiles[0], sorted_quantiles[1], sorted_quantiles[2]
 
+    calibration = metadata.get('metrics', {}).get('conformal_calibration_cqr', {})
+    qconf_offset = float(calibration.get('cqr_offset_qconf_rs_qtl', 0.0) or 0.0)
+    p10_val = max(0.0, p10_val - qconf_offset)
+    p90_val = p90_val + qconf_offset
     band_width = round(p90_val - p10_val, 2)
 
     return PricePredictionResponse(
@@ -134,10 +141,18 @@ def predict_7day_forecast_service(
         p10_raw = float(models['p10'].predict(X_df)[0])
         p50_raw = float(models['p50'].predict(X_df)[0])
         p90_raw = float(models['p90'].predict(X_df)[0])
+        raw_predictions = np.array([p10_raw, p50_raw, p90_raw], dtype=float)
+        if not np.isfinite(raw_predictions).all() or (raw_predictions < 0).any():
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Model returned invalid recursive price predictions.')
 
         # Chernozhukov Monotonic Rearrangement (P10 <= P50 <= P90)
         sorted_q = sorted([p10_raw, p50_raw, p90_raw])
         p10_val, p50_val, p90_val = sorted_q[0], sorted_q[1], sorted_q[2]
+
+        calibration = metadata.get('metrics', {}).get('conformal_calibration_cqr', {})
+        qconf_offset = float(calibration.get('cqr_offset_qconf_rs_qtl', 0.0) or 0.0)
+        p10_val = max(0.0, p10_val - qconf_offset)
+        p90_val = p90_val + qconf_offset
 
         # Roll forward predicted P50 price into historical memory for step k+1
         history_prices.append(p50_val)
