@@ -78,7 +78,7 @@ This roadmap is the definitive guide for reviewing the enterprise-hardened **Cro
    * `research/paper/croplens_ieee_paper.tex`: Verify the LaTeX manuscript for IEEE compliance.
 
 2. **Empirical Results (`research/results/`)**
-   * `research/results/figures/`: Inspect the 8 publication-quality charts.
+   * `reports/model_evaluation/`: Inspect the 8 publication-quality charts.
    * `research/results/canonical_model_comparison.csv`: Check performance benchmarks across models.
 
 ---
