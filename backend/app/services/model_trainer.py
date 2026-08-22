@@ -53,7 +53,7 @@ class ModelTrainer:
 
         # Setup output directories
         self.output_dir = output_dir or os.path.abspath(os.path.join(os.getcwd(), 'backend', 'app', 'models'))
-        self.figures_dir = figures_dir or os.path.abspath(os.path.join(os.getcwd(), 'reports', 'figures'))
+        self.figures_dir = figures_dir or os.path.abspath(os.path.join(os.getcwd(), 'reports', 'model_evaluation'))
 
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.figures_dir, exist_ok=True)

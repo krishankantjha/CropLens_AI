@@ -172,7 +172,7 @@ class TFTBenchmarkService:
         self.data_path = data_path or os.path.join(base_dir, 'data', 'processed', 'features_master.parquet')
         self.models_dir = models_dir or os.path.join(base_dir, 'backend', 'app', 'models')
         self.tft_dir = os.path.join(self.models_dir, 'tft')
-        self.figures_dir = figures_dir or os.path.join(base_dir, 'reports', 'figures')
+        self.figures_dir = figures_dir or os.path.join(base_dir, 'reports', 'model_evaluation')
         os.makedirs(self.tft_dir, exist_ok=True)
         os.makedirs(self.figures_dir, exist_ok=True)
 

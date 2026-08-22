@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 def generate_shap_plots():
     """Generates 300 DPI SHAP feature importance plot using real TreeSHAP attribution data."""
-    output_dir = os.path.join("reports", "figures")
+    output_dir = os.path.join("reports", "model_evaluation")
     os.makedirs(output_dir, exist_ok=True)
 
     metadata_path = os.path.join("backend", "app", "models", "model_metadata.json")
