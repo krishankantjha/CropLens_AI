@@ -46,26 +46,22 @@ class DataResolver:
         
         # Date resolution
         if target_date:
-            matched['date_str'] = matched['date'].dt.strftime('%Y-%m-%d')
-            exact = matched[matched['date_str'] == target_date]
-            if not exact.empty:
-                target_row = exact.iloc[-1].copy()
-                forecast_date = target_date
-            else:
-                # Fallback to latest row and update calendar date features for requested future date
-                target_row = matched.iloc[-1].copy()
-                forecast_date = target_date
-                try:
-                    dt_val = pd.to_datetime(target_date)
-                    target_row['sin_month'] = float(np.sin(2 * np.pi * dt_val.month / 12.0))
-                    target_row['cos_month'] = float(np.cos(2 * np.pi * dt_val.month / 12.0))
-                    target_row['sin_dow'] = float(np.sin(2 * np.pi * dt_val.dayofweek / 7.0))
-                    target_row['cos_dow'] = float(np.cos(2 * np.pi * dt_val.dayofweek / 7.0))
-                except Exception:
-                    pass
+            requested_dt = pd.to_datetime(target_date, errors='coerce')
+            if pd.isna(requested_dt):
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Invalid target date.')
+            cutoff_dt = requested_dt - pd.Timedelta(days=1)
+            eligible = matched[matched['date'] <= cutoff_dt]
+            if eligible.empty:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='No historical row exists before the forecast cutoff.')
+            target_row = eligible.iloc[-1].copy()
+            forecast_date = target_date
+            target_row['sin_month'] = float(np.sin(2 * np.pi * requested_dt.month / 12.0))
+            target_row['cos_month'] = float(np.cos(2 * np.pi * requested_dt.month / 12.0))
+            target_row['sin_dow'] = float(np.sin(2 * np.pi * requested_dt.dayofweek / 7.0))
+            target_row['cos_dow'] = float(np.cos(2 * np.pi * requested_dt.dayofweek / 7.0))
         else:
             target_row = matched.iloc[-1].copy()
-            forecast_date = target_row['date'].strftime('%Y-%m-%d')
+            forecast_date = (pd.to_datetime(target_row['date']) + pd.Timedelta(days=1)).strftime('%Y-%m-%d')
 
         # Apply overrides
         if overrides:
@@ -79,7 +75,10 @@ class DataResolver:
         # Impute missing values
         comm_median = matched[feature_cols].median(numeric_only=True)
         global_median = dataset[feature_cols].median(numeric_only=True)
-        X_single = X_single.fillna(comm_median).fillna(global_median).fillna(0.0)
+        X_single = X_single.fillna(comm_median).fillna(global_median)
+        if X_single.isna().any().any() or not np.isfinite(X_single.to_numpy(dtype=float)).all():
+            missing = X_single.columns[X_single.isna().any()].tolist()
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f'Insufficient historical data for features: {missing}')
 
         return X_single, forecast_date
 
@@ -104,11 +103,8 @@ class DataResolver:
         row['sin_dow'] = float(np.sin(2 * np.pi * dow / 7.0))
         row['cos_dow'] = float(np.cos(2 * np.pi * dow / 7.0))
 
-        # 2. Weather Dissipation (Mocking persistence/decay)
-        if 'temp_max' in row:
-            row['temp_max'] = round(float(row['temp_max']) + 1.2 * np.sin(2 * np.pi * k / 7.0), 2)
-        if 'rainfall_mm' in row:
-            row['rainfall_mm'] = max(0.0, round(float(row['rainfall_mm']) * (0.7 ** k), 2))
+        # 2. Future weather is not fabricated. Retain the latest observed
+        # values; callers may provide an explicit forecast override instead.
 
         # 3. Autoregressive Lags
         price_lags = {
@@ -143,4 +139,7 @@ class DataResolver:
 
         # Construct final row
         X_df = pd.DataFrame([{col: row.get(col, 0.0) for col in feature_cols}], columns=feature_cols)
-        return X_df.fillna(0.0)
+        if X_df.isna().any().any() or not np.isfinite(X_df.to_numpy(dtype=float)).all():
+            missing = X_df.columns[X_df.isna().any()].tolist()
+            raise ValueError(f'Insufficient history to compute model features: {missing}')
+        return X_df
