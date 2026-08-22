@@ -14,12 +14,14 @@ catboost_info/
 xgboost_info/
 .coverage
 htmlcov/
+.ipynb_checkpoints/
 
 # SQLite Database & Session Files
 *.db
 *.sqlite
 *.sqlite3
 backend/app/croplens.db
+dump.rdb
 
 # Heavy ML Model Binaries & PyTorch Checkpoints
 *.pkl
@@ -52,6 +54,9 @@ yarn-debug.log*
 Thumbs.db
 .idea/
 .gemini/
+*.swp
+*.bak
+*~
 
 # Environment Secrets & Credentials
 .env
