@@ -1,0 +1,2558 @@
+date,is_festive_season,festival_name,harvest_season_type
+2019_01_01,0,None,Zaid Lean Season
+2019_01_02,0,None,Zaid Lean Season
+2019_01_03,0,None,Zaid Lean Season
+2019_01_04,0,None,Zaid Lean Season
+2019_01_05,0,None,Zaid Lean Season
+2019_01_06,0,None,Zaid Lean Season
+2019_01_07,0,None,Zaid Lean Season
+2019_01_08,0,None,Zaid Lean Season
+2019_01_09,0,None,Zaid Lean Season
+2019_01_10,0,None,Zaid Lean Season
+2019_01_11,0,None,Zaid Lean Season
+2019_01_12,0,None,Zaid Lean Season
+2019_01_13,0,None,Zaid Lean Season
+2019_01_14,0,None,Zaid Lean Season
+2019_01_15,0,None,Zaid Lean Season
+2019_01_16,0,None,Zaid Lean Season
+2019_01_17,0,None,Zaid Lean Season
+2019_01_18,0,None,Zaid Lean Season
+2019_01_19,0,None,Zaid Lean Season
+2019_01_20,0,None,Zaid Lean Season
+2019_01_21,0,None,Zaid Lean Season
+2019_01_22,0,None,Zaid Lean Season
+2019_01_23,0,None,Zaid Lean Season
+2019_01_24,0,None,Zaid Lean Season
+2019_01_25,0,None,Zaid Lean Season
+2019_01_26,1,Republic Day,Zaid Lean Season
+2019_01_27,0,None,Zaid Lean Season
+2019_01_28,0,None,Zaid Lean Season
+2019_01_29,0,None,Zaid Lean Season
+2019_01_30,0,None,Zaid Lean Season
+2019_01_31,0,None,Zaid Lean Season
+2019_02_01,0,None,Zaid Lean Season
+2019_02_02,0,None,Zaid Lean Season
+2019_02_03,0,None,Zaid Lean Season
+2019_02_04,0,None,Zaid Lean Season
+2019_02_05,0,None,Zaid Lean Season
+2019_02_06,0,None,Zaid Lean Season
+2019_02_07,0,None,Zaid Lean Season
+2019_02_08,0,None,Zaid Lean Season
+2019_02_09,0,None,Zaid Lean Season
+2019_02_10,0,None,Zaid Lean Season
+2019_02_11,0,None,Zaid Lean Season
+2019_02_12,0,None,Zaid Lean Season
+2019_02_13,0,None,Zaid Lean Season
+2019_02_14,0,None,Zaid Lean Season
+2019_02_15,0,None,Zaid Lean Season
+2019_02_16,0,None,Zaid Lean Season
+2019_02_17,0,None,Zaid Lean Season
+2019_02_18,0,None,Zaid Lean Season
+2019_02_19,0,None,Zaid Lean Season
+2019_02_20,0,None,Zaid Lean Season
+2019_02_21,0,None,Zaid Lean Season
+2019_02_22,0,None,Zaid Lean Season
+2019_02_23,0,None,Zaid Lean Season
+2019_02_24,0,None,Zaid Lean Season
+2019_02_25,0,None,Zaid Lean Season
+2019_02_26,0,None,Zaid Lean Season
+2019_02_27,0,None,Zaid Lean Season
+2019_02_28,0,None,Zaid Lean Season
+2019_03_01,0,None,Rabi Harvest
+2019_03_02,0,None,Rabi Harvest
+2019_03_03,0,None,Rabi Harvest
+2019_03_04,1,Maha Shivaratri,Rabi Harvest
+2019_03_05,0,None,Rabi Harvest
+2019_03_06,0,None,Rabi Harvest
+2019_03_07,0,None,Rabi Harvest
+2019_03_08,0,None,Rabi Harvest
+2019_03_09,0,None,Rabi Harvest
+2019_03_10,0,None,Rabi Harvest
+2019_03_11,0,None,Rabi Harvest
+2019_03_12,0,None,Rabi Harvest
+2019_03_13,0,None,Rabi Harvest
+2019_03_14,0,None,Rabi Harvest
+2019_03_15,0,None,Rabi Harvest
+2019_03_16,0,None,Rabi Harvest
+2019_03_17,0,None,Rabi Harvest
+2019_03_18,0,None,Rabi Harvest
+2019_03_19,0,None,Rabi Harvest
+2019_03_20,0,None,Rabi Harvest
+2019_03_21,1,Holi,Rabi Harvest
+2019_03_22,0,None,Rabi Harvest
+2019_03_23,0,None,Rabi Harvest
+2019_03_24,0,None,Rabi Harvest
+2019_03_25,0,None,Rabi Harvest
+2019_03_26,0,None,Rabi Harvest
+2019_03_27,0,None,Rabi Harvest
+2019_03_28,0,None,Rabi Harvest
+2019_03_29,0,None,Rabi Harvest
+2019_03_30,0,None,Rabi Harvest
+2019_03_31,0,None,Rabi Harvest
+2019_04_01,0,None,Rabi Harvest
+2019_04_02,0,None,Rabi Harvest
+2019_04_03,0,None,Rabi Harvest
+2019_04_04,0,None,Rabi Harvest
+2019_04_05,0,None,Rabi Harvest
+2019_04_06,0,None,Rabi Harvest
+2019_04_07,0,None,Rabi Harvest
+2019_04_08,0,None,Rabi Harvest
+2019_04_09,0,None,Rabi Harvest
+2019_04_10,0,None,Rabi Harvest
+2019_04_11,0,None,Rabi Harvest
+2019_04_12,0,None,Rabi Harvest
+2019_04_13,1,Ram Navami,Rabi Harvest
+2019_04_14,1,Dr. B. R. Ambedkar's Jayanti,Rabi Harvest
+2019_04_15,0,None,Rabi Harvest
+2019_04_16,0,None,Rabi Harvest
+2019_04_17,1,Mahavir Jayanti,Rabi Harvest
+2019_04_18,0,None,Rabi Harvest
+2019_04_19,1,Good Friday,Rabi Harvest
+2019_04_20,0,None,Rabi Harvest
+2019_04_21,0,None,Rabi Harvest
+2019_04_22,0,None,Rabi Harvest
+2019_04_23,0,None,Rabi Harvest
+2019_04_24,0,None,Rabi Harvest
+2019_04_25,0,None,Rabi Harvest
+2019_04_26,0,None,Rabi Harvest
+2019_04_27,0,None,Rabi Harvest
+2019_04_28,0,None,Rabi Harvest
+2019_04_29,0,None,Rabi Harvest
+2019_04_30,0,None,Rabi Harvest
+2019_05_01,0,None,Rabi Harvest
+2019_05_02,0,None,Rabi Harvest
+2019_05_03,0,None,Rabi Harvest
+2019_05_04,0,None,Rabi Harvest
+2019_05_05,0,None,Rabi Harvest
+2019_05_06,0,None,Rabi Harvest
+2019_05_07,0,None,Rabi Harvest
+2019_05_08,0,None,Rabi Harvest
+2019_05_09,0,None,Rabi Harvest
+2019_05_10,0,None,Rabi Harvest
+2019_05_11,0,None,Rabi Harvest
+2019_05_12,0,None,Rabi Harvest
+2019_05_13,0,None,Rabi Harvest
+2019_05_14,0,None,Rabi Harvest
+2019_05_15,0,None,Rabi Harvest
+2019_05_16,0,None,Rabi Harvest
+2019_05_17,0,None,Rabi Harvest
+2019_05_18,1,Buddha Purnima,Rabi Harvest
+2019_05_19,0,None,Rabi Harvest
+2019_05_20,0,None,Rabi Harvest
+2019_05_21,0,None,Rabi Harvest
+2019_05_22,0,None,Rabi Harvest
+2019_05_23,0,None,Rabi Harvest
+2019_05_24,0,None,Rabi Harvest
+2019_05_25,0,None,Rabi Harvest
+2019_05_26,0,None,Rabi Harvest
+2019_05_27,0,None,Rabi Harvest
+2019_05_28,0,None,Rabi Harvest
+2019_05_29,0,None,Rabi Harvest
+2019_05_30,0,None,Rabi Harvest
+2019_05_31,0,None,Rabi Harvest
+2019_06_01,0,None,Zaid Lean Season
+2019_06_02,0,None,Zaid Lean Season
+2019_06_03,0,None,Zaid Lean Season
+2019_06_04,0,None,Zaid Lean Season
+2019_06_05,1,Id-ul-Fitr,Zaid Lean Season
+2019_06_06,0,None,Zaid Lean Season
+2019_06_07,0,None,Zaid Lean Season
+2019_06_08,0,None,Zaid Lean Season
+2019_06_09,0,None,Zaid Lean Season
+2019_06_10,0,None,Zaid Lean Season
+2019_06_11,0,None,Zaid Lean Season
+2019_06_12,0,None,Zaid Lean Season
+2019_06_13,0,None,Zaid Lean Season
+2019_06_14,0,None,Zaid Lean Season
+2019_06_15,0,None,Zaid Lean Season
+2019_06_16,0,None,Zaid Lean Season
+2019_06_17,0,None,Zaid Lean Season
+2019_06_18,0,None,Zaid Lean Season
+2019_06_19,0,None,Zaid Lean Season
+2019_06_20,0,None,Zaid Lean Season
+2019_06_21,0,None,Zaid Lean Season
+2019_06_22,0,None,Zaid Lean Season
+2019_06_23,0,None,Zaid Lean Season
+2019_06_24,0,None,Zaid Lean Season
+2019_06_25,0,None,Zaid Lean Season
+2019_06_26,0,None,Zaid Lean Season
+2019_06_27,0,None,Zaid Lean Season
+2019_06_28,0,None,Zaid Lean Season
+2019_06_29,0,None,Zaid Lean Season
+2019_06_30,0,None,Zaid Lean Season
+2019_07_01,0,None,Zaid Lean Season
+2019_07_02,0,None,Zaid Lean Season
+2019_07_03,0,None,Zaid Lean Season
+2019_07_04,0,None,Zaid Lean Season
+2019_07_05,0,None,Zaid Lean Season
+2019_07_06,0,None,Zaid Lean Season
+2019_07_07,0,None,Zaid Lean Season
+2019_07_08,0,None,Zaid Lean Season
+2019_07_09,0,None,Zaid Lean Season
+2019_07_10,0,None,Zaid Lean Season
+2019_07_11,0,None,Zaid Lean Season
+2019_07_12,0,None,Zaid Lean Season
+2019_07_13,0,None,Zaid Lean Season
+2019_07_14,0,None,Zaid Lean Season
+2019_07_15,0,None,Zaid Lean Season
+2019_07_16,0,None,Zaid Lean Season
+2019_07_17,0,None,Zaid Lean Season
+2019_07_18,0,None,Zaid Lean Season
+2019_07_19,0,None,Zaid Lean Season
+2019_07_20,0,None,Zaid Lean Season
+2019_07_21,0,None,Zaid Lean Season
+2019_07_22,0,None,Zaid Lean Season
+2019_07_23,0,None,Zaid Lean Season
+2019_07_24,0,None,Zaid Lean Season
+2019_07_25,0,None,Zaid Lean Season
+2019_07_26,0,None,Zaid Lean Season
+2019_07_27,0,None,Zaid Lean Season
+2019_07_28,0,None,Zaid Lean Season
+2019_07_29,0,None,Zaid Lean Season
+2019_07_30,0,None,Zaid Lean Season
+2019_07_31,0,None,Zaid Lean Season
+2019_08_01,0,None,Zaid Lean Season
+2019_08_02,0,None,Zaid Lean Season
+2019_08_03,0,None,Zaid Lean Season
+2019_08_04,0,None,Zaid Lean Season
+2019_08_05,0,None,Zaid Lean Season
+2019_08_06,0,None,Zaid Lean Season
+2019_08_07,0,None,Zaid Lean Season
+2019_08_08,0,None,Zaid Lean Season
+2019_08_09,0,None,Zaid Lean Season
+2019_08_10,0,None,Zaid Lean Season
+2019_08_11,0,None,Zaid Lean Season
+2019_08_12,1,Id-ul-Zuha (Bakrid),Zaid Lean Season
+2019_08_13,0,None,Zaid Lean Season
+2019_08_14,0,None,Zaid Lean Season
+2019_08_15,1,Independence Day,Zaid Lean Season
+2019_08_16,0,None,Zaid Lean Season
+2019_08_17,0,None,Zaid Lean Season
+2019_08_18,0,None,Zaid Lean Season
+2019_08_19,0,None,Zaid Lean Season
+2019_08_20,0,None,Zaid Lean Season
+2019_08_21,0,None,Zaid Lean Season
+2019_08_22,0,None,Zaid Lean Season
+2019_08_23,0,None,Zaid Lean Season
+2019_08_24,1,Janmashtami (Vaishnava),Zaid Lean Season
+2019_08_25,0,None,Zaid Lean Season
+2019_08_26,0,None,Zaid Lean Season
+2019_08_27,0,None,Zaid Lean Season
+2019_08_28,0,None,Zaid Lean Season
+2019_08_29,0,None,Zaid Lean Season
+2019_08_30,0,None,Zaid Lean Season
+2019_08_31,0,None,Zaid Lean Season
+2019_09_01,1,None,Kharif Harvest
+2019_09_02,1,None,Kharif Harvest
+2019_09_03,1,None,Kharif Harvest
+2019_09_04,1,None,Kharif Harvest
+2019_09_05,1,None,Kharif Harvest
+2019_09_06,1,None,Kharif Harvest
+2019_09_07,1,None,Kharif Harvest
+2019_09_08,1,None,Kharif Harvest
+2019_09_09,1,None,Kharif Harvest
+2019_09_10,1,Muharram,Kharif Harvest
+2019_09_11,1,None,Kharif Harvest
+2019_09_12,1,None,Kharif Harvest
+2019_09_13,1,None,Kharif Harvest
+2019_09_14,1,None,Kharif Harvest
+2019_09_15,1,None,Kharif Harvest
+2019_09_16,1,None,Kharif Harvest
+2019_09_17,1,None,Kharif Harvest
+2019_09_18,1,None,Kharif Harvest
+2019_09_19,1,None,Kharif Harvest
+2019_09_20,1,None,Kharif Harvest
+2019_09_21,1,None,Kharif Harvest
+2019_09_22,1,None,Kharif Harvest
+2019_09_23,1,None,Kharif Harvest
+2019_09_24,1,None,Kharif Harvest
+2019_09_25,1,None,Kharif Harvest
+2019_09_26,1,None,Kharif Harvest
+2019_09_27,1,None,Kharif Harvest
+2019_09_28,1,None,Kharif Harvest
+2019_09_29,1,None,Kharif Harvest
+2019_09_30,1,None,Kharif Harvest
+2019_10_01,1,None,Kharif Harvest
+2019_10_02,1,Mahatma Gandhi's Jayanti,Kharif Harvest
+2019_10_03,1,None,Kharif Harvest
+2019_10_04,1,None,Kharif Harvest
+2019_10_05,1,None,Kharif Harvest
+2019_10_06,1,None,Kharif Harvest
+2019_10_07,1,None,Kharif Harvest
+2019_10_08,1,Dussehra,Kharif Harvest
+2019_10_09,1,None,Kharif Harvest
+2019_10_10,1,None,Kharif Harvest
+2019_10_11,1,None,Kharif Harvest
+2019_10_12,1,None,Kharif Harvest
+2019_10_13,1,None,Kharif Harvest
+2019_10_14,1,None,Kharif Harvest
+2019_10_15,1,None,Kharif Harvest
+2019_10_16,1,None,Kharif Harvest
+2019_10_17,1,None,Kharif Harvest
+2019_10_18,1,None,Kharif Harvest
+2019_10_19,1,None,Kharif Harvest
+2019_10_20,1,None,Kharif Harvest
+2019_10_21,1,None,Kharif Harvest
+2019_10_22,1,None,Kharif Harvest
+2019_10_23,1,None,Kharif Harvest
+2019_10_24,1,None,Kharif Harvest
+2019_10_25,1,None,Kharif Harvest
+2019_10_26,1,None,Kharif Harvest
+2019_10_27,1,Diwali (Deepavali),Kharif Harvest
+2019_10_28,1,None,Kharif Harvest
+2019_10_29,1,None,Kharif Harvest
+2019_10_30,1,None,Kharif Harvest
+2019_10_31,1,None,Kharif Harvest
+2019_11_01,1,None,Kharif Harvest
+2019_11_02,1,None,Kharif Harvest
+2019_11_03,1,None,Kharif Harvest
+2019_11_04,1,None,Kharif Harvest
+2019_11_05,1,None,Kharif Harvest
+2019_11_06,1,None,Kharif Harvest
+2019_11_07,1,None,Kharif Harvest
+2019_11_08,1,None,Kharif Harvest
+2019_11_09,1,None,Kharif Harvest
+2019_11_10,1,Milad-un-Nabi,Kharif Harvest
+2019_11_11,1,None,Kharif Harvest
+2019_11_12,1,Guru Nanak's Jayanti,Kharif Harvest
+2019_11_13,1,None,Kharif Harvest
+2019_11_14,1,None,Kharif Harvest
+2019_11_15,1,None,Kharif Harvest
+2019_11_16,1,None,Kharif Harvest
+2019_11_17,1,None,Kharif Harvest
+2019_11_18,1,None,Kharif Harvest
+2019_11_19,1,None,Kharif Harvest
+2019_11_20,1,None,Kharif Harvest
+2019_11_21,1,None,Kharif Harvest
+2019_11_22,1,None,Kharif Harvest
+2019_11_23,1,None,Kharif Harvest
+2019_11_24,1,None,Kharif Harvest
+2019_11_25,1,None,Kharif Harvest
+2019_11_26,1,None,Kharif Harvest
+2019_11_27,1,None,Kharif Harvest
+2019_11_28,1,None,Kharif Harvest
+2019_11_29,1,None,Kharif Harvest
+2019_11_30,1,None,Kharif Harvest
+2019_12_01,0,None,Zaid Lean Season
+2019_12_02,0,None,Zaid Lean Season
+2019_12_03,0,None,Zaid Lean Season
+2019_12_04,0,None,Zaid Lean Season
+2019_12_05,0,None,Zaid Lean Season
+2019_12_06,0,None,Zaid Lean Season
+2019_12_07,0,None,Zaid Lean Season
+2019_12_08,0,None,Zaid Lean Season
+2019_12_09,0,None,Zaid Lean Season
+2019_12_10,0,None,Zaid Lean Season
+2019_12_11,0,None,Zaid Lean Season
+2019_12_12,0,None,Zaid Lean Season
+2019_12_13,0,None,Zaid Lean Season
+2019_12_14,0,None,Zaid Lean Season
+2019_12_15,0,None,Zaid Lean Season
+2019_12_16,0,None,Zaid Lean Season
+2019_12_17,0,None,Zaid Lean Season
+2019_12_18,0,None,Zaid Lean Season
+2019_12_19,0,None,Zaid Lean Season
+2019_12_20,0,None,Zaid Lean Season
+2019_12_21,0,None,Zaid Lean Season
+2019_12_22,0,None,Zaid Lean Season
+2019_12_23,0,None,Zaid Lean Season
+2019_12_24,0,None,Zaid Lean Season
+2019_12_25,1,Christmas,Zaid Lean Season
+2019_12_26,0,None,Zaid Lean Season
+2019_12_27,0,None,Zaid Lean Season
+2019_12_28,0,None,Zaid Lean Season
+2019_12_29,0,None,Zaid Lean Season
+2019_12_30,0,None,Zaid Lean Season
+2019_12_31,0,None,Zaid Lean Season
+2020_01_01,0,None,Zaid Lean Season
+2020_01_02,0,None,Zaid Lean Season
+2020_01_03,0,None,Zaid Lean Season
+2020_01_04,0,None,Zaid Lean Season
+2020_01_05,0,None,Zaid Lean Season
+2020_01_06,0,None,Zaid Lean Season
+2020_01_07,0,None,Zaid Lean Season
+2020_01_08,0,None,Zaid Lean Season
+2020_01_09,0,None,Zaid Lean Season
+2020_01_10,0,None,Zaid Lean Season
+2020_01_11,0,None,Zaid Lean Season
+2020_01_12,0,None,Zaid Lean Season
+2020_01_13,0,None,Zaid Lean Season
+2020_01_14,0,None,Zaid Lean Season
+2020_01_15,0,None,Zaid Lean Season
+2020_01_16,0,None,Zaid Lean Season
+2020_01_17,0,None,Zaid Lean Season
+2020_01_18,0,None,Zaid Lean Season
+2020_01_19,0,None,Zaid Lean Season
+2020_01_20,0,None,Zaid Lean Season
+2020_01_21,0,None,Zaid Lean Season
+2020_01_22,0,None,Zaid Lean Season
+2020_01_23,0,None,Zaid Lean Season
+2020_01_24,0,None,Zaid Lean Season
+2020_01_25,0,None,Zaid Lean Season
+2020_01_26,1,Republic Day,Zaid Lean Season
+2020_01_27,0,None,Zaid Lean Season
+2020_01_28,0,None,Zaid Lean Season
+2020_01_29,0,None,Zaid Lean Season
+2020_01_30,0,None,Zaid Lean Season
+2020_01_31,0,None,Zaid Lean Season
+2020_02_01,0,None,Zaid Lean Season
+2020_02_02,0,None,Zaid Lean Season
+2020_02_03,0,None,Zaid Lean Season
+2020_02_04,0,None,Zaid Lean Season
+2020_02_05,0,None,Zaid Lean Season
+2020_02_06,0,None,Zaid Lean Season
+2020_02_07,0,None,Zaid Lean Season
+2020_02_08,0,None,Zaid Lean Season
+2020_02_09,0,None,Zaid Lean Season
+2020_02_10,0,None,Zaid Lean Season
+2020_02_11,0,None,Zaid Lean Season
+2020_02_12,0,None,Zaid Lean Season
+2020_02_13,0,None,Zaid Lean Season
+2020_02_14,0,None,Zaid Lean Season
+2020_02_15,0,None,Zaid Lean Season
+2020_02_16,0,None,Zaid Lean Season
+2020_02_17,0,None,Zaid Lean Season
+2020_02_18,0,None,Zaid Lean Season
+2020_02_19,0,None,Zaid Lean Season
+2020_02_20,0,None,Zaid Lean Season
+2020_02_21,0,None,Zaid Lean Season
+2020_02_22,0,None,Zaid Lean Season
+2020_02_23,0,None,Zaid Lean Season
+2020_02_24,0,None,Zaid Lean Season
+2020_02_25,0,None,Zaid Lean Season
+2020_02_26,0,None,Zaid Lean Season
+2020_02_27,0,None,Zaid Lean Season
+2020_02_28,0,None,Zaid Lean Season
+2020_02_29,0,None,Zaid Lean Season
+2020_03_01,0,None,Rabi Harvest
+2020_03_02,0,None,Rabi Harvest
+2020_03_03,0,None,Rabi Harvest
+2020_03_04,0,None,Rabi Harvest
+2020_03_05,0,None,Rabi Harvest
+2020_03_06,0,None,Rabi Harvest
+2020_03_07,0,None,Rabi Harvest
+2020_03_08,0,None,Rabi Harvest
+2020_03_09,0,None,Rabi Harvest
+2020_03_10,1,Holi,Rabi Harvest
+2020_03_11,0,None,Rabi Harvest
+2020_03_12,0,None,Rabi Harvest
+2020_03_13,0,None,Rabi Harvest
+2020_03_14,0,None,Rabi Harvest
+2020_03_15,0,None,Rabi Harvest
+2020_03_16,0,None,Rabi Harvest
+2020_03_17,0,None,Rabi Harvest
+2020_03_18,0,None,Rabi Harvest
+2020_03_19,0,None,Rabi Harvest
+2020_03_20,0,None,Rabi Harvest
+2020_03_21,0,None,Rabi Harvest
+2020_03_22,0,None,Rabi Harvest
+2020_03_23,0,None,Rabi Harvest
+2020_03_24,0,None,Rabi Harvest
+2020_03_25,0,None,Rabi Harvest
+2020_03_26,0,None,Rabi Harvest
+2020_03_27,0,None,Rabi Harvest
+2020_03_28,0,None,Rabi Harvest
+2020_03_29,0,None,Rabi Harvest
+2020_03_30,0,None,Rabi Harvest
+2020_03_31,0,None,Rabi Harvest
+2020_04_01,0,None,Rabi Harvest
+2020_04_02,1,Ram Navami,Rabi Harvest
+2020_04_03,0,None,Rabi Harvest
+2020_04_04,0,None,Rabi Harvest
+2020_04_05,0,None,Rabi Harvest
+2020_04_06,1,Mahavir Jayanti,Rabi Harvest
+2020_04_07,0,None,Rabi Harvest
+2020_04_08,0,None,Rabi Harvest
+2020_04_09,0,None,Rabi Harvest
+2020_04_10,1,Good Friday,Rabi Harvest
+2020_04_11,0,None,Rabi Harvest
+2020_04_12,0,None,Rabi Harvest
+2020_04_13,0,None,Rabi Harvest
+2020_04_14,1,Dr. B. R. Ambedkar's Jayanti,Rabi Harvest
+2020_04_15,0,None,Rabi Harvest
+2020_04_16,0,None,Rabi Harvest
+2020_04_17,0,None,Rabi Harvest
+2020_04_18,0,None,Rabi Harvest
+2020_04_19,0,None,Rabi Harvest
+2020_04_20,0,None,Rabi Harvest
+2020_04_21,0,None,Rabi Harvest
+2020_04_22,0,None,Rabi Harvest
+2020_04_23,0,None,Rabi Harvest
+2020_04_24,0,None,Rabi Harvest
+2020_04_25,0,None,Rabi Harvest
+2020_04_26,0,None,Rabi Harvest
+2020_04_27,0,None,Rabi Harvest
+2020_04_28,0,None,Rabi Harvest
+2020_04_29,0,None,Rabi Harvest
+2020_04_30,0,None,Rabi Harvest
+2020_05_01,0,None,Rabi Harvest
+2020_05_02,0,None,Rabi Harvest
+2020_05_03,0,None,Rabi Harvest
+2020_05_04,0,None,Rabi Harvest
+2020_05_05,0,None,Rabi Harvest
+2020_05_06,0,None,Rabi Harvest
+2020_05_07,1,Buddha Purnima,Rabi Harvest
+2020_05_08,0,None,Rabi Harvest
+2020_05_09,0,None,Rabi Harvest
+2020_05_10,0,None,Rabi Harvest
+2020_05_11,0,None,Rabi Harvest
+2020_05_12,0,None,Rabi Harvest
+2020_05_13,0,None,Rabi Harvest
+2020_05_14,0,None,Rabi Harvest
+2020_05_15,0,None,Rabi Harvest
+2020_05_16,0,None,Rabi Harvest
+2020_05_17,0,None,Rabi Harvest
+2020_05_18,0,None,Rabi Harvest
+2020_05_19,0,None,Rabi Harvest
+2020_05_20,0,None,Rabi Harvest
+2020_05_21,0,None,Rabi Harvest
+2020_05_22,0,None,Rabi Harvest
+2020_05_23,0,None,Rabi Harvest
+2020_05_24,0,None,Rabi Harvest
+2020_05_25,1,Id-ul-Fitr,Rabi Harvest
+2020_05_26,0,None,Rabi Harvest
+2020_05_27,0,None,Rabi Harvest
+2020_05_28,0,None,Rabi Harvest
+2020_05_29,0,None,Rabi Harvest
+2020_05_30,0,None,Rabi Harvest
+2020_05_31,0,None,Rabi Harvest
+2020_06_01,0,None,Zaid Lean Season
+2020_06_02,0,None,Zaid Lean Season
+2020_06_03,0,None,Zaid Lean Season
+2020_06_04,0,None,Zaid Lean Season
+2020_06_05,0,None,Zaid Lean Season
+2020_06_06,0,None,Zaid Lean Season
+2020_06_07,0,None,Zaid Lean Season
+2020_06_08,0,None,Zaid Lean Season
+2020_06_09,0,None,Zaid Lean Season
+2020_06_10,0,None,Zaid Lean Season
+2020_06_11,0,None,Zaid Lean Season
+2020_06_12,0,None,Zaid Lean Season
+2020_06_13,0,None,Zaid Lean Season
+2020_06_14,0,None,Zaid Lean Season
+2020_06_15,0,None,Zaid Lean Season
+2020_06_16,0,None,Zaid Lean Season
+2020_06_17,0,None,Zaid Lean Season
+2020_06_18,0,None,Zaid Lean Season
+2020_06_19,0,None,Zaid Lean Season
+2020_06_20,0,None,Zaid Lean Season
+2020_06_21,0,None,Zaid Lean Season
+2020_06_22,0,None,Zaid Lean Season
+2020_06_23,0,None,Zaid Lean Season
+2020_06_24,0,None,Zaid Lean Season
+2020_06_25,0,None,Zaid Lean Season
+2020_06_26,0,None,Zaid Lean Season
+2020_06_27,0,None,Zaid Lean Season
+2020_06_28,0,None,Zaid Lean Season
+2020_06_29,0,None,Zaid Lean Season
+2020_06_30,0,None,Zaid Lean Season
+2020_07_01,0,None,Zaid Lean Season
+2020_07_02,0,None,Zaid Lean Season
+2020_07_03,0,None,Zaid Lean Season
+2020_07_04,0,None,Zaid Lean Season
+2020_07_05,0,None,Zaid Lean Season
+2020_07_06,0,None,Zaid Lean Season
+2020_07_07,0,None,Zaid Lean Season
+2020_07_08,0,None,Zaid Lean Season
+2020_07_09,0,None,Zaid Lean Season
+2020_07_10,0,None,Zaid Lean Season
+2020_07_11,0,None,Zaid Lean Season
+2020_07_12,0,None,Zaid Lean Season
+2020_07_13,0,None,Zaid Lean Season
+2020_07_14,0,None,Zaid Lean Season
+2020_07_15,0,None,Zaid Lean Season
+2020_07_16,0,None,Zaid Lean Season
+2020_07_17,0,None,Zaid Lean Season
+2020_07_18,0,None,Zaid Lean Season
+2020_07_19,0,None,Zaid Lean Season
+2020_07_20,0,None,Zaid Lean Season
+2020_07_21,0,None,Zaid Lean Season
+2020_07_22,0,None,Zaid Lean Season
+2020_07_23,0,None,Zaid Lean Season
+2020_07_24,0,None,Zaid Lean Season
+2020_07_25,0,None,Zaid Lean Season
+2020_07_26,0,None,Zaid Lean Season
+2020_07_27,0,None,Zaid Lean Season
+2020_07_28,0,None,Zaid Lean Season
+2020_07_29,0,None,Zaid Lean Season
+2020_07_30,0,None,Zaid Lean Season
+2020_07_31,0,None,Zaid Lean Season
+2020_08_01,1,Id-ul-Zuha (Bakrid),Zaid Lean Season
+2020_08_02,0,None,Zaid Lean Season
+2020_08_03,0,None,Zaid Lean Season
+2020_08_04,0,None,Zaid Lean Season
+2020_08_05,0,None,Zaid Lean Season
+2020_08_06,0,None,Zaid Lean Season
+2020_08_07,0,None,Zaid Lean Season
+2020_08_08,0,None,Zaid Lean Season
+2020_08_09,0,None,Zaid Lean Season
+2020_08_10,0,None,Zaid Lean Season
+2020_08_11,0,None,Zaid Lean Season
+2020_08_12,1,Janmashtami (Vaishnava),Zaid Lean Season
+2020_08_13,0,None,Zaid Lean Season
+2020_08_14,0,None,Zaid Lean Season
+2020_08_15,1,Independence Day,Zaid Lean Season
+2020_08_16,0,None,Zaid Lean Season
+2020_08_17,0,None,Zaid Lean Season
+2020_08_18,0,None,Zaid Lean Season
+2020_08_19,0,None,Zaid Lean Season
+2020_08_20,0,None,Zaid Lean Season
+2020_08_21,0,None,Zaid Lean Season
+2020_08_22,0,None,Zaid Lean Season
+2020_08_23,0,None,Zaid Lean Season
+2020_08_24,0,None,Zaid Lean Season
+2020_08_25,0,None,Zaid Lean Season
+2020_08_26,0,None,Zaid Lean Season
+2020_08_27,0,None,Zaid Lean Season
+2020_08_28,0,None,Zaid Lean Season
+2020_08_29,0,None,Zaid Lean Season
+2020_08_30,1,Muharram,Zaid Lean Season
+2020_08_31,0,None,Zaid Lean Season
+2020_09_01,1,None,Kharif Harvest
+2020_09_02,1,None,Kharif Harvest
+2020_09_03,1,None,Kharif Harvest
+2020_09_04,1,None,Kharif Harvest
+2020_09_05,1,None,Kharif Harvest
+2020_09_06,1,None,Kharif Harvest
+2020_09_07,1,None,Kharif Harvest
+2020_09_08,1,None,Kharif Harvest
+2020_09_09,1,None,Kharif Harvest
+2020_09_10,1,None,Kharif Harvest
+2020_09_11,1,None,Kharif Harvest
+2020_09_12,1,None,Kharif Harvest
+2020_09_13,1,None,Kharif Harvest
+2020_09_14,1,None,Kharif Harvest
+2020_09_15,1,None,Kharif Harvest
+2020_09_16,1,None,Kharif Harvest
+2020_09_17,1,None,Kharif Harvest
+2020_09_18,1,None,Kharif Harvest
+2020_09_19,1,None,Kharif Harvest
+2020_09_20,1,None,Kharif Harvest
+2020_09_21,1,None,Kharif Harvest
+2020_09_22,1,None,Kharif Harvest
+2020_09_23,1,None,Kharif Harvest
+2020_09_24,1,None,Kharif Harvest
+2020_09_25,1,None,Kharif Harvest
+2020_09_26,1,None,Kharif Harvest
+2020_09_27,1,None,Kharif Harvest
+2020_09_28,1,None,Kharif Harvest
+2020_09_29,1,None,Kharif Harvest
+2020_09_30,1,None,Kharif Harvest
+2020_10_01,1,None,Kharif Harvest
+2020_10_02,1,Mahatma Gandhi's Jayanti,Kharif Harvest
+2020_10_03,1,None,Kharif Harvest
+2020_10_04,1,None,Kharif Harvest
+2020_10_05,1,None,Kharif Harvest
+2020_10_06,1,None,Kharif Harvest
+2020_10_07,1,None,Kharif Harvest
+2020_10_08,1,None,Kharif Harvest
+2020_10_09,1,None,Kharif Harvest
+2020_10_10,1,None,Kharif Harvest
+2020_10_11,1,None,Kharif Harvest
+2020_10_12,1,None,Kharif Harvest
+2020_10_13,1,None,Kharif Harvest
+2020_10_14,1,None,Kharif Harvest
+2020_10_15,1,None,Kharif Harvest
+2020_10_16,1,None,Kharif Harvest
+2020_10_17,1,None,Kharif Harvest
+2020_10_18,1,None,Kharif Harvest
+2020_10_19,1,None,Kharif Harvest
+2020_10_20,1,None,Kharif Harvest
+2020_10_21,1,None,Kharif Harvest
+2020_10_22,1,None,Kharif Harvest
+2020_10_23,1,None,Kharif Harvest
+2020_10_24,1,None,Kharif Harvest
+2020_10_25,1,Dussehra,Kharif Harvest
+2020_10_26,1,None,Kharif Harvest
+2020_10_27,1,None,Kharif Harvest
+2020_10_28,1,None,Kharif Harvest
+2020_10_29,1,None,Kharif Harvest
+2020_10_30,1,Milad-un-Nabi,Kharif Harvest
+2020_10_31,1,None,Kharif Harvest
+2020_11_01,1,None,Kharif Harvest
+2020_11_02,1,None,Kharif Harvest
+2020_11_03,1,None,Kharif Harvest
+2020_11_04,1,None,Kharif Harvest
+2020_11_05,1,None,Kharif Harvest
+2020_11_06,1,None,Kharif Harvest
+2020_11_07,1,None,Kharif Harvest
+2020_11_08,1,None,Kharif Harvest
+2020_11_09,1,None,Kharif Harvest
+2020_11_10,1,None,Kharif Harvest
+2020_11_11,1,None,Kharif Harvest
+2020_11_12,1,None,Kharif Harvest
+2020_11_13,1,None,Kharif Harvest
+2020_11_14,1,Diwali (Deepavali),Kharif Harvest
+2020_11_15,1,None,Kharif Harvest
+2020_11_16,1,None,Kharif Harvest
+2020_11_17,1,None,Kharif Harvest
+2020_11_18,1,None,Kharif Harvest
+2020_11_19,1,None,Kharif Harvest
+2020_11_20,1,None,Kharif Harvest
+2020_11_21,1,None,Kharif Harvest
+2020_11_22,1,None,Kharif Harvest
+2020_11_23,1,None,Kharif Harvest
+2020_11_24,1,None,Kharif Harvest
+2020_11_25,1,None,Kharif Harvest
+2020_11_26,1,None,Kharif Harvest
+2020_11_27,1,None,Kharif Harvest
+2020_11_28,1,None,Kharif Harvest
+2020_11_29,1,None,Kharif Harvest
+2020_11_30,1,Guru Nanak's Jayanti,Kharif Harvest
+2020_12_01,0,None,Zaid Lean Season
+2020_12_02,0,None,Zaid Lean Season
+2020_12_03,0,None,Zaid Lean Season
+2020_12_04,0,None,Zaid Lean Season
+2020_12_05,0,None,Zaid Lean Season
+2020_12_06,0,None,Zaid Lean Season
+2020_12_07,0,None,Zaid Lean Season
+2020_12_08,0,None,Zaid Lean Season
+2020_12_09,0,None,Zaid Lean Season
+2020_12_10,0,None,Zaid Lean Season
+2020_12_11,0,None,Zaid Lean Season
+2020_12_12,0,None,Zaid Lean Season
+2020_12_13,0,None,Zaid Lean Season
+2020_12_14,0,None,Zaid Lean Season
+2020_12_15,0,None,Zaid Lean Season
+2020_12_16,0,None,Zaid Lean Season
+2020_12_17,0,None,Zaid Lean Season
+2020_12_18,0,None,Zaid Lean Season
+2020_12_19,0,None,Zaid Lean Season
+2020_12_20,0,None,Zaid Lean Season
+2020_12_21,0,None,Zaid Lean Season
+2020_12_22,0,None,Zaid Lean Season
+2020_12_23,0,None,Zaid Lean Season
+2020_12_24,0,None,Zaid Lean Season
+2020_12_25,1,Christmas,Zaid Lean Season
+2020_12_26,0,None,Zaid Lean Season
+2020_12_27,0,None,Zaid Lean Season
+2020_12_28,0,None,Zaid Lean Season
+2020_12_29,0,None,Zaid Lean Season
+2020_12_30,0,None,Zaid Lean Season
+2020_12_31,0,None,Zaid Lean Season
+2021_01_01,0,None,Zaid Lean Season
+2021_01_02,0,None,Zaid Lean Season
+2021_01_03,0,None,Zaid Lean Season
+2021_01_04,0,None,Zaid Lean Season
+2021_01_05,0,None,Zaid Lean Season
+2021_01_06,0,None,Zaid Lean Season
+2021_01_07,0,None,Zaid Lean Season
+2021_01_08,0,None,Zaid Lean Season
+2021_01_09,0,None,Zaid Lean Season
+2021_01_10,0,None,Zaid Lean Season
+2021_01_11,0,None,Zaid Lean Season
+2021_01_12,0,None,Zaid Lean Season
+2021_01_13,0,None,Zaid Lean Season
+2021_01_14,0,None,Zaid Lean Season
+2021_01_15,0,None,Zaid Lean Season
+2021_01_16,0,None,Zaid Lean Season
+2021_01_17,0,None,Zaid Lean Season
+2021_01_18,0,None,Zaid Lean Season
+2021_01_19,0,None,Zaid Lean Season
+2021_01_20,0,None,Zaid Lean Season
+2021_01_21,0,None,Zaid Lean Season
+2021_01_22,0,None,Zaid Lean Season
+2021_01_23,0,None,Zaid Lean Season
+2021_01_24,0,None,Zaid Lean Season
+2021_01_25,0,None,Zaid Lean Season
+2021_01_26,1,Republic Day,Zaid Lean Season
+2021_01_27,0,None,Zaid Lean Season
+2021_01_28,0,None,Zaid Lean Season
+2021_01_29,0,None,Zaid Lean Season
+2021_01_30,0,None,Zaid Lean Season
+2021_01_31,0,None,Zaid Lean Season
+2021_02_01,0,None,Zaid Lean Season
+2021_02_02,0,None,Zaid Lean Season
+2021_02_03,0,None,Zaid Lean Season
+2021_02_04,0,None,Zaid Lean Season
+2021_02_05,0,None,Zaid Lean Season
+2021_02_06,0,None,Zaid Lean Season
+2021_02_07,0,None,Zaid Lean Season
+2021_02_08,0,None,Zaid Lean Season
+2021_02_09,0,None,Zaid Lean Season
+2021_02_10,0,None,Zaid Lean Season
+2021_02_11,0,None,Zaid Lean Season
+2021_02_12,0,None,Zaid Lean Season
+2021_02_13,0,None,Zaid Lean Season
+2021_02_14,0,None,Zaid Lean Season
+2021_02_15,0,None,Zaid Lean Season
+2021_02_16,0,None,Zaid Lean Season
+2021_02_17,0,None,Zaid Lean Season
+2021_02_18,0,None,Zaid Lean Season
+2021_02_19,0,None,Zaid Lean Season
+2021_02_20,0,None,Zaid Lean Season
+2021_02_21,0,None,Zaid Lean Season
+2021_02_22,0,None,Zaid Lean Season
+2021_02_23,0,None,Zaid Lean Season
+2021_02_24,0,None,Zaid Lean Season
+2021_02_25,0,None,Zaid Lean Season
+2021_02_26,0,None,Zaid Lean Season
+2021_02_27,0,None,Zaid Lean Season
+2021_02_28,0,None,Zaid Lean Season
+2021_03_01,0,None,Rabi Harvest
+2021_03_02,0,None,Rabi Harvest
+2021_03_03,0,None,Rabi Harvest
+2021_03_04,0,None,Rabi Harvest
+2021_03_05,0,None,Rabi Harvest
+2021_03_06,0,None,Rabi Harvest
+2021_03_07,0,None,Rabi Harvest
+2021_03_08,0,None,Rabi Harvest
+2021_03_09,0,None,Rabi Harvest
+2021_03_10,0,None,Rabi Harvest
+2021_03_11,0,None,Rabi Harvest
+2021_03_12,0,None,Rabi Harvest
+2021_03_13,0,None,Rabi Harvest
+2021_03_14,0,None,Rabi Harvest
+2021_03_15,0,None,Rabi Harvest
+2021_03_16,0,None,Rabi Harvest
+2021_03_17,0,None,Rabi Harvest
+2021_03_18,0,None,Rabi Harvest
+2021_03_19,0,None,Rabi Harvest
+2021_03_20,0,None,Rabi Harvest
+2021_03_21,0,None,Rabi Harvest
+2021_03_22,0,None,Rabi Harvest
+2021_03_23,0,None,Rabi Harvest
+2021_03_24,0,None,Rabi Harvest
+2021_03_25,0,None,Rabi Harvest
+2021_03_26,0,None,Rabi Harvest
+2021_03_27,0,None,Rabi Harvest
+2021_03_28,0,None,Rabi Harvest
+2021_03_29,1,Holi,Rabi Harvest
+2021_03_30,0,None,Rabi Harvest
+2021_03_31,0,None,Rabi Harvest
+2021_04_01,0,None,Rabi Harvest
+2021_04_02,1,Good Friday,Rabi Harvest
+2021_04_03,0,None,Rabi Harvest
+2021_04_04,0,None,Rabi Harvest
+2021_04_05,0,None,Rabi Harvest
+2021_04_06,0,None,Rabi Harvest
+2021_04_07,0,None,Rabi Harvest
+2021_04_08,0,None,Rabi Harvest
+2021_04_09,0,None,Rabi Harvest
+2021_04_10,0,None,Rabi Harvest
+2021_04_11,0,None,Rabi Harvest
+2021_04_12,0,None,Rabi Harvest
+2021_04_13,0,None,Rabi Harvest
+2021_04_14,1,Dr. B. R. Ambedkar's Jayanti,Rabi Harvest
+2021_04_15,0,None,Rabi Harvest
+2021_04_16,0,None,Rabi Harvest
+2021_04_17,0,None,Rabi Harvest
+2021_04_18,0,None,Rabi Harvest
+2021_04_19,0,None,Rabi Harvest
+2021_04_20,0,None,Rabi Harvest
+2021_04_21,1,Ram Navami,Rabi Harvest
+2021_04_22,0,None,Rabi Harvest
+2021_04_23,0,None,Rabi Harvest
+2021_04_24,0,None,Rabi Harvest
+2021_04_25,1,Mahavir Jayanti,Rabi Harvest
+2021_04_26,0,None,Rabi Harvest
+2021_04_27,0,None,Rabi Harvest
+2021_04_28,0,None,Rabi Harvest
+2021_04_29,0,None,Rabi Harvest
+2021_04_30,0,None,Rabi Harvest
+2021_05_01,0,None,Rabi Harvest
+2021_05_02,0,None,Rabi Harvest
+2021_05_03,0,None,Rabi Harvest
+2021_05_04,0,None,Rabi Harvest
+2021_05_05,0,None,Rabi Harvest
+2021_05_06,0,None,Rabi Harvest
+2021_05_07,0,None,Rabi Harvest
+2021_05_08,0,None,Rabi Harvest
+2021_05_09,0,None,Rabi Harvest
+2021_05_10,0,None,Rabi Harvest
+2021_05_11,0,None,Rabi Harvest
+2021_05_12,0,None,Rabi Harvest
+2021_05_13,0,None,Rabi Harvest
+2021_05_14,1,Id-ul-Fitr,Rabi Harvest
+2021_05_15,0,None,Rabi Harvest
+2021_05_16,0,None,Rabi Harvest
+2021_05_17,0,None,Rabi Harvest
+2021_05_18,0,None,Rabi Harvest
+2021_05_19,0,None,Rabi Harvest
+2021_05_20,0,None,Rabi Harvest
+2021_05_21,0,None,Rabi Harvest
+2021_05_22,0,None,Rabi Harvest
+2021_05_23,0,None,Rabi Harvest
+2021_05_24,0,None,Rabi Harvest
+2021_05_25,0,None,Rabi Harvest
+2021_05_26,1,Buddha Purnima,Rabi Harvest
+2021_05_27,0,None,Rabi Harvest
+2021_05_28,0,None,Rabi Harvest
+2021_05_29,0,None,Rabi Harvest
+2021_05_30,0,None,Rabi Harvest
+2021_05_31,0,None,Rabi Harvest
+2021_06_01,0,None,Zaid Lean Season
+2021_06_02,0,None,Zaid Lean Season
+2021_06_03,0,None,Zaid Lean Season
+2021_06_04,0,None,Zaid Lean Season
+2021_06_05,0,None,Zaid Lean Season
+2021_06_06,0,None,Zaid Lean Season
+2021_06_07,0,None,Zaid Lean Season
+2021_06_08,0,None,Zaid Lean Season
+2021_06_09,0,None,Zaid Lean Season
+2021_06_10,0,None,Zaid Lean Season
+2021_06_11,0,None,Zaid Lean Season
+2021_06_12,0,None,Zaid Lean Season
+2021_06_13,0,None,Zaid Lean Season
+2021_06_14,0,None,Zaid Lean Season
+2021_06_15,0,None,Zaid Lean Season
+2021_06_16,0,None,Zaid Lean Season
+2021_06_17,0,None,Zaid Lean Season
+2021_06_18,0,None,Zaid Lean Season
+2021_06_19,0,None,Zaid Lean Season
+2021_06_20,0,None,Zaid Lean Season
+2021_06_21,0,None,Zaid Lean Season
+2021_06_22,0,None,Zaid Lean Season
+2021_06_23,0,None,Zaid Lean Season
+2021_06_24,0,None,Zaid Lean Season
+2021_06_25,0,None,Zaid Lean Season
+2021_06_26,0,None,Zaid Lean Season
+2021_06_27,0,None,Zaid Lean Season
+2021_06_28,0,None,Zaid Lean Season
+2021_06_29,0,None,Zaid Lean Season
+2021_06_30,0,None,Zaid Lean Season
+2021_07_01,0,None,Zaid Lean Season
+2021_07_02,0,None,Zaid Lean Season
+2021_07_03,0,None,Zaid Lean Season
+2021_07_04,0,None,Zaid Lean Season
+2021_07_05,0,None,Zaid Lean Season
+2021_07_06,0,None,Zaid Lean Season
+2021_07_07,0,None,Zaid Lean Season
+2021_07_08,0,None,Zaid Lean Season
+2021_07_09,0,None,Zaid Lean Season
+2021_07_10,0,None,Zaid Lean Season
+2021_07_11,0,None,Zaid Lean Season
+2021_07_12,0,None,Zaid Lean Season
+2021_07_13,0,None,Zaid Lean Season
+2021_07_14,0,None,Zaid Lean Season
+2021_07_15,0,None,Zaid Lean Season
+2021_07_16,0,None,Zaid Lean Season
+2021_07_17,0,None,Zaid Lean Season
+2021_07_18,0,None,Zaid Lean Season
+2021_07_19,0,None,Zaid Lean Season
+2021_07_20,0,None,Zaid Lean Season
+2021_07_21,1,Id-ul-Zuha (Bakrid),Zaid Lean Season
+2021_07_22,0,None,Zaid Lean Season
+2021_07_23,0,None,Zaid Lean Season
+2021_07_24,0,None,Zaid Lean Season
+2021_07_25,0,None,Zaid Lean Season
+2021_07_26,0,None,Zaid Lean Season
+2021_07_27,0,None,Zaid Lean Season
+2021_07_28,0,None,Zaid Lean Season
+2021_07_29,0,None,Zaid Lean Season
+2021_07_30,0,None,Zaid Lean Season
+2021_07_31,0,None,Zaid Lean Season
+2021_08_01,0,None,Zaid Lean Season
+2021_08_02,0,None,Zaid Lean Season
+2021_08_03,0,None,Zaid Lean Season
+2021_08_04,0,None,Zaid Lean Season
+2021_08_05,0,None,Zaid Lean Season
+2021_08_06,0,None,Zaid Lean Season
+2021_08_07,0,None,Zaid Lean Season
+2021_08_08,0,None,Zaid Lean Season
+2021_08_09,0,None,Zaid Lean Season
+2021_08_10,0,None,Zaid Lean Season
+2021_08_11,0,None,Zaid Lean Season
+2021_08_12,0,None,Zaid Lean Season
+2021_08_13,0,None,Zaid Lean Season
+2021_08_14,0,None,Zaid Lean Season
+2021_08_15,1,Independence Day,Zaid Lean Season
+2021_08_16,0,None,Zaid Lean Season
+2021_08_17,0,None,Zaid Lean Season
+2021_08_18,0,None,Zaid Lean Season
+2021_08_19,1,Muharram,Zaid Lean Season
+2021_08_20,0,None,Zaid Lean Season
+2021_08_21,0,None,Zaid Lean Season
+2021_08_22,0,None,Zaid Lean Season
+2021_08_23,0,None,Zaid Lean Season
+2021_08_24,0,None,Zaid Lean Season
+2021_08_25,0,None,Zaid Lean Season
+2021_08_26,0,None,Zaid Lean Season
+2021_08_27,0,None,Zaid Lean Season
+2021_08_28,0,None,Zaid Lean Season
+2021_08_29,0,None,Zaid Lean Season
+2021_08_30,1,Janmashtami (Vaishnava),Zaid Lean Season
+2021_08_31,0,None,Zaid Lean Season
+2021_09_01,1,None,Kharif Harvest
+2021_09_02,1,None,Kharif Harvest
+2021_09_03,1,None,Kharif Harvest
+2021_09_04,1,None,Kharif Harvest
+2021_09_05,1,None,Kharif Harvest
+2021_09_06,1,None,Kharif Harvest
+2021_09_07,1,None,Kharif Harvest
+2021_09_08,1,None,Kharif Harvest
+2021_09_09,1,None,Kharif Harvest
+2021_09_10,1,None,Kharif Harvest
+2021_09_11,1,None,Kharif Harvest
+2021_09_12,1,None,Kharif Harvest
+2021_09_13,1,None,Kharif Harvest
+2021_09_14,1,None,Kharif Harvest
+2021_09_15,1,None,Kharif Harvest
+2021_09_16,1,None,Kharif Harvest
+2021_09_17,1,None,Kharif Harvest
+2021_09_18,1,None,Kharif Harvest
+2021_09_19,1,None,Kharif Harvest
+2021_09_20,1,None,Kharif Harvest
+2021_09_21,1,None,Kharif Harvest
+2021_09_22,1,None,Kharif Harvest
+2021_09_23,1,None,Kharif Harvest
+2021_09_24,1,None,Kharif Harvest
+2021_09_25,1,None,Kharif Harvest
+2021_09_26,1,None,Kharif Harvest
+2021_09_27,1,None,Kharif Harvest
+2021_09_28,1,None,Kharif Harvest
+2021_09_29,1,None,Kharif Harvest
+2021_09_30,1,None,Kharif Harvest
+2021_10_01,1,None,Kharif Harvest
+2021_10_02,1,Mahatma Gandhi's Jayanti,Kharif Harvest
+2021_10_03,1,None,Kharif Harvest
+2021_10_04,1,None,Kharif Harvest
+2021_10_05,1,None,Kharif Harvest
+2021_10_06,1,None,Kharif Harvest
+2021_10_07,1,None,Kharif Harvest
+2021_10_08,1,None,Kharif Harvest
+2021_10_09,1,None,Kharif Harvest
+2021_10_10,1,None,Kharif Harvest
+2021_10_11,1,None,Kharif Harvest
+2021_10_12,1,None,Kharif Harvest
+2021_10_13,1,None,Kharif Harvest
+2021_10_14,1,None,Kharif Harvest
+2021_10_15,1,Dussehra,Kharif Harvest
+2021_10_16,1,None,Kharif Harvest
+2021_10_17,1,None,Kharif Harvest
+2021_10_18,1,None,Kharif Harvest
+2021_10_19,1,Milad-un-Nabi,Kharif Harvest
+2021_10_20,1,None,Kharif Harvest
+2021_10_21,1,None,Kharif Harvest
+2021_10_22,1,None,Kharif Harvest
+2021_10_23,1,None,Kharif Harvest
+2021_10_24,1,None,Kharif Harvest
+2021_10_25,1,None,Kharif Harvest
+2021_10_26,1,None,Kharif Harvest
+2021_10_27,1,None,Kharif Harvest
+2021_10_28,1,None,Kharif Harvest
+2021_10_29,1,None,Kharif Harvest
+2021_10_30,1,None,Kharif Harvest
+2021_10_31,1,None,Kharif Harvest
+2021_11_01,1,None,Kharif Harvest
+2021_11_02,1,None,Kharif Harvest
+2021_11_03,1,None,Kharif Harvest
+2021_11_04,1,Diwali (Deepavali),Kharif Harvest
+2021_11_05,1,None,Kharif Harvest
+2021_11_06,1,None,Kharif Harvest
+2021_11_07,1,None,Kharif Harvest
+2021_11_08,1,None,Kharif Harvest
+2021_11_09,1,None,Kharif Harvest
+2021_11_10,1,None,Kharif Harvest
+2021_11_11,1,None,Kharif Harvest
+2021_11_12,1,None,Kharif Harvest
+2021_11_13,1,None,Kharif Harvest
+2021_11_14,1,None,Kharif Harvest
+2021_11_15,1,None,Kharif Harvest
+2021_11_16,1,None,Kharif Harvest
+2021_11_17,1,None,Kharif Harvest
+2021_11_18,1,None,Kharif Harvest
+2021_11_19,1,Guru Nanak's Jayanti,Kharif Harvest
+2021_11_20,1,None,Kharif Harvest
+2021_11_21,1,None,Kharif Harvest
+2021_11_22,1,None,Kharif Harvest
+2021_11_23,1,None,Kharif Harvest
+2021_11_24,1,None,Kharif Harvest
+2021_11_25,1,None,Kharif Harvest
+2021_11_26,1,None,Kharif Harvest
+2021_11_27,1,None,Kharif Harvest
+2021_11_28,1,None,Kharif Harvest
+2021_11_29,1,None,Kharif Harvest
+2021_11_30,1,None,Kharif Harvest
+2021_12_01,0,None,Zaid Lean Season
+2021_12_02,0,None,Zaid Lean Season
+2021_12_03,0,None,Zaid Lean Season
+2021_12_04,0,None,Zaid Lean Season
+2021_12_05,0,None,Zaid Lean Season
+2021_12_06,0,None,Zaid Lean Season
+2021_12_07,0,None,Zaid Lean Season
+2021_12_08,0,None,Zaid Lean Season
+2021_12_09,0,None,Zaid Lean Season
+2021_12_10,0,None,Zaid Lean Season
+2021_12_11,0,None,Zaid Lean Season
+2021_12_12,0,None,Zaid Lean Season
+2021_12_13,0,None,Zaid Lean Season
+2021_12_14,0,None,Zaid Lean Season
+2021_12_15,0,None,Zaid Lean Season
+2021_12_16,0,None,Zaid Lean Season
+2021_12_17,0,None,Zaid Lean Season
+2021_12_18,0,None,Zaid Lean Season
+2021_12_19,0,None,Zaid Lean Season
+2021_12_20,0,None,Zaid Lean Season
+2021_12_21,0,None,Zaid Lean Season
+2021_12_22,0,None,Zaid Lean Season
+2021_12_23,0,None,Zaid Lean Season
+2021_12_24,0,None,Zaid Lean Season
+2021_12_25,1,Christmas,Zaid Lean Season
+2021_12_26,0,None,Zaid Lean Season
+2021_12_27,0,None,Zaid Lean Season
+2021_12_28,0,None,Zaid Lean Season
+2021_12_29,0,None,Zaid Lean Season
+2021_12_30,0,None,Zaid Lean Season
+2021_12_31,0,None,Zaid Lean Season
+2022_01_01,0,None,Zaid Lean Season
+2022_01_02,0,None,Zaid Lean Season
+2022_01_03,0,None,Zaid Lean Season
+2022_01_04,0,None,Zaid Lean Season
+2022_01_05,0,None,Zaid Lean Season
+2022_01_06,0,None,Zaid Lean Season
+2022_01_07,0,None,Zaid Lean Season
+2022_01_08,0,None,Zaid Lean Season
+2022_01_09,0,None,Zaid Lean Season
+2022_01_10,0,None,Zaid Lean Season
+2022_01_11,0,None,Zaid Lean Season
+2022_01_12,0,None,Zaid Lean Season
+2022_01_13,0,None,Zaid Lean Season
+2022_01_14,0,None,Zaid Lean Season
+2022_01_15,0,None,Zaid Lean Season
+2022_01_16,0,None,Zaid Lean Season
+2022_01_17,0,None,Zaid Lean Season
+2022_01_18,0,None,Zaid Lean Season
+2022_01_19,0,None,Zaid Lean Season
+2022_01_20,0,None,Zaid Lean Season
+2022_01_21,0,None,Zaid Lean Season
+2022_01_22,0,None,Zaid Lean Season
+2022_01_23,0,None,Zaid Lean Season
+2022_01_24,0,None,Zaid Lean Season
+2022_01_25,0,None,Zaid Lean Season
+2022_01_26,1,Republic Day,Zaid Lean Season
+2022_01_27,0,None,Zaid Lean Season
+2022_01_28,0,None,Zaid Lean Season
+2022_01_29,0,None,Zaid Lean Season
+2022_01_30,0,None,Zaid Lean Season
+2022_01_31,0,None,Zaid Lean Season
+2022_02_01,0,None,Zaid Lean Season
+2022_02_02,0,None,Zaid Lean Season
+2022_02_03,0,None,Zaid Lean Season
+2022_02_04,0,None,Zaid Lean Season
+2022_02_05,0,None,Zaid Lean Season
+2022_02_06,0,None,Zaid Lean Season
+2022_02_07,0,None,Zaid Lean Season
+2022_02_08,0,None,Zaid Lean Season
+2022_02_09,0,None,Zaid Lean Season
+2022_02_10,0,None,Zaid Lean Season
+2022_02_11,0,None,Zaid Lean Season
+2022_02_12,0,None,Zaid Lean Season
+2022_02_13,0,None,Zaid Lean Season
+2022_02_14,0,None,Zaid Lean Season
+2022_02_15,0,None,Zaid Lean Season
+2022_02_16,0,None,Zaid Lean Season
+2022_02_17,0,None,Zaid Lean Season
+2022_02_18,0,None,Zaid Lean Season
+2022_02_19,0,None,Zaid Lean Season
+2022_02_20,0,None,Zaid Lean Season
+2022_02_21,0,None,Zaid Lean Season
+2022_02_22,0,None,Zaid Lean Season
+2022_02_23,0,None,Zaid Lean Season
+2022_02_24,0,None,Zaid Lean Season
+2022_02_25,0,None,Zaid Lean Season
+2022_02_26,0,None,Zaid Lean Season
+2022_02_27,0,None,Zaid Lean Season
+2022_02_28,0,None,Zaid Lean Season
+2022_03_01,1,Maha Shivaratri,Rabi Harvest
+2022_03_02,0,None,Rabi Harvest
+2022_03_03,0,None,Rabi Harvest
+2022_03_04,0,None,Rabi Harvest
+2022_03_05,0,None,Rabi Harvest
+2022_03_06,0,None,Rabi Harvest
+2022_03_07,0,None,Rabi Harvest
+2022_03_08,0,None,Rabi Harvest
+2022_03_09,0,None,Rabi Harvest
+2022_03_10,0,None,Rabi Harvest
+2022_03_11,0,None,Rabi Harvest
+2022_03_12,0,None,Rabi Harvest
+2022_03_13,0,None,Rabi Harvest
+2022_03_14,0,None,Rabi Harvest
+2022_03_15,0,None,Rabi Harvest
+2022_03_16,0,None,Rabi Harvest
+2022_03_17,0,None,Rabi Harvest
+2022_03_18,1,Holi,Rabi Harvest
+2022_03_19,0,None,Rabi Harvest
+2022_03_20,0,None,Rabi Harvest
+2022_03_21,0,None,Rabi Harvest
+2022_03_22,0,None,Rabi Harvest
+2022_03_23,0,None,Rabi Harvest
+2022_03_24,0,None,Rabi Harvest
+2022_03_25,0,None,Rabi Harvest
+2022_03_26,0,None,Rabi Harvest
+2022_03_27,0,None,Rabi Harvest
+2022_03_28,0,None,Rabi Harvest
+2022_03_29,0,None,Rabi Harvest
+2022_03_30,0,None,Rabi Harvest
+2022_03_31,0,None,Rabi Harvest
+2022_04_01,0,None,Rabi Harvest
+2022_04_02,0,None,Rabi Harvest
+2022_04_03,0,None,Rabi Harvest
+2022_04_04,0,None,Rabi Harvest
+2022_04_05,0,None,Rabi Harvest
+2022_04_06,0,None,Rabi Harvest
+2022_04_07,0,None,Rabi Harvest
+2022_04_08,0,None,Rabi Harvest
+2022_04_09,0,None,Rabi Harvest
+2022_04_10,0,None,Rabi Harvest
+2022_04_11,0,None,Rabi Harvest
+2022_04_12,0,None,Rabi Harvest
+2022_04_13,0,None,Rabi Harvest
+2022_04_14,1,Dr. B. R. Ambedkar's Jayanti; Mahavir Jayanti,Rabi Harvest
+2022_04_15,1,Good Friday,Rabi Harvest
+2022_04_16,0,None,Rabi Harvest
+2022_04_17,0,None,Rabi Harvest
+2022_04_18,0,None,Rabi Harvest
+2022_04_19,0,None,Rabi Harvest
+2022_04_20,0,None,Rabi Harvest
+2022_04_21,0,None,Rabi Harvest
+2022_04_22,0,None,Rabi Harvest
+2022_04_23,0,None,Rabi Harvest
+2022_04_24,0,None,Rabi Harvest
+2022_04_25,0,None,Rabi Harvest
+2022_04_26,0,None,Rabi Harvest
+2022_04_27,0,None,Rabi Harvest
+2022_04_28,0,None,Rabi Harvest
+2022_04_29,0,None,Rabi Harvest
+2022_04_30,0,None,Rabi Harvest
+2022_05_01,0,None,Rabi Harvest
+2022_05_02,0,None,Rabi Harvest
+2022_05_03,1,Id-ul-Fitr,Rabi Harvest
+2022_05_04,0,None,Rabi Harvest
+2022_05_05,0,None,Rabi Harvest
+2022_05_06,0,None,Rabi Harvest
+2022_05_07,0,None,Rabi Harvest
+2022_05_08,0,None,Rabi Harvest
+2022_05_09,0,None,Rabi Harvest
+2022_05_10,0,None,Rabi Harvest
+2022_05_11,0,None,Rabi Harvest
+2022_05_12,0,None,Rabi Harvest
+2022_05_13,0,None,Rabi Harvest
+2022_05_14,0,None,Rabi Harvest
+2022_05_15,0,None,Rabi Harvest
+2022_05_16,1,Buddha Purnima,Rabi Harvest
+2022_05_17,0,None,Rabi Harvest
+2022_05_18,0,None,Rabi Harvest
+2022_05_19,0,None,Rabi Harvest
+2022_05_20,0,None,Rabi Harvest
+2022_05_21,0,None,Rabi Harvest
+2022_05_22,0,None,Rabi Harvest
+2022_05_23,0,None,Rabi Harvest
+2022_05_24,0,None,Rabi Harvest
+2022_05_25,0,None,Rabi Harvest
+2022_05_26,0,None,Rabi Harvest
+2022_05_27,0,None,Rabi Harvest
+2022_05_28,0,None,Rabi Harvest
+2022_05_29,0,None,Rabi Harvest
+2022_05_30,0,None,Rabi Harvest
+2022_05_31,0,None,Rabi Harvest
+2022_06_01,0,None,Zaid Lean Season
+2022_06_02,0,None,Zaid Lean Season
+2022_06_03,0,None,Zaid Lean Season
+2022_06_04,0,None,Zaid Lean Season
+2022_06_05,0,None,Zaid Lean Season
+2022_06_06,0,None,Zaid Lean Season
+2022_06_07,0,None,Zaid Lean Season
+2022_06_08,0,None,Zaid Lean Season
+2022_06_09,0,None,Zaid Lean Season
+2022_06_10,0,None,Zaid Lean Season
+2022_06_11,0,None,Zaid Lean Season
+2022_06_12,0,None,Zaid Lean Season
+2022_06_13,0,None,Zaid Lean Season
+2022_06_14,0,None,Zaid Lean Season
+2022_06_15,0,None,Zaid Lean Season
+2022_06_16,0,None,Zaid Lean Season
+2022_06_17,0,None,Zaid Lean Season
+2022_06_18,0,None,Zaid Lean Season
+2022_06_19,0,None,Zaid Lean Season
+2022_06_20,0,None,Zaid Lean Season
+2022_06_21,0,None,Zaid Lean Season
+2022_06_22,0,None,Zaid Lean Season
+2022_06_23,0,None,Zaid Lean Season
+2022_06_24,0,None,Zaid Lean Season
+2022_06_25,0,None,Zaid Lean Season
+2022_06_26,0,None,Zaid Lean Season
+2022_06_27,0,None,Zaid Lean Season
+2022_06_28,0,None,Zaid Lean Season
+2022_06_29,0,None,Zaid Lean Season
+2022_06_30,0,None,Zaid Lean Season
+2022_07_01,0,None,Zaid Lean Season
+2022_07_02,0,None,Zaid Lean Season
+2022_07_03,0,None,Zaid Lean Season
+2022_07_04,0,None,Zaid Lean Season
+2022_07_05,0,None,Zaid Lean Season
+2022_07_06,0,None,Zaid Lean Season
+2022_07_07,0,None,Zaid Lean Season
+2022_07_08,0,None,Zaid Lean Season
+2022_07_09,0,None,Zaid Lean Season
+2022_07_10,1,Id-ul-Zuha (Bakrid),Zaid Lean Season
+2022_07_11,0,None,Zaid Lean Season
+2022_07_12,0,None,Zaid Lean Season
+2022_07_13,0,None,Zaid Lean Season
+2022_07_14,0,None,Zaid Lean Season
+2022_07_15,0,None,Zaid Lean Season
+2022_07_16,0,None,Zaid Lean Season
+2022_07_17,0,None,Zaid Lean Season
+2022_07_18,0,None,Zaid Lean Season
+2022_07_19,0,None,Zaid Lean Season
+2022_07_20,0,None,Zaid Lean Season
+2022_07_21,0,None,Zaid Lean Season
+2022_07_22,0,None,Zaid Lean Season
+2022_07_23,0,None,Zaid Lean Season
+2022_07_24,0,None,Zaid Lean Season
+2022_07_25,0,None,Zaid Lean Season
+2022_07_26,0,None,Zaid Lean Season
+2022_07_27,0,None,Zaid Lean Season
+2022_07_28,0,None,Zaid Lean Season
+2022_07_29,0,None,Zaid Lean Season
+2022_07_30,0,None,Zaid Lean Season
+2022_07_31,0,None,Zaid Lean Season
+2022_08_01,0,None,Zaid Lean Season
+2022_08_02,0,None,Zaid Lean Season
+2022_08_03,0,None,Zaid Lean Season
+2022_08_04,0,None,Zaid Lean Season
+2022_08_05,0,None,Zaid Lean Season
+2022_08_06,0,None,Zaid Lean Season
+2022_08_07,0,None,Zaid Lean Season
+2022_08_08,0,None,Zaid Lean Season
+2022_08_09,1,Muharram,Zaid Lean Season
+2022_08_10,0,None,Zaid Lean Season
+2022_08_11,0,None,Zaid Lean Season
+2022_08_12,0,None,Zaid Lean Season
+2022_08_13,0,None,Zaid Lean Season
+2022_08_14,0,None,Zaid Lean Season
+2022_08_15,1,Independence Day,Zaid Lean Season
+2022_08_16,0,None,Zaid Lean Season
+2022_08_17,0,None,Zaid Lean Season
+2022_08_18,0,None,Zaid Lean Season
+2022_08_19,1,Janmashtami (Vaishnava),Zaid Lean Season
+2022_08_20,0,None,Zaid Lean Season
+2022_08_21,0,None,Zaid Lean Season
+2022_08_22,0,None,Zaid Lean Season
+2022_08_23,0,None,Zaid Lean Season
+2022_08_24,0,None,Zaid Lean Season
+2022_08_25,0,None,Zaid Lean Season
+2022_08_26,0,None,Zaid Lean Season
+2022_08_27,0,None,Zaid Lean Season
+2022_08_28,0,None,Zaid Lean Season
+2022_08_29,0,None,Zaid Lean Season
+2022_08_30,0,None,Zaid Lean Season
+2022_08_31,0,None,Zaid Lean Season
+2022_09_01,1,None,Kharif Harvest
+2022_09_02,1,None,Kharif Harvest
+2022_09_03,1,None,Kharif Harvest
+2022_09_04,1,None,Kharif Harvest
+2022_09_05,1,None,Kharif Harvest
+2022_09_06,1,None,Kharif Harvest
+2022_09_07,1,None,Kharif Harvest
+2022_09_08,1,None,Kharif Harvest
+2022_09_09,1,None,Kharif Harvest
+2022_09_10,1,None,Kharif Harvest
+2022_09_11,1,None,Kharif Harvest
+2022_09_12,1,None,Kharif Harvest
+2022_09_13,1,None,Kharif Harvest
+2022_09_14,1,None,Kharif Harvest
+2022_09_15,1,None,Kharif Harvest
+2022_09_16,1,None,Kharif Harvest
+2022_09_17,1,None,Kharif Harvest
+2022_09_18,1,None,Kharif Harvest
+2022_09_19,1,None,Kharif Harvest
+2022_09_20,1,None,Kharif Harvest
+2022_09_21,1,None,Kharif Harvest
+2022_09_22,1,None,Kharif Harvest
+2022_09_23,1,None,Kharif Harvest
+2022_09_24,1,None,Kharif Harvest
+2022_09_25,1,None,Kharif Harvest
+2022_09_26,1,None,Kharif Harvest
+2022_09_27,1,None,Kharif Harvest
+2022_09_28,1,None,Kharif Harvest
+2022_09_29,1,None,Kharif Harvest
+2022_09_30,1,None,Kharif Harvest
+2022_10_01,1,None,Kharif Harvest
+2022_10_02,1,Mahatma Gandhi's Jayanti,Kharif Harvest
+2022_10_03,1,None,Kharif Harvest
+2022_10_04,1,None,Kharif Harvest
+2022_10_05,1,Dussehra,Kharif Harvest
+2022_10_06,1,None,Kharif Harvest
+2022_10_07,1,None,Kharif Harvest
+2022_10_08,1,None,Kharif Harvest
+2022_10_09,1,Milad-un-Nabi,Kharif Harvest
+2022_10_10,1,None,Kharif Harvest
+2022_10_11,1,None,Kharif Harvest
+2022_10_12,1,None,Kharif Harvest
+2022_10_13,1,None,Kharif Harvest
+2022_10_14,1,None,Kharif Harvest
+2022_10_15,1,None,Kharif Harvest
+2022_10_16,1,None,Kharif Harvest
+2022_10_17,1,None,Kharif Harvest
+2022_10_18,1,None,Kharif Harvest
+2022_10_19,1,None,Kharif Harvest
+2022_10_20,1,None,Kharif Harvest
+2022_10_21,1,None,Kharif Harvest
+2022_10_22,1,None,Kharif Harvest
+2022_10_23,1,None,Kharif Harvest
+2022_10_24,1,Diwali (Deepavali),Kharif Harvest
+2022_10_25,1,None,Kharif Harvest
+2022_10_26,1,None,Kharif Harvest
+2022_10_27,1,None,Kharif Harvest
+2022_10_28,1,None,Kharif Harvest
+2022_10_29,1,None,Kharif Harvest
+2022_10_30,1,None,Kharif Harvest
+2022_10_31,1,None,Kharif Harvest
+2022_11_01,1,None,Kharif Harvest
+2022_11_02,1,None,Kharif Harvest
+2022_11_03,1,None,Kharif Harvest
+2022_11_04,1,None,Kharif Harvest
+2022_11_05,1,None,Kharif Harvest
+2022_11_06,1,None,Kharif Harvest
+2022_11_07,1,None,Kharif Harvest
+2022_11_08,1,Guru Nanak's Jayanti,Kharif Harvest
+2022_11_09,1,None,Kharif Harvest
+2022_11_10,1,None,Kharif Harvest
+2022_11_11,1,None,Kharif Harvest
+2022_11_12,1,None,Kharif Harvest
+2022_11_13,1,None,Kharif Harvest
+2022_11_14,1,None,Kharif Harvest
+2022_11_15,1,None,Kharif Harvest
+2022_11_16,1,None,Kharif Harvest
+2022_11_17,1,None,Kharif Harvest
+2022_11_18,1,None,Kharif Harvest
+2022_11_19,1,None,Kharif Harvest
+2022_11_20,1,None,Kharif Harvest
+2022_11_21,1,None,Kharif Harvest
+2022_11_22,1,None,Kharif Harvest
+2022_11_23,1,None,Kharif Harvest
+2022_11_24,1,None,Kharif Harvest
+2022_11_25,1,None,Kharif Harvest
+2022_11_26,1,None,Kharif Harvest
+2022_11_27,1,None,Kharif Harvest
+2022_11_28,1,None,Kharif Harvest
+2022_11_29,1,None,Kharif Harvest
+2022_11_30,1,None,Kharif Harvest
+2022_12_01,0,None,Zaid Lean Season
+2022_12_02,0,None,Zaid Lean Season
+2022_12_03,0,None,Zaid Lean Season
+2022_12_04,0,None,Zaid Lean Season
+2022_12_05,0,None,Zaid Lean Season
+2022_12_06,0,None,Zaid Lean Season
+2022_12_07,0,None,Zaid Lean Season
+2022_12_08,0,None,Zaid Lean Season
+2022_12_09,0,None,Zaid Lean Season
+2022_12_10,0,None,Zaid Lean Season
+2022_12_11,0,None,Zaid Lean Season
+2022_12_12,0,None,Zaid Lean Season
+2022_12_13,0,None,Zaid Lean Season
+2022_12_14,0,None,Zaid Lean Season
+2022_12_15,0,None,Zaid Lean Season
+2022_12_16,0,None,Zaid Lean Season
+2022_12_17,0,None,Zaid Lean Season
+2022_12_18,0,None,Zaid Lean Season
+2022_12_19,0,None,Zaid Lean Season
+2022_12_20,0,None,Zaid Lean Season
+2022_12_21,0,None,Zaid Lean Season
+2022_12_22,0,None,Zaid Lean Season
+2022_12_23,0,None,Zaid Lean Season
+2022_12_24,0,None,Zaid Lean Season
+2022_12_25,1,Christmas,Zaid Lean Season
+2022_12_26,0,None,Zaid Lean Season
+2022_12_27,0,None,Zaid Lean Season
+2022_12_28,0,None,Zaid Lean Season
+2022_12_29,0,None,Zaid Lean Season
+2022_12_30,0,None,Zaid Lean Season
+2022_12_31,0,None,Zaid Lean Season
+2023_01_01,0,None,Zaid Lean Season
+2023_01_02,0,None,Zaid Lean Season
+2023_01_03,0,None,Zaid Lean Season
+2023_01_04,0,None,Zaid Lean Season
+2023_01_05,0,None,Zaid Lean Season
+2023_01_06,0,None,Zaid Lean Season
+2023_01_07,0,None,Zaid Lean Season
+2023_01_08,0,None,Zaid Lean Season
+2023_01_09,0,None,Zaid Lean Season
+2023_01_10,0,None,Zaid Lean Season
+2023_01_11,0,None,Zaid Lean Season
+2023_01_12,0,None,Zaid Lean Season
+2023_01_13,0,None,Zaid Lean Season
+2023_01_14,0,None,Zaid Lean Season
+2023_01_15,0,None,Zaid Lean Season
+2023_01_16,0,None,Zaid Lean Season
+2023_01_17,0,None,Zaid Lean Season
+2023_01_18,0,None,Zaid Lean Season
+2023_01_19,0,None,Zaid Lean Season
+2023_01_20,0,None,Zaid Lean Season
+2023_01_21,0,None,Zaid Lean Season
+2023_01_22,0,None,Zaid Lean Season
+2023_01_23,0,None,Zaid Lean Season
+2023_01_24,0,None,Zaid Lean Season
+2023_01_25,0,None,Zaid Lean Season
+2023_01_26,1,Republic Day,Zaid Lean Season
+2023_01_27,0,None,Zaid Lean Season
+2023_01_28,0,None,Zaid Lean Season
+2023_01_29,0,None,Zaid Lean Season
+2023_01_30,0,None,Zaid Lean Season
+2023_01_31,0,None,Zaid Lean Season
+2023_02_01,0,None,Zaid Lean Season
+2023_02_02,0,None,Zaid Lean Season
+2023_02_03,0,None,Zaid Lean Season
+2023_02_04,0,None,Zaid Lean Season
+2023_02_05,0,None,Zaid Lean Season
+2023_02_06,0,None,Zaid Lean Season
+2023_02_07,0,None,Zaid Lean Season
+2023_02_08,0,None,Zaid Lean Season
+2023_02_09,0,None,Zaid Lean Season
+2023_02_10,0,None,Zaid Lean Season
+2023_02_11,0,None,Zaid Lean Season
+2023_02_12,0,None,Zaid Lean Season
+2023_02_13,0,None,Zaid Lean Season
+2023_02_14,0,None,Zaid Lean Season
+2023_02_15,0,None,Zaid Lean Season
+2023_02_16,0,None,Zaid Lean Season
+2023_02_17,0,None,Zaid Lean Season
+2023_02_18,0,None,Zaid Lean Season
+2023_02_19,0,None,Zaid Lean Season
+2023_02_20,0,None,Zaid Lean Season
+2023_02_21,0,None,Zaid Lean Season
+2023_02_22,0,None,Zaid Lean Season
+2023_02_23,0,None,Zaid Lean Season
+2023_02_24,0,None,Zaid Lean Season
+2023_02_25,0,None,Zaid Lean Season
+2023_02_26,0,None,Zaid Lean Season
+2023_02_27,0,None,Zaid Lean Season
+2023_02_28,0,None,Zaid Lean Season
+2023_03_01,0,None,Rabi Harvest
+2023_03_02,0,None,Rabi Harvest
+2023_03_03,0,None,Rabi Harvest
+2023_03_04,0,None,Rabi Harvest
+2023_03_05,0,None,Rabi Harvest
+2023_03_06,0,None,Rabi Harvest
+2023_03_07,0,None,Rabi Harvest
+2023_03_08,1,Holi,Rabi Harvest
+2023_03_09,0,None,Rabi Harvest
+2023_03_10,0,None,Rabi Harvest
+2023_03_11,0,None,Rabi Harvest
+2023_03_12,0,None,Rabi Harvest
+2023_03_13,0,None,Rabi Harvest
+2023_03_14,0,None,Rabi Harvest
+2023_03_15,0,None,Rabi Harvest
+2023_03_16,0,None,Rabi Harvest
+2023_03_17,0,None,Rabi Harvest
+2023_03_18,0,None,Rabi Harvest
+2023_03_19,0,None,Rabi Harvest
+2023_03_20,0,None,Rabi Harvest
+2023_03_21,0,None,Rabi Harvest
+2023_03_22,0,None,Rabi Harvest
+2023_03_23,0,None,Rabi Harvest
+2023_03_24,0,None,Rabi Harvest
+2023_03_25,0,None,Rabi Harvest
+2023_03_26,0,None,Rabi Harvest
+2023_03_27,0,None,Rabi Harvest
+2023_03_28,0,None,Rabi Harvest
+2023_03_29,0,None,Rabi Harvest
+2023_03_30,1,Ram Navami,Rabi Harvest
+2023_03_31,0,None,Rabi Harvest
+2023_04_01,0,None,Rabi Harvest
+2023_04_02,0,None,Rabi Harvest
+2023_04_03,0,None,Rabi Harvest
+2023_04_04,1,Mahavir Jayanti,Rabi Harvest
+2023_04_05,0,None,Rabi Harvest
+2023_04_06,0,None,Rabi Harvest
+2023_04_07,1,Good Friday,Rabi Harvest
+2023_04_08,0,None,Rabi Harvest
+2023_04_09,0,None,Rabi Harvest
+2023_04_10,0,None,Rabi Harvest
+2023_04_11,0,None,Rabi Harvest
+2023_04_12,0,None,Rabi Harvest
+2023_04_13,0,None,Rabi Harvest
+2023_04_14,1,Dr. B. R. Ambedkar's Jayanti,Rabi Harvest
+2023_04_15,0,None,Rabi Harvest
+2023_04_16,0,None,Rabi Harvest
+2023_04_17,0,None,Rabi Harvest
+2023_04_18,0,None,Rabi Harvest
+2023_04_19,0,None,Rabi Harvest
+2023_04_20,0,None,Rabi Harvest
+2023_04_21,0,None,Rabi Harvest
+2023_04_22,1,Id-ul-Fitr,Rabi Harvest
+2023_04_23,0,None,Rabi Harvest
+2023_04_24,0,None,Rabi Harvest
+2023_04_25,0,None,Rabi Harvest
+2023_04_26,0,None,Rabi Harvest
+2023_04_27,0,None,Rabi Harvest
+2023_04_28,0,None,Rabi Harvest
+2023_04_29,0,None,Rabi Harvest
+2023_04_30,0,None,Rabi Harvest
+2023_05_01,0,None,Rabi Harvest
+2023_05_02,0,None,Rabi Harvest
+2023_05_03,0,None,Rabi Harvest
+2023_05_04,0,None,Rabi Harvest
+2023_05_05,1,Buddha Purnima,Rabi Harvest
+2023_05_06,0,None,Rabi Harvest
+2023_05_07,0,None,Rabi Harvest
+2023_05_08,0,None,Rabi Harvest
+2023_05_09,0,None,Rabi Harvest
+2023_05_10,0,None,Rabi Harvest
+2023_05_11,0,None,Rabi Harvest
+2023_05_12,0,None,Rabi Harvest
+2023_05_13,0,None,Rabi Harvest
+2023_05_14,0,None,Rabi Harvest
+2023_05_15,0,None,Rabi Harvest
+2023_05_16,0,None,Rabi Harvest
+2023_05_17,0,None,Rabi Harvest
+2023_05_18,0,None,Rabi Harvest
+2023_05_19,0,None,Rabi Harvest
+2023_05_20,0,None,Rabi Harvest
+2023_05_21,0,None,Rabi Harvest
+2023_05_22,0,None,Rabi Harvest
+2023_05_23,0,None,Rabi Harvest
+2023_05_24,0,None,Rabi Harvest
+2023_05_25,0,None,Rabi Harvest
+2023_05_26,0,None,Rabi Harvest
+2023_05_27,0,None,Rabi Harvest
+2023_05_28,0,None,Rabi Harvest
+2023_05_29,0,None,Rabi Harvest
+2023_05_30,0,None,Rabi Harvest
+2023_05_31,0,None,Rabi Harvest
+2023_06_01,0,None,Zaid Lean Season
+2023_06_02,0,None,Zaid Lean Season
+2023_06_03,0,None,Zaid Lean Season
+2023_06_04,0,None,Zaid Lean Season
+2023_06_05,0,None,Zaid Lean Season
+2023_06_06,0,None,Zaid Lean Season
+2023_06_07,0,None,Zaid Lean Season
+2023_06_08,0,None,Zaid Lean Season
+2023_06_09,0,None,Zaid Lean Season
+2023_06_10,0,None,Zaid Lean Season
+2023_06_11,0,None,Zaid Lean Season
+2023_06_12,0,None,Zaid Lean Season
+2023_06_13,0,None,Zaid Lean Season
+2023_06_14,0,None,Zaid Lean Season
+2023_06_15,0,None,Zaid Lean Season
+2023_06_16,0,None,Zaid Lean Season
+2023_06_17,0,None,Zaid Lean Season
+2023_06_18,0,None,Zaid Lean Season
+2023_06_19,0,None,Zaid Lean Season
+2023_06_20,0,None,Zaid Lean Season
+2023_06_21,0,None,Zaid Lean Season
+2023_06_22,0,None,Zaid Lean Season
+2023_06_23,0,None,Zaid Lean Season
+2023_06_24,0,None,Zaid Lean Season
+2023_06_25,0,None,Zaid Lean Season
+2023_06_26,0,None,Zaid Lean Season
+2023_06_27,0,None,Zaid Lean Season
+2023_06_28,0,None,Zaid Lean Season
+2023_06_29,1,Id-ul-Zuha (Bakrid),Zaid Lean Season
+2023_06_30,0,None,Zaid Lean Season
+2023_07_01,0,None,Zaid Lean Season
+2023_07_02,0,None,Zaid Lean Season
+2023_07_03,0,None,Zaid Lean Season
+2023_07_04,0,None,Zaid Lean Season
+2023_07_05,0,None,Zaid Lean Season
+2023_07_06,0,None,Zaid Lean Season
+2023_07_07,0,None,Zaid Lean Season
+2023_07_08,0,None,Zaid Lean Season
+2023_07_09,0,None,Zaid Lean Season
+2023_07_10,0,None,Zaid Lean Season
+2023_07_11,0,None,Zaid Lean Season
+2023_07_12,0,None,Zaid Lean Season
+2023_07_13,0,None,Zaid Lean Season
+2023_07_14,0,None,Zaid Lean Season
+2023_07_15,0,None,Zaid Lean Season
+2023_07_16,0,None,Zaid Lean Season
+2023_07_17,0,None,Zaid Lean Season
+2023_07_18,0,None,Zaid Lean Season
+2023_07_19,0,None,Zaid Lean Season
+2023_07_20,0,None,Zaid Lean Season
+2023_07_21,0,None,Zaid Lean Season
+2023_07_22,0,None,Zaid Lean Season
+2023_07_23,0,None,Zaid Lean Season
+2023_07_24,0,None,Zaid Lean Season
+2023_07_25,0,None,Zaid Lean Season
+2023_07_26,0,None,Zaid Lean Season
+2023_07_27,0,None,Zaid Lean Season
+2023_07_28,0,None,Zaid Lean Season
+2023_07_29,1,Muharram,Zaid Lean Season
+2023_07_30,0,None,Zaid Lean Season
+2023_07_31,0,None,Zaid Lean Season
+2023_08_01,0,None,Zaid Lean Season
+2023_08_02,0,None,Zaid Lean Season
+2023_08_03,0,None,Zaid Lean Season
+2023_08_04,0,None,Zaid Lean Season
+2023_08_05,0,None,Zaid Lean Season
+2023_08_06,0,None,Zaid Lean Season
+2023_08_07,0,None,Zaid Lean Season
+2023_08_08,0,None,Zaid Lean Season
+2023_08_09,0,None,Zaid Lean Season
+2023_08_10,0,None,Zaid Lean Season
+2023_08_11,0,None,Zaid Lean Season
+2023_08_12,0,None,Zaid Lean Season
+2023_08_13,0,None,Zaid Lean Season
+2023_08_14,0,None,Zaid Lean Season
+2023_08_15,1,Independence Day,Zaid Lean Season
+2023_08_16,0,None,Zaid Lean Season
+2023_08_17,0,None,Zaid Lean Season
+2023_08_18,0,None,Zaid Lean Season
+2023_08_19,0,None,Zaid Lean Season
+2023_08_20,0,None,Zaid Lean Season
+2023_08_21,0,None,Zaid Lean Season
+2023_08_22,0,None,Zaid Lean Season
+2023_08_23,0,None,Zaid Lean Season
+2023_08_24,0,None,Zaid Lean Season
+2023_08_25,0,None,Zaid Lean Season
+2023_08_26,0,None,Zaid Lean Season
+2023_08_27,0,None,Zaid Lean Season
+2023_08_28,0,None,Zaid Lean Season
+2023_08_29,0,None,Zaid Lean Season
+2023_08_30,0,None,Zaid Lean Season
+2023_08_31,0,None,Zaid Lean Season
+2023_09_01,1,None,Kharif Harvest
+2023_09_02,1,None,Kharif Harvest
+2023_09_03,1,None,Kharif Harvest
+2023_09_04,1,None,Kharif Harvest
+2023_09_05,1,None,Kharif Harvest
+2023_09_06,1,None,Kharif Harvest
+2023_09_07,1,Janmashtami (Vaishnava),Kharif Harvest
+2023_09_08,1,None,Kharif Harvest
+2023_09_09,1,None,Kharif Harvest
+2023_09_10,1,None,Kharif Harvest
+2023_09_11,1,None,Kharif Harvest
+2023_09_12,1,None,Kharif Harvest
+2023_09_13,1,None,Kharif Harvest
+2023_09_14,1,None,Kharif Harvest
+2023_09_15,1,None,Kharif Harvest
+2023_09_16,1,None,Kharif Harvest
+2023_09_17,1,None,Kharif Harvest
+2023_09_18,1,None,Kharif Harvest
+2023_09_19,1,None,Kharif Harvest
+2023_09_20,1,None,Kharif Harvest
+2023_09_21,1,None,Kharif Harvest
+2023_09_22,1,None,Kharif Harvest
+2023_09_23,1,None,Kharif Harvest
+2023_09_24,1,None,Kharif Harvest
+2023_09_25,1,None,Kharif Harvest
+2023_09_26,1,None,Kharif Harvest
+2023_09_27,1,None,Kharif Harvest
+2023_09_28,1,Milad-un-Nabi,Kharif Harvest
+2023_09_29,1,None,Kharif Harvest
+2023_09_30,1,None,Kharif Harvest
+2023_10_01,1,None,Kharif Harvest
+2023_10_02,1,Mahatma Gandhi's Jayanti,Kharif Harvest
+2023_10_03,1,None,Kharif Harvest
+2023_10_04,1,None,Kharif Harvest
+2023_10_05,1,None,Kharif Harvest
+2023_10_06,1,None,Kharif Harvest
+2023_10_07,1,None,Kharif Harvest
+2023_10_08,1,None,Kharif Harvest
+2023_10_09,1,None,Kharif Harvest
+2023_10_10,1,None,Kharif Harvest
+2023_10_11,1,None,Kharif Harvest
+2023_10_12,1,None,Kharif Harvest
+2023_10_13,1,None,Kharif Harvest
+2023_10_14,1,None,Kharif Harvest
+2023_10_15,1,None,Kharif Harvest
+2023_10_16,1,None,Kharif Harvest
+2023_10_17,1,None,Kharif Harvest
+2023_10_18,1,None,Kharif Harvest
+2023_10_19,1,None,Kharif Harvest
+2023_10_20,1,None,Kharif Harvest
+2023_10_21,1,None,Kharif Harvest
+2023_10_22,1,None,Kharif Harvest
+2023_10_23,1,None,Kharif Harvest
+2023_10_24,1,Dussehra,Kharif Harvest
+2023_10_25,1,None,Kharif Harvest
+2023_10_26,1,None,Kharif Harvest
+2023_10_27,1,None,Kharif Harvest
+2023_10_28,1,None,Kharif Harvest
+2023_10_29,1,None,Kharif Harvest
+2023_10_30,1,None,Kharif Harvest
+2023_10_31,1,None,Kharif Harvest
+2023_11_01,1,None,Kharif Harvest
+2023_11_02,1,None,Kharif Harvest
+2023_11_03,1,None,Kharif Harvest
+2023_11_04,1,None,Kharif Harvest
+2023_11_05,1,None,Kharif Harvest
+2023_11_06,1,None,Kharif Harvest
+2023_11_07,1,None,Kharif Harvest
+2023_11_08,1,None,Kharif Harvest
+2023_11_09,1,None,Kharif Harvest
+2023_11_10,1,None,Kharif Harvest
+2023_11_11,1,None,Kharif Harvest
+2023_11_12,1,Diwali (Deepavali),Kharif Harvest
+2023_11_13,1,None,Kharif Harvest
+2023_11_14,1,None,Kharif Harvest
+2023_11_15,1,None,Kharif Harvest
+2023_11_16,1,None,Kharif Harvest
+2023_11_17,1,None,Kharif Harvest
+2023_11_18,1,None,Kharif Harvest
+2023_11_19,1,None,Kharif Harvest
+2023_11_20,1,None,Kharif Harvest
+2023_11_21,1,None,Kharif Harvest
+2023_11_22,1,None,Kharif Harvest
+2023_11_23,1,None,Kharif Harvest
+2023_11_24,1,None,Kharif Harvest
+2023_11_25,1,None,Kharif Harvest
+2023_11_26,1,None,Kharif Harvest
+2023_11_27,1,Guru Nanak's Jayanti,Kharif Harvest
+2023_11_28,1,None,Kharif Harvest
+2023_11_29,1,None,Kharif Harvest
+2023_11_30,1,None,Kharif Harvest
+2023_12_01,0,None,Zaid Lean Season
+2023_12_02,0,None,Zaid Lean Season
+2023_12_03,0,None,Zaid Lean Season
+2023_12_04,0,None,Zaid Lean Season
+2023_12_05,0,None,Zaid Lean Season
+2023_12_06,0,None,Zaid Lean Season
+2023_12_07,0,None,Zaid Lean Season
+2023_12_08,0,None,Zaid Lean Season
+2023_12_09,0,None,Zaid Lean Season
+2023_12_10,0,None,Zaid Lean Season
+2023_12_11,0,None,Zaid Lean Season
+2023_12_12,0,None,Zaid Lean Season
+2023_12_13,0,None,Zaid Lean Season
+2023_12_14,0,None,Zaid Lean Season
+2023_12_15,0,None,Zaid Lean Season
+2023_12_16,0,None,Zaid Lean Season
+2023_12_17,0,None,Zaid Lean Season
+2023_12_18,0,None,Zaid Lean Season
+2023_12_19,0,None,Zaid Lean Season
+2023_12_20,0,None,Zaid Lean Season
+2023_12_21,0,None,Zaid Lean Season
+2023_12_22,0,None,Zaid Lean Season
+2023_12_23,0,None,Zaid Lean Season
+2023_12_24,0,None,Zaid Lean Season
+2023_12_25,1,Christmas,Zaid Lean Season
+2023_12_26,0,None,Zaid Lean Season
+2023_12_27,0,None,Zaid Lean Season
+2023_12_28,0,None,Zaid Lean Season
+2023_12_29,0,None,Zaid Lean Season
+2023_12_30,0,None,Zaid Lean Season
+2023_12_31,0,None,Zaid Lean Season
+2024_01_01,0,None,Zaid Lean Season
+2024_01_02,0,None,Zaid Lean Season
+2024_01_03,0,None,Zaid Lean Season
+2024_01_04,0,None,Zaid Lean Season
+2024_01_05,0,None,Zaid Lean Season
+2024_01_06,0,None,Zaid Lean Season
+2024_01_07,0,None,Zaid Lean Season
+2024_01_08,0,None,Zaid Lean Season
+2024_01_09,0,None,Zaid Lean Season
+2024_01_10,0,None,Zaid Lean Season
+2024_01_11,0,None,Zaid Lean Season
+2024_01_12,0,None,Zaid Lean Season
+2024_01_13,0,None,Zaid Lean Season
+2024_01_14,0,None,Zaid Lean Season
+2024_01_15,0,None,Zaid Lean Season
+2024_01_16,0,None,Zaid Lean Season
+2024_01_17,0,None,Zaid Lean Season
+2024_01_18,0,None,Zaid Lean Season
+2024_01_19,0,None,Zaid Lean Season
+2024_01_20,0,None,Zaid Lean Season
+2024_01_21,0,None,Zaid Lean Season
+2024_01_22,0,None,Zaid Lean Season
+2024_01_23,0,None,Zaid Lean Season
+2024_01_24,0,None,Zaid Lean Season
+2024_01_25,0,None,Zaid Lean Season
+2024_01_26,1,Republic Day,Zaid Lean Season
+2024_01_27,0,None,Zaid Lean Season
+2024_01_28,0,None,Zaid Lean Season
+2024_01_29,0,None,Zaid Lean Season
+2024_01_30,0,None,Zaid Lean Season
+2024_01_31,0,None,Zaid Lean Season
+2024_02_01,0,None,Zaid Lean Season
+2024_02_02,0,None,Zaid Lean Season
+2024_02_03,0,None,Zaid Lean Season
+2024_02_04,0,None,Zaid Lean Season
+2024_02_05,0,None,Zaid Lean Season
+2024_02_06,0,None,Zaid Lean Season
+2024_02_07,0,None,Zaid Lean Season
+2024_02_08,0,None,Zaid Lean Season
+2024_02_09,0,None,Zaid Lean Season
+2024_02_10,0,None,Zaid Lean Season
+2024_02_11,0,None,Zaid Lean Season
+2024_02_12,0,None,Zaid Lean Season
+2024_02_13,0,None,Zaid Lean Season
+2024_02_14,0,None,Zaid Lean Season
+2024_02_15,0,None,Zaid Lean Season
+2024_02_16,0,None,Zaid Lean Season
+2024_02_17,0,None,Zaid Lean Season
+2024_02_18,0,None,Zaid Lean Season
+2024_02_19,0,None,Zaid Lean Season
+2024_02_20,0,None,Zaid Lean Season
+2024_02_21,0,None,Zaid Lean Season
+2024_02_22,0,None,Zaid Lean Season
+2024_02_23,0,None,Zaid Lean Season
+2024_02_24,0,None,Zaid Lean Season
+2024_02_25,0,None,Zaid Lean Season
+2024_02_26,0,None,Zaid Lean Season
+2024_02_27,0,None,Zaid Lean Season
+2024_02_28,0,None,Zaid Lean Season
+2024_02_29,0,None,Zaid Lean Season
+2024_03_01,0,None,Rabi Harvest
+2024_03_02,0,None,Rabi Harvest
+2024_03_03,0,None,Rabi Harvest
+2024_03_04,0,None,Rabi Harvest
+2024_03_05,0,None,Rabi Harvest
+2024_03_06,0,None,Rabi Harvest
+2024_03_07,0,None,Rabi Harvest
+2024_03_08,0,None,Rabi Harvest
+2024_03_09,0,None,Rabi Harvest
+2024_03_10,0,None,Rabi Harvest
+2024_03_11,0,None,Rabi Harvest
+2024_03_12,0,None,Rabi Harvest
+2024_03_13,0,None,Rabi Harvest
+2024_03_14,0,None,Rabi Harvest
+2024_03_15,0,None,Rabi Harvest
+2024_03_16,0,None,Rabi Harvest
+2024_03_17,0,None,Rabi Harvest
+2024_03_18,0,None,Rabi Harvest
+2024_03_19,0,None,Rabi Harvest
+2024_03_20,0,None,Rabi Harvest
+2024_03_21,0,None,Rabi Harvest
+2024_03_22,0,None,Rabi Harvest
+2024_03_23,0,None,Rabi Harvest
+2024_03_24,0,None,Rabi Harvest
+2024_03_25,1,Holi,Rabi Harvest
+2024_03_26,0,None,Rabi Harvest
+2024_03_27,0,None,Rabi Harvest
+2024_03_28,0,None,Rabi Harvest
+2024_03_29,1,Good Friday,Rabi Harvest
+2024_03_30,0,None,Rabi Harvest
+2024_03_31,0,None,Rabi Harvest
+2024_04_01,0,None,Rabi Harvest
+2024_04_02,0,None,Rabi Harvest
+2024_04_03,0,None,Rabi Harvest
+2024_04_04,0,None,Rabi Harvest
+2024_04_05,0,None,Rabi Harvest
+2024_04_06,0,None,Rabi Harvest
+2024_04_07,0,None,Rabi Harvest
+2024_04_08,0,None,Rabi Harvest
+2024_04_09,0,None,Rabi Harvest
+2024_04_10,0,None,Rabi Harvest
+2024_04_11,1,Id-ul-Fitr,Rabi Harvest
+2024_04_12,0,None,Rabi Harvest
+2024_04_13,0,None,Rabi Harvest
+2024_04_14,1,Dr. B. R. Ambedkar's Jayanti,Rabi Harvest
+2024_04_15,0,None,Rabi Harvest
+2024_04_16,0,None,Rabi Harvest
+2024_04_17,1,Ram Navami,Rabi Harvest
+2024_04_18,0,None,Rabi Harvest
+2024_04_19,0,None,Rabi Harvest
+2024_04_20,0,None,Rabi Harvest
+2024_04_21,1,Mahavir Jayanti,Rabi Harvest
+2024_04_22,0,None,Rabi Harvest
+2024_04_23,0,None,Rabi Harvest
+2024_04_24,0,None,Rabi Harvest
+2024_04_25,0,None,Rabi Harvest
+2024_04_26,0,None,Rabi Harvest
+2024_04_27,0,None,Rabi Harvest
+2024_04_28,0,None,Rabi Harvest
+2024_04_29,0,None,Rabi Harvest
+2024_04_30,0,None,Rabi Harvest
+2024_05_01,0,None,Rabi Harvest
+2024_05_02,0,None,Rabi Harvest
+2024_05_03,0,None,Rabi Harvest
+2024_05_04,0,None,Rabi Harvest
+2024_05_05,0,None,Rabi Harvest
+2024_05_06,0,None,Rabi Harvest
+2024_05_07,0,None,Rabi Harvest
+2024_05_08,0,None,Rabi Harvest
+2024_05_09,0,None,Rabi Harvest
+2024_05_10,0,None,Rabi Harvest
+2024_05_11,0,None,Rabi Harvest
+2024_05_12,0,None,Rabi Harvest
+2024_05_13,0,None,Rabi Harvest
+2024_05_14,0,None,Rabi Harvest
+2024_05_15,0,None,Rabi Harvest
+2024_05_16,0,None,Rabi Harvest
+2024_05_17,0,None,Rabi Harvest
+2024_05_18,0,None,Rabi Harvest
+2024_05_19,0,None,Rabi Harvest
+2024_05_20,0,None,Rabi Harvest
+2024_05_21,0,None,Rabi Harvest
+2024_05_22,0,None,Rabi Harvest
+2024_05_23,1,Buddha Purnima,Rabi Harvest
+2024_05_24,0,None,Rabi Harvest
+2024_05_25,0,None,Rabi Harvest
+2024_05_26,0,None,Rabi Harvest
+2024_05_27,0,None,Rabi Harvest
+2024_05_28,0,None,Rabi Harvest
+2024_05_29,0,None,Rabi Harvest
+2024_05_30,0,None,Rabi Harvest
+2024_05_31,0,None,Rabi Harvest
+2024_06_01,0,None,Zaid Lean Season
+2024_06_02,0,None,Zaid Lean Season
+2024_06_03,0,None,Zaid Lean Season
+2024_06_04,0,None,Zaid Lean Season
+2024_06_05,0,None,Zaid Lean Season
+2024_06_06,0,None,Zaid Lean Season
+2024_06_07,0,None,Zaid Lean Season
+2024_06_08,0,None,Zaid Lean Season
+2024_06_09,0,None,Zaid Lean Season
+2024_06_10,0,None,Zaid Lean Season
+2024_06_11,0,None,Zaid Lean Season
+2024_06_12,0,None,Zaid Lean Season
+2024_06_13,0,None,Zaid Lean Season
+2024_06_14,0,None,Zaid Lean Season
+2024_06_15,0,None,Zaid Lean Season
+2024_06_16,0,None,Zaid Lean Season
+2024_06_17,1,Id-ul-Zuha (Bakrid),Zaid Lean Season
+2024_06_18,0,None,Zaid Lean Season
+2024_06_19,0,None,Zaid Lean Season
+2024_06_20,0,None,Zaid Lean Season
+2024_06_21,0,None,Zaid Lean Season
+2024_06_22,0,None,Zaid Lean Season
+2024_06_23,0,None,Zaid Lean Season
+2024_06_24,0,None,Zaid Lean Season
+2024_06_25,0,None,Zaid Lean Season
+2024_06_26,0,None,Zaid Lean Season
+2024_06_27,0,None,Zaid Lean Season
+2024_06_28,0,None,Zaid Lean Season
+2024_06_29,0,None,Zaid Lean Season
+2024_06_30,0,None,Zaid Lean Season
+2024_07_01,0,None,Zaid Lean Season
+2024_07_02,0,None,Zaid Lean Season
+2024_07_03,0,None,Zaid Lean Season
+2024_07_04,0,None,Zaid Lean Season
+2024_07_05,0,None,Zaid Lean Season
+2024_07_06,0,None,Zaid Lean Season
+2024_07_07,0,None,Zaid Lean Season
+2024_07_08,0,None,Zaid Lean Season
+2024_07_09,0,None,Zaid Lean Season
+2024_07_10,0,None,Zaid Lean Season
+2024_07_11,0,None,Zaid Lean Season
+2024_07_12,0,None,Zaid Lean Season
+2024_07_13,0,None,Zaid Lean Season
+2024_07_14,0,None,Zaid Lean Season
+2024_07_15,0,None,Zaid Lean Season
+2024_07_16,0,None,Zaid Lean Season
+2024_07_17,1,Muharram,Zaid Lean Season
+2024_07_18,0,None,Zaid Lean Season
+2024_07_19,0,None,Zaid Lean Season
+2024_07_20,0,None,Zaid Lean Season
+2024_07_21,0,None,Zaid Lean Season
+2024_07_22,0,None,Zaid Lean Season
+2024_07_23,0,None,Zaid Lean Season
+2024_07_24,0,None,Zaid Lean Season
+2024_07_25,0,None,Zaid Lean Season
+2024_07_26,0,None,Zaid Lean Season
+2024_07_27,0,None,Zaid Lean Season
+2024_07_28,0,None,Zaid Lean Season
+2024_07_29,0,None,Zaid Lean Season
+2024_07_30,0,None,Zaid Lean Season
+2024_07_31,0,None,Zaid Lean Season
+2024_08_01,0,None,Zaid Lean Season
+2024_08_02,0,None,Zaid Lean Season
+2024_08_03,0,None,Zaid Lean Season
+2024_08_04,0,None,Zaid Lean Season
+2024_08_05,0,None,Zaid Lean Season
+2024_08_06,0,None,Zaid Lean Season
+2024_08_07,0,None,Zaid Lean Season
+2024_08_08,0,None,Zaid Lean Season
+2024_08_09,0,None,Zaid Lean Season
+2024_08_10,0,None,Zaid Lean Season
+2024_08_11,0,None,Zaid Lean Season
+2024_08_12,0,None,Zaid Lean Season
+2024_08_13,0,None,Zaid Lean Season
+2024_08_14,0,None,Zaid Lean Season
+2024_08_15,1,Independence Day,Zaid Lean Season
+2024_08_16,0,None,Zaid Lean Season
+2024_08_17,0,None,Zaid Lean Season
+2024_08_18,0,None,Zaid Lean Season
+2024_08_19,0,None,Zaid Lean Season
+2024_08_20,0,None,Zaid Lean Season
+2024_08_21,0,None,Zaid Lean Season
+2024_08_22,0,None,Zaid Lean Season
+2024_08_23,0,None,Zaid Lean Season
+2024_08_24,0,None,Zaid Lean Season
+2024_08_25,0,None,Zaid Lean Season
+2024_08_26,1,Janmashtami (Vaishnava),Zaid Lean Season
+2024_08_27,0,None,Zaid Lean Season
+2024_08_28,0,None,Zaid Lean Season
+2024_08_29,0,None,Zaid Lean Season
+2024_08_30,0,None,Zaid Lean Season
+2024_08_31,0,None,Zaid Lean Season
+2024_09_01,1,None,Kharif Harvest
+2024_09_02,1,None,Kharif Harvest
+2024_09_03,1,None,Kharif Harvest
+2024_09_04,1,None,Kharif Harvest
+2024_09_05,1,None,Kharif Harvest
+2024_09_06,1,None,Kharif Harvest
+2024_09_07,1,None,Kharif Harvest
+2024_09_08,1,None,Kharif Harvest
+2024_09_09,1,None,Kharif Harvest
+2024_09_10,1,None,Kharif Harvest
+2024_09_11,1,None,Kharif Harvest
+2024_09_12,1,None,Kharif Harvest
+2024_09_13,1,None,Kharif Harvest
+2024_09_14,1,None,Kharif Harvest
+2024_09_15,1,None,Kharif Harvest
+2024_09_16,1,Milad-un-Nabi,Kharif Harvest
+2024_09_17,1,None,Kharif Harvest
+2024_09_18,1,None,Kharif Harvest
+2024_09_19,1,None,Kharif Harvest
+2024_09_20,1,None,Kharif Harvest
+2024_09_21,1,None,Kharif Harvest
+2024_09_22,1,None,Kharif Harvest
+2024_09_23,1,None,Kharif Harvest
+2024_09_24,1,None,Kharif Harvest
+2024_09_25,1,None,Kharif Harvest
+2024_09_26,1,None,Kharif Harvest
+2024_09_27,1,None,Kharif Harvest
+2024_09_28,1,None,Kharif Harvest
+2024_09_29,1,None,Kharif Harvest
+2024_09_30,1,None,Kharif Harvest
+2024_10_01,1,None,Kharif Harvest
+2024_10_02,1,Mahatma Gandhi's Jayanti,Kharif Harvest
+2024_10_03,1,None,Kharif Harvest
+2024_10_04,1,None,Kharif Harvest
+2024_10_05,1,None,Kharif Harvest
+2024_10_06,1,None,Kharif Harvest
+2024_10_07,1,None,Kharif Harvest
+2024_10_08,1,None,Kharif Harvest
+2024_10_09,1,None,Kharif Harvest
+2024_10_10,1,None,Kharif Harvest
+2024_10_11,1,None,Kharif Harvest
+2024_10_12,1,Dussehra,Kharif Harvest
+2024_10_13,1,None,Kharif Harvest
+2024_10_14,1,None,Kharif Harvest
+2024_10_15,1,None,Kharif Harvest
+2024_10_16,1,None,Kharif Harvest
+2024_10_17,1,None,Kharif Harvest
+2024_10_18,1,None,Kharif Harvest
+2024_10_19,1,None,Kharif Harvest
+2024_10_20,1,None,Kharif Harvest
+2024_10_21,1,None,Kharif Harvest
+2024_10_22,1,None,Kharif Harvest
+2024_10_23,1,None,Kharif Harvest
+2024_10_24,1,None,Kharif Harvest
+2024_10_25,1,None,Kharif Harvest
+2024_10_26,1,None,Kharif Harvest
+2024_10_27,1,None,Kharif Harvest
+2024_10_28,1,None,Kharif Harvest
+2024_10_29,1,None,Kharif Harvest
+2024_10_30,1,None,Kharif Harvest
+2024_10_31,1,Diwali (Deepavali),Kharif Harvest
+2024_11_01,1,None,Kharif Harvest
+2024_11_02,1,None,Kharif Harvest
+2024_11_03,1,None,Kharif Harvest
+2024_11_04,1,None,Kharif Harvest
+2024_11_05,1,None,Kharif Harvest
+2024_11_06,1,None,Kharif Harvest
+2024_11_07,1,None,Kharif Harvest
+2024_11_08,1,None,Kharif Harvest
+2024_11_09,1,None,Kharif Harvest
+2024_11_10,1,None,Kharif Harvest
+2024_11_11,1,None,Kharif Harvest
+2024_11_12,1,None,Kharif Harvest
+2024_11_13,1,None,Kharif Harvest
+2024_11_14,1,None,Kharif Harvest
+2024_11_15,1,Guru Nanak's Jayanti,Kharif Harvest
+2024_11_16,1,None,Kharif Harvest
+2024_11_17,1,None,Kharif Harvest
+2024_11_18,1,None,Kharif Harvest
+2024_11_19,1,None,Kharif Harvest
+2024_11_20,1,None,Kharif Harvest
+2024_11_21,1,None,Kharif Harvest
+2024_11_22,1,None,Kharif Harvest
+2024_11_23,1,None,Kharif Harvest
+2024_11_24,1,None,Kharif Harvest
+2024_11_25,1,None,Kharif Harvest
+2024_11_26,1,None,Kharif Harvest
+2024_11_27,1,None,Kharif Harvest
+2024_11_28,1,None,Kharif Harvest
+2024_11_29,1,None,Kharif Harvest
+2024_11_30,1,None,Kharif Harvest
+2024_12_01,0,None,Zaid Lean Season
+2024_12_02,0,None,Zaid Lean Season
+2024_12_03,0,None,Zaid Lean Season
+2024_12_04,0,None,Zaid Lean Season
+2024_12_05,0,None,Zaid Lean Season
+2024_12_06,0,None,Zaid Lean Season
+2024_12_07,0,None,Zaid Lean Season
+2024_12_08,0,None,Zaid Lean Season
+2024_12_09,0,None,Zaid Lean Season
+2024_12_10,0,None,Zaid Lean Season
+2024_12_11,0,None,Zaid Lean Season
+2024_12_12,0,None,Zaid Lean Season
+2024_12_13,0,None,Zaid Lean Season
+2024_12_14,0,None,Zaid Lean Season
+2024_12_15,0,None,Zaid Lean Season
+2024_12_16,0,None,Zaid Lean Season
+2024_12_17,0,None,Zaid Lean Season
+2024_12_18,0,None,Zaid Lean Season
+2024_12_19,0,None,Zaid Lean Season
+2024_12_20,0,None,Zaid Lean Season
+2024_12_21,0,None,Zaid Lean Season
+2024_12_22,0,None,Zaid Lean Season
+2024_12_23,0,None,Zaid Lean Season
+2024_12_24,0,None,Zaid Lean Season
+2024_12_25,1,Christmas,Zaid Lean Season
+2024_12_26,0,None,Zaid Lean Season
+2024_12_27,0,None,Zaid Lean Season
+2024_12_28,0,None,Zaid Lean Season
+2024_12_29,0,None,Zaid Lean Season
+2024_12_30,0,None,Zaid Lean Season
+2024_12_31,0,None,Zaid Lean Season
+2025_01_01,0,None,Zaid Lean Season
+2025_01_02,0,None,Zaid Lean Season
+2025_01_03,0,None,Zaid Lean Season
+2025_01_04,0,None,Zaid Lean Season
+2025_01_05,0,None,Zaid Lean Season
+2025_01_06,0,None,Zaid Lean Season
+2025_01_07,0,None,Zaid Lean Season
+2025_01_08,0,None,Zaid Lean Season
+2025_01_09,0,None,Zaid Lean Season
+2025_01_10,0,None,Zaid Lean Season
+2025_01_11,0,None,Zaid Lean Season
+2025_01_12,0,None,Zaid Lean Season
+2025_01_13,0,None,Zaid Lean Season
+2025_01_14,0,None,Zaid Lean Season
+2025_01_15,0,None,Zaid Lean Season
+2025_01_16,0,None,Zaid Lean Season
+2025_01_17,0,None,Zaid Lean Season
+2025_01_18,0,None,Zaid Lean Season
+2025_01_19,0,None,Zaid Lean Season
+2025_01_20,0,None,Zaid Lean Season
+2025_01_21,0,None,Zaid Lean Season
+2025_01_22,0,None,Zaid Lean Season
+2025_01_23,0,None,Zaid Lean Season
+2025_01_24,0,None,Zaid Lean Season
+2025_01_25,0,None,Zaid Lean Season
+2025_01_26,1,Republic Day,Zaid Lean Season
+2025_01_27,0,None,Zaid Lean Season
+2025_01_28,0,None,Zaid Lean Season
+2025_01_29,0,None,Zaid Lean Season
+2025_01_30,0,None,Zaid Lean Season
+2025_01_31,0,None,Zaid Lean Season
+2025_02_01,0,None,Zaid Lean Season
+2025_02_02,0,None,Zaid Lean Season
+2025_02_03,0,None,Zaid Lean Season
+2025_02_04,0,None,Zaid Lean Season
+2025_02_05,0,None,Zaid Lean Season
+2025_02_06,0,None,Zaid Lean Season
+2025_02_07,0,None,Zaid Lean Season
+2025_02_08,0,None,Zaid Lean Season
+2025_02_09,0,None,Zaid Lean Season
+2025_02_10,0,None,Zaid Lean Season
+2025_02_11,0,None,Zaid Lean Season
+2025_02_12,0,None,Zaid Lean Season
+2025_02_13,0,None,Zaid Lean Season
+2025_02_14,0,None,Zaid Lean Season
+2025_02_15,0,None,Zaid Lean Season
+2025_02_16,0,None,Zaid Lean Season
+2025_02_17,0,None,Zaid Lean Season
+2025_02_18,0,None,Zaid Lean Season
+2025_02_19,0,None,Zaid Lean Season
+2025_02_20,0,None,Zaid Lean Season
+2025_02_21,0,None,Zaid Lean Season
+2025_02_22,0,None,Zaid Lean Season
+2025_02_23,0,None,Zaid Lean Season
+2025_02_24,0,None,Zaid Lean Season
+2025_02_25,0,None,Zaid Lean Season
+2025_02_26,1,Maha Shivaratri,Zaid Lean Season
+2025_02_27,0,None,Zaid Lean Season
+2025_02_28,0,None,Zaid Lean Season
+2025_03_01,0,None,Rabi Harvest
+2025_03_02,0,None,Rabi Harvest
+2025_03_03,0,None,Rabi Harvest
+2025_03_04,0,None,Rabi Harvest
+2025_03_05,0,None,Rabi Harvest
+2025_03_06,0,None,Rabi Harvest
+2025_03_07,0,None,Rabi Harvest
+2025_03_08,0,None,Rabi Harvest
+2025_03_09,0,None,Rabi Harvest
+2025_03_10,0,None,Rabi Harvest
+2025_03_11,0,None,Rabi Harvest
+2025_03_12,0,None,Rabi Harvest
+2025_03_13,0,None,Rabi Harvest
+2025_03_14,1,Holi,Rabi Harvest
+2025_03_15,0,None,Rabi Harvest
+2025_03_16,0,None,Rabi Harvest
+2025_03_17,0,None,Rabi Harvest
+2025_03_18,0,None,Rabi Harvest
+2025_03_19,0,None,Rabi Harvest
+2025_03_20,0,None,Rabi Harvest
+2025_03_21,0,None,Rabi Harvest
+2025_03_22,0,None,Rabi Harvest
+2025_03_23,0,None,Rabi Harvest
+2025_03_24,0,None,Rabi Harvest
+2025_03_25,0,None,Rabi Harvest
+2025_03_26,0,None,Rabi Harvest
+2025_03_27,0,None,Rabi Harvest
+2025_03_28,0,None,Rabi Harvest
+2025_03_29,0,None,Rabi Harvest
+2025_03_30,0,None,Rabi Harvest
+2025_03_31,1,Id-ul-Fitr,Rabi Harvest
+2025_04_01,0,None,Rabi Harvest
+2025_04_02,0,None,Rabi Harvest
+2025_04_03,0,None,Rabi Harvest
+2025_04_04,0,None,Rabi Harvest
+2025_04_05,0,None,Rabi Harvest
+2025_04_06,0,None,Rabi Harvest
+2025_04_07,0,None,Rabi Harvest
+2025_04_08,0,None,Rabi Harvest
+2025_04_09,0,None,Rabi Harvest
+2025_04_10,1,Mahavir Jayanti,Rabi Harvest
+2025_04_11,0,None,Rabi Harvest
+2025_04_12,0,None,Rabi Harvest
+2025_04_13,0,None,Rabi Harvest
+2025_04_14,1,Dr. B. R. Ambedkar's Jayanti,Rabi Harvest
+2025_04_15,0,None,Rabi Harvest
+2025_04_16,0,None,Rabi Harvest
+2025_04_17,0,None,Rabi Harvest
+2025_04_18,1,Good Friday,Rabi Harvest
+2025_04_19,0,None,Rabi Harvest
+2025_04_20,0,None,Rabi Harvest
+2025_04_21,0,None,Rabi Harvest
+2025_04_22,0,None,Rabi Harvest
+2025_04_23,0,None,Rabi Harvest
+2025_04_24,0,None,Rabi Harvest
+2025_04_25,0,None,Rabi Harvest
+2025_04_26,0,None,Rabi Harvest
+2025_04_27,0,None,Rabi Harvest
+2025_04_28,0,None,Rabi Harvest
+2025_04_29,0,None,Rabi Harvest
+2025_04_30,0,None,Rabi Harvest
+2025_05_01,0,None,Rabi Harvest
+2025_05_02,0,None,Rabi Harvest
+2025_05_03,0,None,Rabi Harvest
+2025_05_04,0,None,Rabi Harvest
+2025_05_05,0,None,Rabi Harvest
+2025_05_06,0,None,Rabi Harvest
+2025_05_07,0,None,Rabi Harvest
+2025_05_08,0,None,Rabi Harvest
+2025_05_09,0,None,Rabi Harvest
+2025_05_10,0,None,Rabi Harvest
+2025_05_11,0,None,Rabi Harvest
+2025_05_12,1,Buddha Purnima,Rabi Harvest
+2025_05_13,0,None,Rabi Harvest
+2025_05_14,0,None,Rabi Harvest
+2025_05_15,0,None,Rabi Harvest
+2025_05_16,0,None,Rabi Harvest
+2025_05_17,0,None,Rabi Harvest
+2025_05_18,0,None,Rabi Harvest
+2025_05_19,0,None,Rabi Harvest
+2025_05_20,0,None,Rabi Harvest
+2025_05_21,0,None,Rabi Harvest
+2025_05_22,0,None,Rabi Harvest
+2025_05_23,0,None,Rabi Harvest
+2025_05_24,0,None,Rabi Harvest
+2025_05_25,0,None,Rabi Harvest
+2025_05_26,0,None,Rabi Harvest
+2025_05_27,0,None,Rabi Harvest
+2025_05_28,0,None,Rabi Harvest
+2025_05_29,0,None,Rabi Harvest
+2025_05_30,0,None,Rabi Harvest
+2025_05_31,0,None,Rabi Harvest
+2025_06_01,0,None,Zaid Lean Season
+2025_06_02,0,None,Zaid Lean Season
+2025_06_03,0,None,Zaid Lean Season
+2025_06_04,0,None,Zaid Lean Season
+2025_06_05,0,None,Zaid Lean Season
+2025_06_06,0,None,Zaid Lean Season
+2025_06_07,1,Id-ul-Zuha (Bakrid),Zaid Lean Season
+2025_06_08,0,None,Zaid Lean Season
+2025_06_09,0,None,Zaid Lean Season
+2025_06_10,0,None,Zaid Lean Season
+2025_06_11,0,None,Zaid Lean Season
+2025_06_12,0,None,Zaid Lean Season
+2025_06_13,0,None,Zaid Lean Season
+2025_06_14,0,None,Zaid Lean Season
+2025_06_15,0,None,Zaid Lean Season
+2025_06_16,0,None,Zaid Lean Season
+2025_06_17,0,None,Zaid Lean Season
+2025_06_18,0,None,Zaid Lean Season
+2025_06_19,0,None,Zaid Lean Season
+2025_06_20,0,None,Zaid Lean Season
+2025_06_21,0,None,Zaid Lean Season
+2025_06_22,0,None,Zaid Lean Season
+2025_06_23,0,None,Zaid Lean Season
+2025_06_24,0,None,Zaid Lean Season
+2025_06_25,0,None,Zaid Lean Season
+2025_06_26,0,None,Zaid Lean Season
+2025_06_27,0,None,Zaid Lean Season
+2025_06_28,0,None,Zaid Lean Season
+2025_06_29,0,None,Zaid Lean Season
+2025_06_30,0,None,Zaid Lean Season
+2025_07_01,0,None,Zaid Lean Season
+2025_07_02,0,None,Zaid Lean Season
+2025_07_03,0,None,Zaid Lean Season
+2025_07_04,0,None,Zaid Lean Season
+2025_07_05,0,None,Zaid Lean Season
+2025_07_06,1,Muharram,Zaid Lean Season
+2025_07_07,0,None,Zaid Lean Season
+2025_07_08,0,None,Zaid Lean Season
+2025_07_09,0,None,Zaid Lean Season
+2025_07_10,0,None,Zaid Lean Season
+2025_07_11,0,None,Zaid Lean Season
+2025_07_12,0,None,Zaid Lean Season
+2025_07_13,0,None,Zaid Lean Season
+2025_07_14,0,None,Zaid Lean Season
+2025_07_15,0,None,Zaid Lean Season
+2025_07_16,0,None,Zaid Lean Season
+2025_07_17,0,None,Zaid Lean Season
+2025_07_18,0,None,Zaid Lean Season
+2025_07_19,0,None,Zaid Lean Season
+2025_07_20,0,None,Zaid Lean Season
+2025_07_21,0,None,Zaid Lean Season
+2025_07_22,0,None,Zaid Lean Season
+2025_07_23,0,None,Zaid Lean Season
+2025_07_24,0,None,Zaid Lean Season
+2025_07_25,0,None,Zaid Lean Season
+2025_07_26,0,None,Zaid Lean Season
+2025_07_27,0,None,Zaid Lean Season
+2025_07_28,0,None,Zaid Lean Season
+2025_07_29,0,None,Zaid Lean Season
+2025_07_30,0,None,Zaid Lean Season
+2025_07_31,0,None,Zaid Lean Season
+2025_08_01,0,None,Zaid Lean Season
+2025_08_02,0,None,Zaid Lean Season
+2025_08_03,0,None,Zaid Lean Season
+2025_08_04,0,None,Zaid Lean Season
+2025_08_05,0,None,Zaid Lean Season
+2025_08_06,0,None,Zaid Lean Season
+2025_08_07,0,None,Zaid Lean Season
+2025_08_08,0,None,Zaid Lean Season
+2025_08_09,0,None,Zaid Lean Season
+2025_08_10,0,None,Zaid Lean Season
+2025_08_11,0,None,Zaid Lean Season
+2025_08_12,0,None,Zaid Lean Season
+2025_08_13,0,None,Zaid Lean Season
+2025_08_14,0,None,Zaid Lean Season
+2025_08_15,1,Independence Day,Zaid Lean Season
+2025_08_16,1,Janmashtami (Vaishnava),Zaid Lean Season
+2025_08_17,0,None,Zaid Lean Season
+2025_08_18,0,None,Zaid Lean Season
+2025_08_19,0,None,Zaid Lean Season
+2025_08_20,0,None,Zaid Lean Season
+2025_08_21,0,None,Zaid Lean Season
+2025_08_22,0,None,Zaid Lean Season
+2025_08_23,0,None,Zaid Lean Season
+2025_08_24,0,None,Zaid Lean Season
+2025_08_25,0,None,Zaid Lean Season
+2025_08_26,0,None,Zaid Lean Season
+2025_08_27,0,None,Zaid Lean Season
+2025_08_28,0,None,Zaid Lean Season
+2025_08_29,0,None,Zaid Lean Season
+2025_08_30,0,None,Zaid Lean Season
+2025_08_31,0,None,Zaid Lean Season
+2025_09_01,1,None,Kharif Harvest
+2025_09_02,1,None,Kharif Harvest
+2025_09_03,1,None,Kharif Harvest
+2025_09_04,1,None,Kharif Harvest
+2025_09_05,1,Milad-un-Nabi,Kharif Harvest
+2025_09_06,1,None,Kharif Harvest
+2025_09_07,1,None,Kharif Harvest
+2025_09_08,1,None,Kharif Harvest
+2025_09_09,1,None,Kharif Harvest
+2025_09_10,1,None,Kharif Harvest
+2025_09_11,1,None,Kharif Harvest
+2025_09_12,1,None,Kharif Harvest
+2025_09_13,1,None,Kharif Harvest
+2025_09_14,1,None,Kharif Harvest
+2025_09_15,1,None,Kharif Harvest
+2025_09_16,1,None,Kharif Harvest
+2025_09_17,1,None,Kharif Harvest
+2025_09_18,1,None,Kharif Harvest
+2025_09_19,1,None,Kharif Harvest
+2025_09_20,1,None,Kharif Harvest
+2025_09_21,1,None,Kharif Harvest
+2025_09_22,1,None,Kharif Harvest
+2025_09_23,1,None,Kharif Harvest
+2025_09_24,1,None,Kharif Harvest
+2025_09_25,1,None,Kharif Harvest
+2025_09_26,1,None,Kharif Harvest
+2025_09_27,1,None,Kharif Harvest
+2025_09_28,1,None,Kharif Harvest
+2025_09_29,1,None,Kharif Harvest
+2025_09_30,1,None,Kharif Harvest
+2025_10_01,1,None,Kharif Harvest
+2025_10_02,1,Dussehra; Mahatma Gandhi's Jayanti,Kharif Harvest
+2025_10_03,1,None,Kharif Harvest
+2025_10_04,1,None,Kharif Harvest
+2025_10_05,1,None,Kharif Harvest
+2025_10_06,1,None,Kharif Harvest
+2025_10_07,1,None,Kharif Harvest
+2025_10_08,1,None,Kharif Harvest
+2025_10_09,1,None,Kharif Harvest
+2025_10_10,1,None,Kharif Harvest
+2025_10_11,1,None,Kharif Harvest
+2025_10_12,1,None,Kharif Harvest
+2025_10_13,1,None,Kharif Harvest
+2025_10_14,1,None,Kharif Harvest
+2025_10_15,1,None,Kharif Harvest
+2025_10_16,1,None,Kharif Harvest
+2025_10_17,1,None,Kharif Harvest
+2025_10_18,1,None,Kharif Harvest
+2025_10_19,1,None,Kharif Harvest
+2025_10_20,1,Diwali (Deepavali),Kharif Harvest
+2025_10_21,1,None,Kharif Harvest
+2025_10_22,1,None,Kharif Harvest
+2025_10_23,1,None,Kharif Harvest
+2025_10_24,1,None,Kharif Harvest
+2025_10_25,1,None,Kharif Harvest
+2025_10_26,1,None,Kharif Harvest
+2025_10_27,1,None,Kharif Harvest
+2025_10_28,1,None,Kharif Harvest
+2025_10_29,1,None,Kharif Harvest
+2025_10_30,1,None,Kharif Harvest
+2025_10_31,1,None,Kharif Harvest
+2025_11_01,1,None,Kharif Harvest
+2025_11_02,1,None,Kharif Harvest
+2025_11_03,1,None,Kharif Harvest
+2025_11_04,1,None,Kharif Harvest
+2025_11_05,1,Guru Nanak's Jayanti,Kharif Harvest
+2025_11_06,1,None,Kharif Harvest
+2025_11_07,1,None,Kharif Harvest
+2025_11_08,1,None,Kharif Harvest
+2025_11_09,1,None,Kharif Harvest
+2025_11_10,1,None,Kharif Harvest
+2025_11_11,1,None,Kharif Harvest
+2025_11_12,1,None,Kharif Harvest
+2025_11_13,1,None,Kharif Harvest
+2025_11_14,1,None,Kharif Harvest
+2025_11_15,1,None,Kharif Harvest
+2025_11_16,1,None,Kharif Harvest
+2025_11_17,1,None,Kharif Harvest
+2025_11_18,1,None,Kharif Harvest
+2025_11_19,1,None,Kharif Harvest
+2025_11_20,1,None,Kharif Harvest
+2025_11_21,1,None,Kharif Harvest
+2025_11_22,1,None,Kharif Harvest
+2025_11_23,1,None,Kharif Harvest
+2025_11_24,1,None,Kharif Harvest
+2025_11_25,1,None,Kharif Harvest
+2025_11_26,1,None,Kharif Harvest
+2025_11_27,1,None,Kharif Harvest
+2025_11_28,1,None,Kharif Harvest
+2025_11_29,1,None,Kharif Harvest
+2025_11_30,1,None,Kharif Harvest
+2025_12_01,0,None,Zaid Lean Season
+2025_12_02,0,None,Zaid Lean Season
+2025_12_03,0,None,Zaid Lean Season
+2025_12_04,0,None,Zaid Lean Season
+2025_12_05,0,None,Zaid Lean Season
+2025_12_06,0,None,Zaid Lean Season
+2025_12_07,0,None,Zaid Lean Season
+2025_12_08,0,None,Zaid Lean Season
+2025_12_09,0,None,Zaid Lean Season
+2025_12_10,0,None,Zaid Lean Season
+2025_12_11,0,None,Zaid Lean Season
+2025_12_12,0,None,Zaid Lean Season
+2025_12_13,0,None,Zaid Lean Season
+2025_12_14,0,None,Zaid Lean Season
+2025_12_15,0,None,Zaid Lean Season
+2025_12_16,0,None,Zaid Lean Season
+2025_12_17,0,None,Zaid Lean Season
+2025_12_18,0,None,Zaid Lean Season
+2025_12_19,0,None,Zaid Lean Season
+2025_12_20,0,None,Zaid Lean Season
+2025_12_21,0,None,Zaid Lean Season
+2025_12_22,0,None,Zaid Lean Season
+2025_12_23,0,None,Zaid Lean Season
+2025_12_24,0,None,Zaid Lean Season
+2025_12_25,1,Christmas,Zaid Lean Season
+2025_12_26,0,None,Zaid Lean Season
+2025_12_27,0,None,Zaid Lean Season
+2025_12_28,0,None,Zaid Lean Season
+2025_12_29,0,None,Zaid Lean Season
+2025_12_30,0,None,Zaid Lean Season
+2025_12_31,0,None,Zaid Lean Season
