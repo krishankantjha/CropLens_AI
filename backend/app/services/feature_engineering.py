@@ -161,9 +161,11 @@ def _merge_datasets(
         on=["date", "district"],
         how="left",
     )
+    # Forward-fill only: backward filling would copy future satellite values
+    # into earlier observations and violate the t-to-t+1 information boundary.
     df["ndvi_mean"] = (
         df.groupby(["district", "commodity"])["ndvi_mean"]
-        .transform(lambda x: x.ffill().bfill())
+        .transform(lambda x: x.ffill())
     )
     _validate_row_count(df, initial_rows, "NDVI merge")
 
@@ -213,13 +215,14 @@ def _compute_price_features(df: pd.DataFrame) -> pd.DataFrame:
         lambda x: x.shift(1).ewm(span=21, adjust=False).mean()
     )
 
-    # Calculate 7-day rolling price channel width
+    # Calculate 7-day rolling price channel width from historical prices only.
     roll_max_7d = grp["modal_price"].transform(lambda x: x.shift(1).rolling(7, min_periods=2).max())
     roll_min_7d = grp["modal_price"].transform(lambda x: x.shift(1).rolling(7, min_periods=2).min())
     df["price_channel_width_7d"] = (roll_max_7d - roll_min_7d).fillna(0.0)
 
-    # Calculate price velocity using lagged price
-    df["price_velocity_7d"] = (df["modal_price"] - df["price_lag_1w"]) / 7.0
+    # Calculate velocity using prices available before the prediction cutoff.
+    price_lag_8d = grp["modal_price"].shift(8)
+    df["price_velocity_7d"] = (df["price_lag_1d"] - price_lag_8d) / 7.0
 
     # Calculate rolling price volatility over 30 days
     df["price_volatility_30d"] = grp["modal_price"].transform(
@@ -232,24 +235,27 @@ def _compute_price_features(df: pd.DataFrame) -> pd.DataFrame:
     # Calculate price reversal Z score relative to 90 day lagged mean
     roll_mean_90 = grp["modal_price"].transform(
         lambda x: x.shift(1).rolling(90, min_periods=7).mean()
-    ).fillna(df["modal_price"])
+    )
     roll_std_90 = grp["modal_price"].transform(
         lambda x: x.shift(1).rolling(90, min_periods=7).std()
     ).fillna(1.0).replace(0.0, 1.0)
-    df["rolling_price_reversal_signal"] = (df["modal_price"] - roll_mean_90) / roll_std_90
+    df["rolling_price_reversal_signal"] = (df["price_lag_1d"] - roll_mean_90) / roll_std_90
 
-    # Calculate buyer versus seller market power bias
-    midpoint = (df["min_price"] + df["max_price"]) / 2.0
-    price_range = (df["max_price"] - df["min_price"]).clip(lower=1.0)
-    df["modal_vs_midpoint_bias"] = (df["modal_price"] - midpoint) / price_range
+    # Use the previous auction's min/max values, not the target row's modal price.
+    min_price_lag1 = grp["min_price"].shift(1)
+    max_price_lag1 = grp["max_price"].shift(1)
+    midpoint = (min_price_lag1 + max_price_lag1) / 2.0
+    price_range = (max_price_lag1 - min_price_lag1).clip(lower=1.0)
+    df["modal_vs_midpoint_bias"] = (df["price_lag_1d"] - midpoint) / price_range
 
     # Calculate historical percentile rank using past prices only
     df["commodity_price_percentile_rank"] = grp["modal_price"].transform(
         lambda x: x.shift(1).expanding(min_periods=10).rank(pct=True)
     ).fillna(0.5)
 
-    # Calculate quality premium ratio
-    df["price_quality_premium"] = df["modal_price"] / (df["min_price"] + 1e-5)
+    # Calculate quality premium from the previous auction only.
+    min_price_lag1 = grp["min_price"].shift(1)
+    df["price_quality_premium"] = df["price_lag_1d"] / (min_price_lag1 + 1e-5)
 
     return df
 
@@ -259,12 +265,12 @@ def _compute_supply_features(df: pd.DataFrame) -> pd.DataFrame:
     grp = df.groupby(["market", "commodity"])
 
     # Shift arrivals by 1 day to ensure arrival metrics use data strictly available prior to morning auction price discovery
-    arrivals_lag1 = grp["arrivals_in_qtl"].shift(1).fillna(df["arrivals_in_qtl"])
+    arrivals_lag1 = grp["arrivals_in_qtl"].shift(1)
     
     # Calculate 30 day rolling mean of past arrivals (strictly t-1 to t-30)
     df["arrivals_rolling_mean_30d"] = grp["arrivals_in_qtl"].transform(
         lambda x: x.shift(1).rolling(30, min_periods=1).mean()
-    ).fillna(df["arrivals_in_qtl"])
+)
 
     # Calculate arrival glut or deficit ratio using lagged arrivals
     df["arrival_ratio"] = arrivals_lag1 / (df["arrivals_rolling_mean_30d"] + 1e-5)
@@ -288,8 +294,8 @@ def _compute_weather_features(df: pd.DataFrame) -> pd.DataFrame:
     grp_district = df.groupby("district")
 
     # Shift weather observations by 1 day so day-t price forecasts use weather recorded prior to trading start
-    temp_max_lag1 = grp_district["temp_max"].shift(1).fillna(df["temp_max"])
-    temp_min_lag1 = grp_district["temp_min"].shift(1).fillna(df["temp_min"])
+    temp_max_lag1 = grp_district["temp_max"].shift(1)
+    temp_min_lag1 = grp_district["temp_min"].shift(1)
     rainfall_lag1 = grp_district["rainfall_mm"].shift(1).fillna(0.0)
 
     # Calculate diurnal temperature range
@@ -326,10 +332,12 @@ def _compute_weather_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # Calculate 4 week crop greenness momentum
     ndvi_lag_28 = df.groupby(["district"])["ndvi_mean"].shift(28)
-    df["ndvi_momentum_4w"] = df["ndvi_mean"] - ndvi_lag_28
+    ndvi_lag_1 = df.groupby(["district"])['ndvi_mean'].shift(1)
+    ndvi_lag_29 = df.groupby(["district"])['ndvi_mean'].shift(29)
+    df["ndvi_momentum_4w"] = ndvi_lag_1 - ndvi_lag_29
 
-    # Calculate harvest glut index
-    df["harvest_glut_index"] = df["ndvi_mean"] * df["arrival_ratio"]
+    # Use the last known NDVI observation with lagged arrivals.
+    df["harvest_glut_index"] = ndvi_lag_1 * df["arrival_ratio"]
 
     return df
 
@@ -425,9 +433,8 @@ def _compute_spatial_features(df: pd.DataFrame) -> pd.DataFrame:
     ].shift(1)
 
     df = pd.merge(df, azadpur_df, on=["date", "commodity"], how="left")
-    df["azadpur_modal_price"] = df["azadpur_modal_price"].fillna(df["modal_price"])
     df["hub_price_diff"] = (
-        (df["modal_price"] - df["azadpur_modal_price"]) / (df["azadpur_modal_price"] + 1e-5) * 100
+        (df["price_lag_1d"] - df["azadpur_modal_price"]) / (df["azadpur_modal_price"] + 1e-5) * 100
     )
     df = df.drop(columns=["azadpur_modal_price"])
 
@@ -443,9 +450,8 @@ def _compute_spatial_features(df: pd.DataFrame) -> pd.DataFrame:
         "regional_avg_price"
     ].shift(1)
     df = pd.merge(df, daily_avg, on=["date", "commodity"], how="left")
-    df["regional_avg_price"] = df["regional_avg_price"].fillna(df["modal_price"])
     df["spatial_price_gradient"] = (
-        (df["modal_price"] - df["regional_avg_price"]) / (df["regional_avg_price"] + 1e-5) * 100
+        (df["price_lag_1d"] - df["regional_avg_price"]) / (df["regional_avg_price"] + 1e-5) * 100
     )
     df = df.drop(columns=["regional_avg_price"])
 
@@ -495,10 +501,9 @@ def _compute_market_features(df: pd.DataFrame) -> pd.DataFrame:
         on=["market", "commodity", "week_of_year", "year"],
         how="left",
     )
-    df["hist_week_mean"] = df["hist_week_mean"].fillna(df["modal_price"])
     df["hist_week_std"] = df["hist_week_std"].fillna(1.0).replace(0.0, 1.0)
     df["market_seasonality_deviation"] = (
-        (df["modal_price"] - df["hist_week_mean"]) / df["hist_week_std"]
+        (df["price_lag_1d"] - df["hist_week_mean"]) / df["hist_week_std"]
     )
     df = df.drop(columns=["week_of_year", "year", "hist_week_mean", "hist_week_std"])
 
