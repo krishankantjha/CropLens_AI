@@ -121,3 +121,6 @@ The temporal split protocol enforces four non-negotiable integrity constraints:
 2. **Untouched Test Set:** The 2025 holdout partition (19,303 observations) was locked prior to any model selection or hyperparameter tuning. No test observations were ever used for feature selection, scaling parameter estimation, or tree depth selection.
 3. **Independent Calibration Split:** Conformal non-conformity calibration parameters ($Q_{\text{conf}}$) were estimated strictly using the 2024 validation partition, completely isolated from both the training gradients and the 2025 test evaluation.
 4. **Automated Consistency Verification:** All 10 integrity assertions (zero duplicate rows, exact feature counts, zero target leakage, and index alignment) were formalized into automated unit tests (`backend/tests/test_research_consistency.py`) with a 100% automated pass rate.
+
+#### **Dataset Coverage Verification**
+The EDA workflow exports `reports/eda_insights/commodity_mandi_observation_coverage_heatmap.png` and the accompanying `commodity_mandi_observation_coverage.csv`. This matrix-level diagnostic verifies that the intended commodity–mandi combinations are represented before model fitting and exposes sparse combinations that may require separate interpretation.
