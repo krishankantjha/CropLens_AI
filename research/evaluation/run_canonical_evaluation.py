@@ -58,7 +58,7 @@ def get_paths():
     data_path = os.path.join(BASE_DIR, "data", "processed", "features_master.parquet")
     models_dir = os.path.join(APP_DIR, "models")
     results_dir = os.path.join(BASE_DIR, "reports", "research_results")
-    figures_dir = os.path.join(BASE_DIR, "reports", "figures")
+    figures_dir = os.path.join(BASE_DIR, "reports", "model_evaluation")
     
     os.makedirs(results_dir, exist_ok=True)
     os.makedirs(figures_dir, exist_ok=True)
