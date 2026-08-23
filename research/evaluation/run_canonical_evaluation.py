@@ -58,7 +58,7 @@ warnings.filterwarnings('ignore')
 def get_paths():
     """Resolves standard project paths."""
     data_path = os.path.join(BASE_DIR, "data", "processed", "features_master.parquet")
-    models_dir = os.path.join(APP_DIR, "models")
+    models_dir = os.path.join(BACKEND_DIR, "app", "models")
     results_dir = os.path.join(BASE_DIR, "reports", "research_results")
     figures_dir = os.path.join(BASE_DIR, "reports", "model_evaluation")
     
@@ -174,7 +174,8 @@ def run_canonical_evaluation():
     test_df = df.loc[test_mask].copy()
 
     # STRICT CONSISTENCY CHECKS
-    assert len(y_test) == 19303, f"Expected 19,303 test rows in 2025 holdout split, got {len(y_test)}"
+    if len(y_test) == 0:
+        raise ValueError('The 2025 holdout split contains no rows.')
     assert test_df['date'].dt.year.min() == 2025 and test_df['date'].dt.year.max() == 2025, "Test split contains non-2025 dates!"
     assert len(feature_cols) == 47, f"Expected 47 feature columns, got {len(feature_cols)}"
 
@@ -247,48 +248,58 @@ def run_canonical_evaluation():
     print("\n3. Loading and Evaluating Deep Learning Models...")
     dl_metrics = {}
     
-    # Check if PyTorch model definitions exist
+    # Load previously computed deep-learning metrics. The canonical evaluator does
+    # not invent fallback values: missing or incomplete benchmark evidence is a
+    # reproducibility failure and must be corrected by rerunning the benchmark.
     meta_path = os.path.join(models_dir, "model_metadata.json")
     if os.path.exists(meta_path):
         with open(meta_path, 'r') as f:
             meta_json = json.load(f)
-        lstm_meta = meta_json.get('metrics', {}).get('lstm_benchmark', {})
-        gru_meta = meta_json.get('metrics', {}).get('gru_benchmark', {})
-        if lstm_meta:
-            dl_metrics['LSTM (2-Layer)'] = {
-                'MAE (Rs/qtl)': lstm_meta.get('MAE (Rs/qtl)', 112.98),
-                'RMSE (Rs/qtl)': lstm_meta.get('RMSE (Rs/qtl)', 327.80),
-                'MAPE (%)': lstm_meta.get('MAPE (%)', 1.53),
-                'sMAPE (%)': lstm_meta.get('sMAPE (%)', 1.55),
-                'R2': lstm_meta.get('R2', 0.996),
-                'MASE': round(lstm_meta.get('MAE (Rs/qtl)', 112.98) / 3618.0, 3)
-            }
-        if gru_meta:
-            dl_metrics['GRU (2-Layer)'] = {
-                'MAE (Rs/qtl)': gru_meta.get('MAE (Rs/qtl)', 110.05),
-                'RMSE (Rs/qtl)': gru_meta.get('RMSE (Rs/qtl)', 331.64),
-                'MAPE (%)': gru_meta.get('MAPE (%)', 1.54),
-                'sMAPE (%)': gru_meta.get('sMAPE (%)', 1.56),
-                'R2': gru_meta.get('R2', 0.996),
-                'MASE': round(gru_meta.get('MAE (Rs/qtl)', 110.05) / 3618.0, 3)
-            }
+        for meta_key, display_name in (
+            ('lstm_benchmark', 'LSTM (2-Layer)'),
+            ('gru_benchmark', 'GRU (2-Layer)'),
+        ):
+            record = meta_json.get('metrics', {}).get(meta_key)
+            if record:
+                required_metrics = ('MAE (Rs/qtl)', 'RMSE (Rs/qtl)', 'MAPE (%)', 'sMAPE (%)', 'R2')
+                missing_metrics = [key for key in required_metrics if key not in record]
+                if missing_metrics:
+                    raise ValueError(f'{meta_key} metadata is missing metrics: {", ".join(missing_metrics)}')
+                dl_metrics[display_name] = {
+                    **{key: record[key] for key in required_metrics},
+                    'MASE': record.get('MASE'),
+                }
 
     # TFT Evaluation
     tft_fpath = os.path.join(models_dir, "tft", "tft_model.pt")
     if os.path.exists(tft_fpath):
+        tft_meta_path = os.path.join(models_dir, 'tft', 'tft_benchmark_metadata.json')
+        if not os.path.exists(tft_meta_path):
+            raise FileNotFoundError(f'TFT checkpoint exists but metadata is missing: {tft_meta_path}')
+        with open(tft_meta_path, 'r') as f:
+            tft_meta = json.load(f)
+        tft_record = tft_meta.get('benchmark_comparison_2025_test_set', {}).get('PyTorch TFT (Benchmark)')
+        if not tft_record:
+            raise ValueError('TFT metadata does not contain a computed 2025 benchmark record.')
+        required_metrics = ('MAE', 'RMSE', 'MAPE')
+        missing_metrics = [key for key in required_metrics if key not in tft_record]
+        if missing_metrics:
+            raise ValueError('TFT benchmark metadata is missing metrics: ' + ', '.join(missing_metrics))
         dl_metrics['Temporal Fusion Transformer (TFT)'] = {
-            'MAE (Rs/qtl)': 87.53,
-            'RMSE (Rs/qtl)': 112.13,
-            'MAPE (%)': 3.73,
-            'sMAPE (%)': 3.78,
-            'R2': 0.991,
-            'MASE': round(87.53 / 3618.0, 3)
+            'MAE (Rs/qtl)': tft_record['MAE'],
+            'RMSE (Rs/qtl)': tft_record['RMSE'],
+            'MAPE (%)': tft_record['MAPE'],
+            'sMAPE (%)': tft_record.get('sMAPE'),
+            'R2': tft_record.get('R2'),
+            'MASE': tft_record.get('MASE'),
         }
 
     # Export Deep Learning Configuration and Benchmark Record
     dl_configs = [
         {
             'model': 'PyTorch 2-Layer LSTM',
+            'target_variable': target_col,
+            'features_used': len(feature_cols),
             'sequence_length_days': 7,
             'hidden_units': 64,
             'num_layers': 2,
@@ -303,6 +314,8 @@ def run_canonical_evaluation():
         },
         {
             'model': 'PyTorch 2-Layer GRU',
+            'target_variable': target_col,
+            'features_used': len(feature_cols),
             'sequence_length_days': 7,
             'hidden_units': 64,
             'num_layers': 2,
@@ -317,6 +330,8 @@ def run_canonical_evaluation():
         },
         {
             'model': 'PyTorch Temporal Fusion Transformer (TFT)',
+            'target_variable': target_col,
+            'features_used': len(feature_cols),
             'sequence_length_days': 30,
             'd_model': 64,
             'num_heads': 4,
@@ -364,7 +379,8 @@ def run_canonical_evaluation():
         'Improvement over Naive (MAE %)': 0.0,
         'Improvement over Naive (MAPE %)': 0.0,
         'Training Paradigm': 'Zero-shot (Persistence)',
-        'Evaluation Scope': 'Exact 2025 Test Set (19,303 rows)'
+        'Evaluation Scope': f'Exact 2025 Test Set ({len(y_test_clean):,} rows)'
+
     })
 
     # Evaluate tabular models
@@ -379,7 +395,7 @@ def run_canonical_evaluation():
             comparison_rows.append({
                 'Model': m_name,
                 'Model Family': 'Linear' if 'Ridge' in m_name else 'Gradient Boosted Trees',
-                'Features Used': 47,
+                'Features Used': len(feature_cols),
                 'Test Rows': len(y_test),
                 'MAE (Rs/qtl)': p_metrics['MAE (Rs/qtl)'],
                 'RMSE (Rs/qtl)': p_metrics['RMSE (Rs/qtl)'],
@@ -390,7 +406,7 @@ def run_canonical_evaluation():
                 'Improvement over Naive (MAE %)': mae_imp,
                 'Improvement over Naive (MAPE %)': mape_imp,
                 'Training Paradigm': 'Supervised Regression' if 'Ridge' in m_name or 'XGB' in m_name or 'Cat' in m_name else 'Quantile Pinball Loss (alpha=0.50)',
-                'Evaluation Scope': 'Exact 2025 Test Set (19,303 rows)'
+                'Evaluation Scope': f'Exact 2025 Test Set ({len(y_test):,} rows)'
             })
 
     # Add DL models
@@ -400,7 +416,7 @@ def run_canonical_evaluation():
         comparison_rows.append({
             'Model': dl_name,
             'Model Family': 'Deep Recurrent Neural Network' if 'LSTM' in dl_name or 'GRU' in dl_name else 'Temporal Attention Network',
-            'Features Used': 47,
+            'Features Used': len(feature_cols),
             'Test Rows': len(y_test),
             'MAE (Rs/qtl)': dm['MAE (Rs/qtl)'],
             'RMSE (Rs/qtl)': dm['RMSE (Rs/qtl)'],
@@ -411,7 +427,7 @@ def run_canonical_evaluation():
             'Improvement over Naive (MAE %)': mae_imp,
             'Improvement over Naive (MAPE %)': mape_imp,
             'Training Paradigm': 'Sequence Huber Loss' if 'LSTM' in dl_name or 'GRU' in dl_name else 'Sequence MSE Loss',
-            'Evaluation Scope': '2025 Test Set (Sliding Window Sequence Alignment)'
+            'Evaluation Scope': f'2025 Test Set (Sliding Window Sequence Alignment, {len(y_test):,} rows)'
         })
 
     master_df = pd.DataFrame(comparison_rows)
@@ -913,7 +929,7 @@ def run_canonical_evaluation():
         },
         {
             'Claim': 'Deep learning models conclusively underperform GBDT across all conditions',
-            'Evidence': 'PyTorch LSTM (MAE 112.98), GRU (MAE 110.05), and TFT (MAE 87.53) were evaluated as fixed proof-of-concept sequence baselines without extensive Optuna tuning.',
+            'Evidence': 'Deep-learning benchmark metrics and training configurations are sourced from the current benchmark artifacts; results are interpreted according to the documented tuning scope.',
             'Metric/Experiment': 'Deep Learning Sequence Benchmarks',
             'Result': 'Sequence models show higher error under default parameters; DL is classified as proof-of-concept baseline.',
             'Confidence': 'Medium (Explicitly qualified)',
@@ -986,9 +1002,9 @@ def run_canonical_evaluation():
                 'MAPE': master_df.loc[master_df['Model'] == 'LightGBM P50', 'MAPE (%)'].values[0]
             },
             'PyTorch TFT (Benchmark)': {
-                'MAE': 87.53,
-                'RMSE': 112.13,
-                'MAPE': 3.73
+                'MAE': master_df.loc[master_df['Model'] == 'Temporal Fusion Transformer (TFT)', 'MAE (Rs/qtl)'].values[0],
+                'RMSE': master_df.loc[master_df['Model'] == 'Temporal Fusion Transformer (TFT)', 'RMSE (Rs/qtl)'].values[0],
+                'MAPE': master_df.loc[master_df['Model'] == 'Temporal Fusion Transformer (TFT)', 'MAPE (%)'].values[0]
             }
         }
         with open(tft_meta_path, 'w') as f:
@@ -997,20 +1013,31 @@ def run_canonical_evaluation():
 
     # 15. Create RESEARCH_FREEZE.md (PHASE 12)
     print("\n14. Generating RESEARCH_FREEZE.md...")
+    freeze_table_df = master_df.rename(columns={
+        'Model': 'Model',
+        'MAE (Rs/qtl)': 'MAE (Rs/qtl)',
+        'RMSE (Rs/qtl)': 'RMSE (Rs/qtl)',
+        'MAPE (%)': 'MAPE (%)',
+        'R2': 'R2',
+        'MASE': 'MASE',
+        'Improvement over Naive (MAE %)': 'MAE vs Naive (%)',
+        'Training Paradigm': 'Role in Paper',
+    })[['Model', 'MAE (Rs/qtl)', 'RMSE (Rs/qtl)', 'MAPE (%)', 'R2', 'MASE', 'MAE vs Naive (%)', 'Role in Paper']]
+    freeze_table = freeze_table_df.to_markdown(index=False)
     freeze_content = f"""# CropLens AI — Formal Research Freeze State
 
 **Date of Freeze:** {datetime.date.today().isoformat()}  
 **Version:** 1.0.0-RESEARCH-FREEZE  
-**Evaluation Scope:** 2025 Out-of-Sample Holdout Set (19,303 rows)
+**Evaluation Scope:** 2025 Out-of-Sample Holdout Set ({len(y_test):,} rows)
 
 ---
 
 ## 1. Dataset & Split Specifications
-- **Master Dataset Path:** `data/processed/features_master.parquet` (135,471 rows, 61 columns)
+- **Master Dataset Path:** `data/processed/features_master.parquet` ({len(df):,} rows after valid-target construction, {df.shape[1]} columns)
 - **Temporal Horizon:** 1-Day Ahead ($t+1$) APMC Modal Wholesale Price Prediction
-- **Training Period:** 2019-01-01 to 2023-12-31 (96,770 rows)
-- **Validation Period:** 2024-01-01 to 2024-12-31 (19,398 rows) — strictly used for Optuna tuning and CQR calibration
-- **Test Period:** 2025-01-01 to 2025-12-31 (19,303 rows) — strictly untouched holdout
+- **Training Period:** 2019-01-01 to 2023-12-31 ({len(y_train):,} rows)
+- **Validation Period:** 2024-01-01 to 2024-12-31 ({len(y_val):,} rows) — strictly used for Optuna tuning and CQR calibration
+- **Test Period:** 2025-01-01 to 2025-12-31 ({len(y_test):,} rows) — strictly untouched holdout
 - **Commodity Scope (10):** Chilli Red, Gram(Chana), Maize, Mustard, Onion, Paddy(Dhan), Potato, Soyabean, Tomato, Wheat
 - **Market Mandi Scope (10):** Agra, Azadpur, Farrukhabad, Guntur, Indore, Karnal, Khanna, Kolkata, Lasalgaon, Mathura
 - **Random Seed:** 42 across all data loaders, model initializers, and bootstrap resamplers
@@ -1031,16 +1058,7 @@ def run_canonical_evaluation():
 
 ## 3. Canonical Frozen Benchmark Results (2025 Test Set)
 
-| Model | MAE (Rs/qtl) | RMSE (Rs/qtl) | MAPE (%) | $R^2$ | MASE | MAE vs Naive (%) | Role in Paper |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **Ridge Regression** | **29.77** | **59.36** | **0.60** | **1.000** | **0.008** | **+37.9%** | Linear Point Forecast Baseline |
-| **Naive Persistence** | 47.95 | 95.15 | 0.93 | 1.000 | 0.013 | 0.0% (Ref) | Zero-Shot Persistence Baseline |
-| **XGBoost** | 57.16 | 198.50 | 0.82 | 0.998 | 0.016 | -19.2% | Non-Linear Point Forecast Baseline |
-| **LightGBM P50** | 59.58 | 212.87 | 0.78 | 0.998 | 0.016 | -24.3% | Multi-Quantile Point Median Model |
-| **CatBoost** | 84.33 | 211.52 | 1.42 | 0.998 | 0.023 | -75.9% | Point Forecast Baseline |
-| **PyTorch TFT** | 87.53 | 112.13 | 3.73 | 0.991 | 0.024 | -82.5% | Proof-of-Concept Sequence Baseline |
-| **PyTorch GRU** | 110.05 | 331.64 | 1.54 | 0.996 | 0.030 | -129.5% | Proof-of-Concept Sequence Baseline |
-| **PyTorch LSTM** | 112.98 | 327.80 | 1.53 | 0.996 | 0.031 | -135.6% | Proof-of-Concept Sequence Baseline |
+{freeze_table}
 
 ---
 
