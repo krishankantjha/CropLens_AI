@@ -11,6 +11,23 @@ from typing import Dict, Any, List, Optional
 
 logger = logging.getLogger("croplens.features")
 
+MODEL_FEATURE_COLUMNS = (
+    "arrivals_in_qtl", "rainfall_mm", "temp_max", "temp_min", "ndvi_mean",
+    "is_festive_season", "price_lag_1d", "price_lag_2d", "price_lag_3d",
+    "price_lag_1w", "price_lag_4w", "price_lag_52w", "price_ema_7d",
+    "price_ema_21d", "price_channel_width_7d", "price_velocity_7d",
+    "price_volatility_30d", "price_spread", "rolling_price_reversal_signal",
+    "modal_vs_midpoint_bias", "commodity_price_percentile_rank",
+    "price_quality_premium", "arrivals_rolling_mean_30d", "arrival_ratio",
+    "arrival_velocity_7d", "arrival_price_divergence_signal", "temp_range",
+    "rainfall_rolling_sum_14d", "rain_x_ndvi_interaction", "temp_stress_days_7d",
+    "consecutive_dry_days", "vegetative_stress_ratio", "heat_wave_event_flag",
+    "ndvi_momentum_4w", "harvest_glut_index", "festival_price_anticipation_score",
+    "post_festival_demand_hangover", "dist_to_hub_km", "hub_price_diff",
+    "spatial_price_gradient", "sin_month", "cos_month", "sin_dow", "cos_dow",
+    "is_peak_harvest_month", "market_seasonality_deviation", "price_regime_indicator",
+)
+
 class FeatureExtractor:
     """
     Unified feature extraction engine.
@@ -32,14 +49,24 @@ class FeatureExtractor:
         """
         # Implementation delegates to existing optimized logic in feature_engineering.py
         # but ensures strict adherence to the canonical schema.
-        from backend.app.services.feature_engineering import (
-            _compute_price_features,
-            _compute_supply_features,
-            _compute_weather_features,
-            _compute_festival_features,
-            _compute_spatial_features,
-            _compute_market_features,
-        )
+        try:
+            from app.services.feature_engineering import (
+                _compute_price_features,
+                _compute_supply_features,
+                _compute_weather_features,
+                _compute_festival_features,
+                _compute_spatial_features,
+                _compute_market_features,
+            )
+        except ImportError:
+            from backend.app.services.feature_engineering import (
+                _compute_price_features,
+                _compute_supply_features,
+                _compute_weather_features,
+                _compute_festival_features,
+                _compute_spatial_features,
+                _compute_market_features,
+            )
 
         df = df.copy()
         required_columns = {
