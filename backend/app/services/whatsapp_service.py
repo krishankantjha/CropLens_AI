@@ -128,23 +128,27 @@ def dispatch_scheduled_advisories_service(app: Any = None) -> Dict[str, Any]:
         for sub in active_subs:
             # 1. Fetch latest forecast data from cache or model
             cached_data = get_cached_forecast_7d(sub.crop, sub.mandi, today_str)
-            if cached_data:
-                current_p = cached_data.get("current_price", 1500.0)
-                target_p = cached_data.get("peak_day", {}).get("price", current_p + 100.0)
-                gain = cached_data.get("expected_gain", target_p - current_p)
-                decision = cached_data.get("decision_hi" if sub.language == "hi" else "decision", "HOLD")
-            elif app and hasattr(app, "state") and getattr(app.state, "models_loaded", False):
-                try:
+            try:
+                if cached_data:
+                    peak_day = cached_data.get("peak_day") or {}
+                    current_p = cached_data.get("current_price")
+                    target_p = peak_day.get("price")
+                    gain = cached_data.get("expected_gain")
+                    decision = cached_data.get("decision_hi" if sub.language == "hi" else "decision")
+                    if any(value is None for value in (current_p, target_p, gain, decision)):
+                        raise ValueError("Cached forecast is incomplete")
+                elif app and hasattr(app, "state") and getattr(app.state, "models_loaded", False) and getattr(app.state, "dataset_loaded", False):
                     req = MultiDayForecastRequest(commodity=sub.crop, market=sub.mandi, start_date=today_str, horizon_days=7)
                     res = predict_7day_forecast_service(req, app.state.models, app.state.metadata, app.state.dataset)
                     current_p = res.current_price
                     target_p = res.peak_day.price
                     gain = res.expected_gain
                     decision = res.decision_hi if sub.language == "hi" else res.decision
-                except Exception:
-                    current_p, target_p, gain, decision = 1650.0, 1780.0, 130.0, "5 दिन फसल रोके रखें"
-            else:
-                current_p, target_p, gain, decision = 1650.0, 1780.0, 130.0, "5 दिन फसल रोके रखें"
+                else:
+                    raise RuntimeError("Forecast service is not ready")
+            except Exception as forecast_error:
+                print(f"[Alert Warning] Skipping {sub.crop}/{sub.mandi}: {forecast_error}")
+                continue
 
             # 2. Dispatch via WhatsApp
             if sub.channel in ["whatsapp", "both"]:

@@ -10,6 +10,7 @@ import logging
 import joblib
 from typing import Dict, Any, Optional
 from backend.app.core.config import BACKEND_DIR
+from backend.app.services.canonical_features import MODEL_FEATURE_COLUMNS
 
 logger = logging.getLogger("croplens.registry")
 
@@ -84,8 +85,23 @@ class ModelRegistry:
             raise FileNotFoundError(f"Model version {ver} is missing metadata: {meta_file}")
         with open(meta_file, 'r') as f:
             artifacts["metadata"] = json.load(f)
-        if not artifacts["metadata"].get("feature_cols"):
+        metadata = artifacts["metadata"]
+        feature_cols = metadata.get("feature_cols")
+        if not feature_cols:
             raise ValueError(f"Model version {ver} metadata has no feature_cols contract")
+        if list(feature_cols) != list(MODEL_FEATURE_COLUMNS):
+            raise ValueError(
+                f"Model version {ver} feature contract does not match the canonical order"
+            )
+        if metadata.get("target_variable") != "target_next_day_modal_price":
+            raise ValueError(
+                f"Model version {ver} has unsupported target_variable: "
+                f"{metadata.get('target_variable')!r}"
+            )
+        if metadata.get("feature_count") != len(MODEL_FEATURE_COLUMNS):
+            raise ValueError(
+                f"Model version {ver} feature_count does not equal the canonical contract"
+            )
 
         return artifacts
 
