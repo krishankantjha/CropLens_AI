@@ -145,21 +145,23 @@ def _merge_datasets(
     df_weather = df_weather.sort_values(["district", "date"]).reset_index(drop=True)
     df_ndvi = df_ndvi.sort_values(["district", "date"]).reset_index(drop=True)
 
-    # Merge weather data
+    # Merge weather data; duplicate source keys would multiply training rows.
     df = pd.merge(
         df_prices,
         df_weather[["date", "district", "rainfall_mm", "temp_max", "temp_min"]],
         on=["date", "district"],
         how="left",
+        validate="many_to_one",
     )
     _validate_row_count(df, initial_rows, "weather merge")
 
-    # Merge satellite NDVI data and fill gaps
+    # Merge satellite NDVI data and fill gaps; duplicate source keys would multiply rows.
     df = pd.merge(
         df,
         df_ndvi[["date", "district", "ndvi_mean"]],
         on=["date", "district"],
         how="left",
+        validate="many_to_one",
     )
     # Forward-fill only: backward filling would copy future satellite values
     # into earlier observations and violate the t-to-t+1 information boundary.
@@ -169,12 +171,13 @@ def _merge_datasets(
     )
     _validate_row_count(df, initial_rows, "NDVI merge")
 
-    # Merge mandi location coordinates
+    # Merge mandi location coordinates; each location key must be unique.
     df = pd.merge(
         df,
         df_locations[["market", "district", "state", "market_id", "latitude", "longitude"]],
         on=["market", "district", "state"],
         how="left",
+        validate="many_to_one",
     )
     missing_gps = df[df["latitude"].isna()]["market"].unique()
     if len(missing_gps) > 0:
@@ -183,12 +186,13 @@ def _merge_datasets(
         )
     _validate_row_count(df, initial_rows, "locations merge")
 
-    # Merge festival and harvest calendar
+    # Merge festival and harvest calendar; each date must have one calendar row.
     df = pd.merge(
         df,
         df_calendar[["date", "is_festive_season", "festival_name", "harvest_season_type"]],
         on="date",
         how="left",
+        validate="many_to_one",
     )
     _validate_row_count(df, initial_rows, "calendar merge")
 
