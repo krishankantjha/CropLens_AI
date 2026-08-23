@@ -97,6 +97,12 @@ class DataResolver:
         k = (target_dt - pd.to_datetime(base_row.get('date', target_dt))).days
         dow = target_dt.dayofweek
 
+        if not history_prices:
+            raise ValueError('At least one observed historical price is required for recursive forecasting.')
+        history_array = np.asarray(history_prices, dtype=float)
+        if not np.isfinite(history_array).all():
+            raise ValueError('Historical prices must be finite for recursive forecasting.')
+
         # 1. Seasonality
         row['sin_month'] = float(np.sin(2 * np.pi * target_dt.month / 12.0))
         row['cos_month'] = float(np.cos(2 * np.pi * target_dt.month / 12.0))
@@ -113,7 +119,11 @@ class DataResolver:
         }
         for col, idx in price_lags.items():
             if col in feature_cols:
-                row[col] = float(history_prices[idx]) if len(history_prices) >= abs(idx) else float(history_prices[0])
+                if len(history_prices) < abs(idx):
+                    raise ValueError(
+                        f'Insufficient history for {col}: requires {abs(idx)} observed prices.'
+                    )
+                row[col] = float(history_prices[idx])
 
         # 4. Technical Indicators (EMAs, Channel, Volatility)
         if 'price_ema_7d' in feature_cols:
@@ -126,7 +136,9 @@ class DataResolver:
             row['price_channel_width_7d'] = float(np.max(p_slice7) - np.min(p_slice7))
         
         if 'price_velocity_7d' in feature_cols:
-            row['price_velocity_7d'] = float((history_prices[-1] - history_prices[-7]) / 7.0) if len(history_prices) >= 7 else 0.0
+            if len(history_prices) < 7:
+                raise ValueError('Insufficient history for price_velocity_7d: requires 7 observed prices.')
+            row['price_velocity_7d'] = float((history_prices[-1] - history_prices[-7]) / 7.0)
             
         if 'price_volatility_30d' in feature_cols:
             p_slice30 = history_prices[-30:] if len(history_prices) >= 30 else history_prices
@@ -137,8 +149,11 @@ class DataResolver:
             ema21 = float(pd.Series(history_prices[-30:]).ewm(span=21, adjust=False).mean().iloc[-1])
             row['price_regime_indicator'] = 1.0 if ema7 > ema21 else 0.0
 
-        # Construct final row
-        X_df = pd.DataFrame([{col: row.get(col, 0.0) for col in feature_cols}], columns=feature_cols)
+        # Construct final row without fabricating missing contract features.
+        missing_features = [col for col in feature_cols if col not in row or pd.isna(row[col])]
+        if missing_features:
+            raise ValueError(f'Insufficient history to compute model features: {missing_features}')
+        X_df = pd.DataFrame([{col: row[col] for col in feature_cols}], columns=feature_cols)
         if X_df.isna().any().any() or not np.isfinite(X_df.to_numpy(dtype=float)).all():
             missing = X_df.columns[X_df.isna().any()].tolist()
             raise ValueError(f'Insufficient history to compute model features: {missing}')

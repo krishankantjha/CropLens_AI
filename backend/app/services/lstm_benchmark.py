@@ -16,6 +16,11 @@ from torch.utils.data import TensorDataset, DataLoader
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
+try:
+    from app.services.canonical_features import MODEL_FEATURE_COLUMNS
+except ImportError:
+    from backend.app.services.canonical_features import MODEL_FEATURE_COLUMNS
+
 # Set PyTorch and NumPy random seed for 100% reproducibility
 torch.manual_seed(42)
 np.random.seed(42)
@@ -81,15 +86,23 @@ def run_lstm_and_gru_benchmarks():
     df = pd.read_parquet(DATA_PATH)
     df['date'] = pd.to_datetime(df['date'])
     
-    target_col = "modal_price"
-    metadata_cols = [
-        'state', 'district', 'market', 'commodity', 'variety',
-        'market_id', 'harvest_season_type', 'festival_name', 'date',
-        'latitude', 'longitude', 'modal_price', 'min_price', 'max_price'
-    ]
-    # Use the full, fair 47 numeric features matching LightGBM/XGBoost/CatBoost/Ridge
-    feature_cols = [c for c in df.select_dtypes(include=[np.number]).columns if c not in metadata_cols]
-    print(f"Total features selected for LSTM/GRU: {len(feature_cols)} (100% parity with tabular models)")
+    target_col = "target_next_day_modal_price"
+    grouped = df.groupby(['market', 'commodity'], sort=False)
+    next_date = grouped['date'].shift(-1)
+    next_price = grouped['modal_price'].shift(-1)
+    df[target_col] = next_price.where(next_date.eq(df['date'] + pd.Timedelta(days=1)))
+    df = df[df[target_col].notna()].copy()
+    if df.empty:
+        raise ValueError('No valid next-calendar-day targets remain for LSTM/GRU benchmark.')
+
+    feature_cols = list(MODEL_FEATURE_COLUMNS)
+    missing_features = sorted(set(feature_cols).difference(df.columns))
+    if missing_features:
+        raise ValueError('LSTM/GRU dataset is missing canonical features: ' + ', '.join(missing_features))
+    non_numeric = [c for c in feature_cols if not pd.api.types.is_numeric_dtype(df[c])]
+    if non_numeric:
+        raise TypeError('LSTM/GRU canonical features must be numeric: ' + ', '.join(non_numeric))
+    print(f"Total features selected for LSTM/GRU: {len(feature_cols)} (canonical contract parity)")
     
     # Chronological Split Mask: Train strictly <= 2023
     train_mask_df = df['date'].dt.year <= 2023
@@ -161,9 +174,14 @@ def run_lstm_and_gru_benchmarks():
         
         results[f"{rnn_name.lower()}_benchmark"] = {
             "model_type": f"PyTorch 2-Layer {rnn_name}",
+            "target_variable": target_col,
             "lookback_window_days": 7,
             "hidden_units": 64,
             "feature_count": len(feature_cols),
+            "feature_columns": feature_cols,
+            "train_years": "2019-2023",
+            "validation_year": 2024,
+            "test_year": 2025,
             "MAE (Rs/qtl)": round(mae, 2),
             "RMSE (Rs/qtl)": round(rmse, 2),
             "MAPE (%)": round(mape, 2),
