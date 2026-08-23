@@ -32,6 +32,11 @@ from scipy import stats
 import optuna
 import shap
 
+try:
+    from app.services.canonical_features import MODEL_FEATURE_COLUMNS
+except ImportError:
+    from backend.app.services.canonical_features import MODEL_FEATURE_COLUMNS
+
 warnings.filterwarnings('ignore')
 optuna.logging.set_verbosity(optuna.logging.WARNING)
 
@@ -67,24 +72,7 @@ class ModelTrainer:
         self.forecast_horizon_days = 1
 
         # Explicit auditable model feature contract.
-        self.model_feature_cols = [
-            'arrivals_in_qtl', 'rainfall_mm', 'temp_max', 'temp_min', 'ndvi_mean',
-            'is_festive_season', 'price_lag_1d', 'price_lag_2d', 'price_lag_3d',
-            'price_lag_1w', 'price_lag_4w', 'price_lag_52w', 'price_ema_7d',
-            'price_ema_21d', 'price_channel_width_7d', 'price_velocity_7d',
-            'price_volatility_30d', 'price_spread', 'rolling_price_reversal_signal',
-            'modal_vs_midpoint_bias', 'commodity_price_percentile_rank',
-            'price_quality_premium', 'arrivals_rolling_mean_30d', 'arrival_ratio',
-            'arrival_velocity_7d', 'arrival_price_divergence_signal', 'temp_range',
-            'rainfall_rolling_sum_14d', 'rain_x_ndvi_interaction',
-            'temp_stress_days_7d', 'consecutive_dry_days', 'vegetative_stress_ratio',
-            'heat_wave_event_flag', 'ndvi_momentum_4w', 'harvest_glut_index',
-            'festival_price_anticipation_score', 'post_festival_demand_hangover',
-            'dist_to_hub_km', 'hub_price_diff', 'spatial_price_gradient',
-            'sin_month', 'cos_month', 'sin_dow', 'cos_dow',
-            'is_peak_harvest_month', 'market_seasonality_deviation',
-            'price_regime_indicator',
-        ]
+        self.model_feature_cols = list(MODEL_FEATURE_COLUMNS)
 
         # Train, validation, and test datasets
         self.X_train, self.y_train = None, None
@@ -97,7 +85,8 @@ class ModelTrainer:
         self.metrics = {}
         self.shap_values = None
         self.xgb_imputer = None
-        self._optuna_n_trials = 0
+        self._optuna_n_trials = 35
+        self.optuna_metadata = {}
 
     def _pinball_loss(self, y_true, y_pred, alpha: float) -> float:
         """Calculates pinball (quantile) loss for a given quantile alpha."""
@@ -274,9 +263,16 @@ class ModelTrainer:
         self.metrics['stationarity_tests'] = stat_results
 
     def optimize_hyperparameters(self, n_trials: int = 35, alpha: float = 0.50):
-        """Finds LightGBM hyperparameters for one quantile on the validation set."""
+        """Tune one LightGBM quantile model using only the fixed validation window.
+
+        Each quantile receives an independent Optuna study. The estimator budget is
+        tuned inside the study and the same selected budget is used for the final
+        model, while early stopping remains available as a conservative guard.
+        """
         if not 0.0 < alpha < 1.0:
             raise ValueError('alpha must be strictly between 0 and 1')
+        if n_trials < 1:
+            raise ValueError('n_trials must be at least 1')
         print(f"\nTuning LightGBM quantile hyperparameters for alpha={alpha:.2f} with Optuna ({n_trials} trials)...")
 
         def objective(trial):
@@ -293,27 +289,61 @@ class ModelTrainer:
                 'colsample_bytree': trial.suggest_float('colsample_bytree', 0.65, 1.0),
                 'reg_alpha': trial.suggest_float('reg_alpha', 1e-3, 10.0, log=True),
                 'reg_lambda': trial.suggest_float('reg_lambda', 1e-3, 10.0, log=True),
+                'n_estimators': trial.suggest_int('n_estimators', 150, 600, step=50),
                 'random_state': 42,
-                'verbose': -1
+                'n_jobs': 1,
+                'feature_pre_filter': False,
+                'verbosity': -1,
             }
 
-            model = lgb.LGBMRegressor(**params, n_estimators=250)
-            model.fit(self.X_train, self.y_train)
+            model = lgb.LGBMRegressor(**params)
+            model.fit(
+                self.X_train,
+                self.y_train,
+                eval_set=[(self.X_val, self.y_val)],
+                eval_metric='quantile',
+                callbacks=[lgb.early_stopping(stopping_rounds=30, verbose=False)],
+            )
             preds = model.predict(self.X_val)
             val_pinball = self._pinball_loss(self.y_val, preds, alpha=alpha)
+            trial.set_user_attr('best_iteration', int(model.best_iteration_ or params['n_estimators']))
             return val_pinball
 
-        sampler = optuna.samplers.TPESampler(seed=42)
+        sampler = optuna.samplers.TPESampler(seed=42, multivariate=True)
         study = optuna.create_study(direction='minimize', sampler=sampler)
         study.optimize(objective, n_trials=n_trials)
 
         self._optuna_n_trials = int(n_trials)
         self.best_params_by_quantile = getattr(self, 'best_params_by_quantile', {})
+        self.optuna_metadata = getattr(self, 'optuna_metadata', {})
         q_name = f'p{int(alpha * 100)}'
-        self.best_params_by_quantile[q_name] = dict(study.best_params)
-        self.best_params = self.best_params_by_quantile.get('p50', study.best_params)
+        selected_params = dict(study.best_params)
+        selected_params.update({
+            'objective': 'quantile',
+            'alpha': alpha,
+            'metric': 'quantile',
+            'boosting_type': 'gbdt',
+            'random_state': 42,
+            'n_jobs': 1,
+            'feature_pre_filter': False,
+            'verbosity': -1,
+        })
+        self.best_params_by_quantile[q_name] = selected_params
+        self.best_params = self.best_params_by_quantile.get('p50', selected_params)
+        self.optuna_metadata[q_name] = {
+            'alpha': alpha,
+            'n_trials': int(n_trials),
+            'direction': 'minimize',
+            'sampler': 'TPESampler',
+            'sampler_seed': 42,
+            'validation_objective': 'pinball_loss',
+            'best_value': float(study.best_value),
+            'best_trial_number': int(study.best_trial.number),
+            'best_trial_user_attributes': dict(study.best_trial.user_attrs),
+            'selected_params': selected_params,
+        }
         print(f"Best Validation Pinball Loss (alpha = {alpha:.2f}): {study.best_value:.4f}")
-        print(f"Best Parameters for {q_name.upper()}: {study.best_params}")
+        print(f"Best Parameters for {q_name.upper()}: {selected_params}")
 
     def train_quantile_models(self):
         """Trains LightGBM quantile regression models for P10, P50, and P90 bounds."""
@@ -325,13 +355,14 @@ class ModelTrainer:
             q_name = f"p{int(q*100)}"
             self.optimize_hyperparameters(n_trials=getattr(self, '_optuna_n_trials', 35), alpha=q)
             params = {
+                **self.best_params_by_quantile[q_name],
                 'objective': 'quantile',
                 'alpha': q,
                 'metric': 'quantile',
-                'n_estimators': 300,
                 'random_state': 42,
-                'verbose': -1,
-                **self.best_params_by_quantile[q_name]
+                'n_jobs': 1,
+                'feature_pre_filter': False,
+                'verbosity': -1,
             }
 
             model = lgb.LGBMRegressor(**params)
@@ -1417,7 +1448,8 @@ class ModelTrainer:
                 'metric': 'quantile pinball loss',
                 'sampler': 'TPESampler(seed=42)',
                 'best_hyperparameters_by_quantile': getattr(self, 'best_params_by_quantile', {}),
-                'best_hyperparameters': self.best_params
+                'best_hyperparameters': self.best_params,
+                'study_evidence_by_quantile': getattr(self, 'optuna_metadata', {}),
             },
             'quantile_models': {
                 'p10_alpha': 0.10,

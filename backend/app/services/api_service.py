@@ -106,18 +106,34 @@ def predict_7day_forecast_service(
             base_row = exact.iloc[-1].copy()
             start_dt = pd.to_datetime(exact.iloc[-1]['date'])
         else:
-            base_row = matched.iloc[-1].copy()
-            start_dt = pd.to_datetime(matched.iloc[-1]['date'])
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail='No historical row exists on or before the requested forecast start date.'
+            )
     else:
         base_row = matched.iloc[-1].copy()
         start_dt = pd.to_datetime(matched.iloc[-1]['date'])
 
-    current_price = float(base_row.get('modal_price', base_row.get('price_lag_1d', 1500.0)))
+    current_price_value = base_row.get('modal_price', base_row.get('price_lag_1d'))
+    if current_price_value is None or pd.isna(current_price_value) or not np.isfinite(float(current_price_value)):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail='Historical current price is unavailable for the requested forecast.'
+        )
+    current_price = float(current_price_value)
 
     # Seed 35-day historical price sequence for autoregressive lag roll-forward
-    history_prices = list(matched['modal_price'].tail(35).values) if 'modal_price' in matched.columns else [current_price] * 35
-    if len(history_prices) < 35:
-        history_prices = [current_price] * (35 - len(history_prices)) + history_prices
+    if 'modal_price' not in matched.columns:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail='Historical modal prices are required for recursive forecasting.'
+        )
+    history_prices = list(matched['modal_price'].dropna().tail(35).values)
+    if len(history_prices) < 28:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail='At least 28 observed historical prices are required for recursive forecasting.'
+        )
 
     DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     DAY_NAMES_HI = ["सोम", "मंगल", "बुध", "गुरु", "शुक्र", "शनि", "रवि"]
@@ -263,7 +279,14 @@ def detect_supply_shocks_service(
     # Impute missing features with commodity median first, then global median
     comm_median = df.groupby('commodity')[shock_features].transform('median')
     global_median = dataset[shock_features].median(numeric_only=True)
-    X_shock = df[shock_features].fillna(comm_median).fillna(global_median).fillna(0.0).values
+    X_shock_df = df[shock_features].fillna(comm_median).fillna(global_median)
+    if X_shock_df.isna().any().any() or not np.isfinite(X_shock_df.to_numpy(dtype=float)).all():
+        missing_rows = int(X_shock_df.isna().any(axis=1).sum())
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f'Insufficient historical data for supply-shock features in {missing_rows} row(s).'
+        )
+    X_shock = X_shock_df.to_numpy(dtype=float)
 
     iso_model = models['isolation_forest']
     scores = iso_model.decision_function(X_shock)

@@ -26,6 +26,11 @@ from torch.utils.data import Dataset, DataLoader
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import mean_absolute_percentage_error, root_mean_squared_error, mean_absolute_error
 
+try:
+    from app.services.canonical_features import MODEL_FEATURE_COLUMNS
+except ImportError:
+    from backend.app.services.canonical_features import MODEL_FEATURE_COLUMNS
+
 
 def set_seeds(seed: int = 42):
     random.seed(seed)
@@ -178,7 +183,7 @@ class TFTBenchmarkService:
 
         self.df = None
         self.feature_cols = None
-        self.target_col = 'modal_price'
+        self.target_col = 'target_next_day_modal_price'
 
         self.market_encoder = LabelEncoder()
         self.commodity_encoder = LabelEncoder()
@@ -200,17 +205,24 @@ class TFTBenchmarkService:
         self.df['date'] = pd.to_datetime(self.df['date'])
         self.df = self.df.sort_values(['commodity', 'market', 'date']).reset_index(drop=True)
 
-        metadata_cols = [
-            'state', 'district', 'market', 'commodity', 'variety',
-            'market_id', 'harvest_season_type', 'festival_name', 'date',
-            'latitude', 'longitude', 'modal_price', 'min_price', 'max_price',
-            'market_idx', 'commodity_idx'
-        ]
-        self.feature_cols = [
-            c for c in self.df.select_dtypes(include=[np.number]).columns
-            if c not in metadata_cols
-        ]
-        print(f"Dataset Rows: {len(self.df):,} | Numerical TFT Features: {len(self.feature_cols)}")
+        grouped = self.df.groupby(['market', 'commodity'], sort=False)
+        next_date = grouped['date'].shift(-1)
+        next_price = grouped['modal_price'].shift(-1)
+        self.df[self.target_col] = next_price.where(
+            next_date.eq(self.df['date'] + pd.Timedelta(days=1))
+        )
+        self.df = self.df[self.df[self.target_col].notna()].copy().reset_index(drop=True)
+        if self.df.empty:
+            raise ValueError('No valid next-calendar-day targets remain for TFT benchmark.')
+
+        self.feature_cols = list(MODEL_FEATURE_COLUMNS)
+        missing_features = sorted(set(self.feature_cols).difference(self.df.columns))
+        if missing_features:
+            raise ValueError('TFT dataset is missing canonical features: ' + ', '.join(missing_features))
+        non_numeric = [c for c in self.feature_cols if not pd.api.types.is_numeric_dtype(self.df[c])]
+        if non_numeric:
+            raise TypeError('TFT canonical features must be numeric: ' + ', '.join(non_numeric))
+        print(f"Dataset Rows: {len(self.df):,} | Canonical TFT Features: {len(self.feature_cols)}")
 
         train_mask = self.df['date'].dt.year <= 2023
         val_mask   = self.df['date'].dt.year == 2024
@@ -440,24 +452,28 @@ class TFTBenchmarkService:
         print(f"- RMSE: Rs {tft_rmse:.2f}/qtl")
         print(f"- MAE:  Rs {tft_mae:.2f}/qtl")
 
-        # Load Phase 3 LightGBM and Ridge metrics from model_metadata.json
+        # Load current LightGBM and Ridge metrics from model_metadata.json.
+        # Missing comparator evidence is a reproducibility failure, not a reason
+        # to insert historical fallback values.
         meta_path = os.path.join(self.models_dir, 'model_metadata.json')
-        lgb_mape, lgb_rmse, lgb_mae       = 0.68, 39.12, 18.57
-        ridge_mape, ridge_rmse, ridge_mae  = 0.84, 26.98, 20.25
-        if os.path.exists(meta_path):
-            try:
-                with open(meta_path, 'r') as f:
-                    meta = json.load(f)
-                test_perf  = meta.get('metrics', {}).get('performance', {}).get('Test (2025)', {})
-                ridge_perf = meta.get('metrics', {}).get('ridge_baseline', {})
-                lgb_mape   = test_perf.get('MAPE (%)',      lgb_mape)
-                lgb_rmse   = test_perf.get('RMSE (Rs/qtl)', lgb_rmse)
-                lgb_mae    = test_perf.get('MAE (Rs/qtl)',  lgb_mae)
-                ridge_mape = ridge_perf.get('MAPE (%)',      ridge_mape)
-                ridge_rmse = ridge_perf.get('RMSE (Rs/qtl)', ridge_rmse)
-                ridge_mae  = ridge_perf.get('MAE (Rs/qtl)',  ridge_mae)
-            except Exception:
-                pass
+        if not os.path.exists(meta_path):
+            raise FileNotFoundError(f'Model metadata is required for TFT comparison: {meta_path}')
+        with open(meta_path, 'r') as f:
+            meta = json.load(f)
+        test_perf = meta.get('metrics', {}).get('performance', {}).get('Test (2025)', {})
+        ridge_perf = meta.get('metrics', {}).get('ridge_baseline', {})
+        required_keys = ('MAPE (%)', 'RMSE (Rs/qtl)', 'MAE (Rs/qtl)')
+        for model_name, record in (('LightGBM P50', test_perf), ('Ridge baseline', ridge_perf)):
+            missing = [key for key in required_keys if key not in record]
+            if missing:
+                raise ValueError(f'{model_name} metadata is missing metrics: {", ".join(missing)}')
+
+        lgb_mape = test_perf['MAPE (%)']
+        lgb_rmse = test_perf['RMSE (Rs/qtl)']
+        lgb_mae = test_perf['MAE (Rs/qtl)']
+        ridge_mape = ridge_perf['MAPE (%)']
+        ridge_rmse = ridge_perf['RMSE (Rs/qtl)']
+        ridge_mae = ridge_perf['MAE (Rs/qtl)']
 
         comparison = {
             'Ridge Linear Baseline':     {'MAE': round(float(ridge_mae),  2), 'RMSE': round(float(ridge_rmse),  2), 'MAPE': round(float(ridge_mape),  2)},
@@ -533,6 +549,8 @@ class TFTBenchmarkService:
             'project': 'CropLens AI',
             'phase': 'Phase 4 Deep Learning Benchmark',
             'model_architecture': 'PyTorch Temporal Fusion Transformer (TFT)',
+            'target_variable': self.target_col,
+            'feature_columns': self.feature_cols,
             'tft_config': {
                 'seq_len': self.SEQ_LEN,
                 'd_model': 64, 'n_heads': 4, 'dropout': 0.1,
