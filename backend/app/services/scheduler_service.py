@@ -124,8 +124,11 @@ def warm_prediction_cache(app: Any) -> Dict[str, Any]:
     from backend.app.schemas import MultiDayForecastRequest
     from backend.app.services.api_service import predict_7day_forecast_service
 
-    if not getattr(getattr(app, "state", None), "models_loaded", False):
+    app_state = getattr(app, "state", None)
+    if not getattr(app_state, "models_loaded", False):
         return {"status": "skipped", "reason": "Models not yet initialized in app state"}
+    if not getattr(app_state, "dataset_loaded", False):
+        return {"status": "skipped", "reason": "Serving dataset not yet initialized in app state"}
 
     start_time = time.time()
     warmed_count = 0
@@ -263,6 +266,20 @@ def _build_live_rows(
         calendar = _calendar_values(date_value, row.commodity)
 
         enriched = dict(reference)
+        live_ndvi = ndvi_lookup.get((row.market, row.date))
+        if weather is None or live_ndvi is None:
+            print(
+                f"[Sync Warning] Skipping {row.commodity}/{row.market} on {date_value.date()}: "
+                "live weather and NDVI observations are both required."
+            )
+            continue
+        if row.min_price is None or row.max_price is None:
+            print(
+                f"[Sync Warning] Skipping {row.commodity}/{row.market} on {date_value.date()}: "
+                "live minimum and maximum prices are required."
+            )
+            continue
+
         enriched.update(
             {
                 "commodity": row.commodity,
@@ -271,33 +288,28 @@ def _build_live_rows(
                 "modal_price": float(row.modal_price),
                 "arrivals_in_qtl": float(row.arrivals_in_qtl),
                 "state": _first_present(row.state, reference.get("state"), coordinates.get("state")),
-                "district": _first_present(row.district, reference.get("district"), _MARKET_DISTRICTS.get(row.market, row.market)),
-                "variety": _first_present(row.variety, reference.get("variety"), "Standard"),
-                "grade": _first_present(row.grade, reference.get("grade"), "Standard"),
-                "min_price": float(row.min_price) if row.min_price is not None else max(float(row.modal_price) * 0.9, 0.0),
-                "max_price": float(row.max_price) if row.max_price is not None else float(row.modal_price) * 1.1,
+                "district": _first_present(row.district, reference.get("district"), _MARKET_DISTRICTS.get(row.market)),
+                "variety": _first_present(row.variety, reference.get("variety")),
+                "grade": _first_present(row.grade, reference.get("grade")),
+                "min_price": float(row.min_price),
+                "max_price": float(row.max_price),
                 "latitude": _first_present(reference.get("latitude"), coordinates.get("lat")),
                 "longitude": _first_present(reference.get("longitude"), coordinates.get("lon")),
                 "market_id": _first_present(reference.get("market_id"), f"LIVE_{row.market.upper()}"),
+                "temp_max": float(weather.temp_max),
+                "temp_min": float(weather.temp_min),
+                "rainfall_mm": float(weather.rainfall_mm),
+                "ndvi_mean": float(live_ndvi),
                 **calendar,
             }
         )
-
-        if weather is not None:
-            enriched.update(
-                {
-                    "temp_max": float(weather.temp_max),
-                    "temp_min": float(weather.temp_min),
-                    "rainfall_mm": float(weather.rainfall_mm),
-                }
+        required_context = ("state", "district", "variety", "grade", "latitude", "longitude")
+        if any(enriched.get(column) is None for column in required_context):
+            print(
+                f"[Sync Warning] Skipping {row.commodity}/{row.market} on {date_value.date()}: "
+                "required serving context is incomplete."
             )
-        else:
-            enriched["temp_max"] = _first_present(reference.get("temp_max"), 30.0)
-            enriched["temp_min"] = _first_present(reference.get("temp_min"), 20.0)
-            enriched["rainfall_mm"] = _first_present(reference.get("rainfall_mm"), 0.0)
-        
-        live_ndvi = ndvi_lookup.get((row.market, row.date))
-        enriched["ndvi_mean"] = _first_present(live_ndvi, reference.get("ndvi_mean"), 0.5)
+            continue
         output.append(enriched)
 
     if not output:

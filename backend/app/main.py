@@ -93,14 +93,28 @@ def load_model_artifacts() -> Dict[str, Any]:
     try:
         df = pd.read_parquet(dataset_path)
     except Exception as e:
-        raise RuntimeError(f"Failed to load master dataset parquet: {str(e)}")
+        raise RuntimeError(f"Failed to load master dataset parquet: {str(e)}") from e
+    if df.empty:
+        raise RuntimeError(f"Master dataset is empty: {dataset_path}")
+    required_dataset_columns = {
+        'date', 'market', 'commodity', 'modal_price', *metadata['feature_cols']
+    }
+    missing_dataset_columns = sorted(required_dataset_columns.difference(df.columns))
+    if missing_dataset_columns:
+        raise RuntimeError(
+            'Master dataset is missing serving columns: ' + ', '.join(missing_dataset_columns)
+        )
+    df['date'] = pd.to_datetime(df['date'], errors='coerce')
+    if df['date'].isna().any():
+        raise RuntimeError('Master dataset contains invalid dates.')
 
     return {
         "models": loaded_models,
         "metadata": metadata,
         "dataset": df,
         "dataset_path": dataset_path,
-        "model_dir": model_dir
+        "model_dir": model_dir,
+        "model_version": registry_artifacts['version'],
     }
 
 
@@ -141,6 +155,7 @@ async def lifespan(app: FastAPI):
         app.state.models = artifacts["models"]
         app.state.metadata = artifacts["metadata"]
         app.state.dataset = artifacts["dataset"]
+        app.state.model_version = artifacts["model_version"]
         app.state.models_loaded = True
         app.state.dataset_loaded = True
         app.state.startup_timestamp = datetime.now(timezone.utc).isoformat()
@@ -161,6 +176,7 @@ async def lifespan(app: FastAPI):
         app.state.models = {}
         app.state.metadata = {"feature_cols": []}
         app.state.dataset = pd.DataFrame()
+        app.state.model_version = "unavailable"
         app.state.models_loaded = False
         app.state.dataset_loaded = False
         app.state.startup_error = str(e)
@@ -229,12 +245,12 @@ class RootResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str = Field(..., json_schema_extra={"example": "healthy"})
-    version: str = Field(..., json_schema_extra={"example": "1.0.0"})
+    version: str = Field(..., json_schema_extra={"example": "v1.0.0"})
     models_loaded: bool = Field(..., json_schema_extra={"example": True})
     dataset_loaded: bool = Field(..., json_schema_extra={"example": True})
     loaded_models: List[str] = Field(..., json_schema_extra={"example": ["p10", "p50", "p90", "isolation_forest"]})
     dataset_rows: int = Field(..., json_schema_extra={"example": 38355})
-    feature_count: int = Field(..., json_schema_extra={"example": 39})
+    feature_count: int = Field(..., json_schema_extra={"example": 47})
     startup_timestamp: str = Field(...)
     startup_duration_ms: float = Field(..., json_schema_extra={"example": 120.45})
 
@@ -265,7 +281,7 @@ def health_check() -> HealthResponse:
 
     return HealthResponse(
         status=status_str,
-        version="1.0.0",
+        version=getattr(app.state, "model_version", "unavailable"),
         models_loaded=models_loaded,
         dataset_loaded=dataset_loaded,
         loaded_models=loaded_model_names,
