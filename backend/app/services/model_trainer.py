@@ -174,7 +174,7 @@ class ModelTrainer:
         os.replace(temporary, destination)
 
     def _restore_checkpoints(self):
-        """Restore only checkpoints created for the current data and feature contract."""
+        """Restore valid stages while using the newest valid snapshot for state."""
         stage_order = [
             'data_diagnostics', 'quantile_models', 'calibration',
             'walk_forward_cv', 'ridge_baseline', 'arima_baseline',
@@ -185,6 +185,7 @@ class ModelTrainer:
             'final_artifacts'
         ]
         expected = self._checkpoint_signature()
+        valid_snapshots = []
         for stage in stage_order:
             path = self._checkpoint_path(stage)
             if not os.path.exists(path):
@@ -194,23 +195,29 @@ class ModelTrainer:
                 if payload.get('signature') != expected:
                     print(f"Skipping stale checkpoint: {path}")
                     continue
-                self.models = payload.get('models', {})
-                self.metrics = payload.get('metrics', {})
-                self.best_params = payload.get('best_params', {})
-                self.best_params_by_quantile = payload.get('best_params_by_quantile', {})
-                self.optuna_metadata = payload.get('optuna_metadata', {})
-                self._optuna_n_trials = int(payload.get('optuna_n_trials', 35))
-                self.cqr_q_offset = payload.get('cqr_q_offset', self.cqr_q_offset)
+                valid_snapshots.append((os.path.getmtime(path), stage, payload))
+                self._completed_stages.add(stage)
                 if stage in {
                     'final_evaluation', 'quantile_crossings',
                     'bootstrap_intervals', 'test_conformal_calibration',
                     'explainability_plots', 'final_artifacts'
                 }:
                     self._final_test_unlocked = True
-                self._completed_stages.add(stage)
                 print(f"Resumed checkpoint: {stage}")
             except Exception as exc:
                 raise RuntimeError(f'Unable to load checkpoint {path}: {exc}') from exc
+
+        if valid_snapshots:
+            _, latest_stage, payload = max(valid_snapshots, key=lambda item: item[0])
+            if latest_stage != 'final_artifacts':
+                self._stages_changed_this_run = True
+            self.models = payload.get('models', {})
+            self.metrics = payload.get('metrics', {})
+            self.best_params = payload.get('best_params', {})
+            self.best_params_by_quantile = payload.get('best_params_by_quantile', {})
+            self.optuna_metadata = payload.get('optuna_metadata', {})
+            self._optuna_n_trials = int(payload.get('optuna_n_trials', 35))
+            self.cqr_q_offset = payload.get('cqr_q_offset', self.cqr_q_offset)
 
     def _pinball_loss(self, y_true, y_pred, alpha: float) -> float:
         """Calculates pinball (quantile) loss for a given quantile alpha."""
