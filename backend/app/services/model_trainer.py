@@ -94,7 +94,7 @@ class ModelTrainer:
     def _checkpoint_signature(self):
         """Return the data and contract identity required for safe resume."""
         return {
-            'pipeline_contract_version': 'resume-v1',
+            'pipeline_contract_version': 'resume-v2',
             'data_path': os.path.abspath(self.data_path),
             'total_rows': int(len(self.df)),
             'date_min': str(self.df['date'].min()),
@@ -1288,7 +1288,7 @@ class ModelTrainer:
         """Calculates evaluation metrics (MAPE, RMSE, MAE, R2, sMAPE, MASE, Pinball Loss, Coverage) on validation and test sets."""
         self._final_test_unlocked = True
         print("\nEvaluating model performance...")
-        X_eval, y_eval, _ = self._get_evaluation_split('test')
+        X_eval, y_eval, eval_df = self._get_evaluation_split('test')
 
         eval_summary = {}
         train_panel = self.df.loc[self.X_train.index, ['market', 'commodity', self.target_col]]
