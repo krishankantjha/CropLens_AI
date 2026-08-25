@@ -1104,8 +1104,8 @@ class ModelTrainer:
             'groups_tested_by_lag': lag_counts
         }
 
-    def compute_bootstrap_confidence_intervals(self, n_bootstraps: int = 1000, split: str = 'validation'):
-        """Computes 95% non-parametric Circular Block Bootstrap confidence intervals on test set evaluation metrics."""
+    def compute_bootstrap_confidence_intervals(self, n_bootstraps: int = 1000, split: str = 'test'):
+        """Computes 95% panel-aware Circular Block Bootstrap intervals for the selected evaluation split."""
         X_eval, y_eval, eval_df = self._get_evaluation_split(split)
         print(f"\nComputing 95% Circular Block Bootstrap Confidence Intervals ({n_bootstraps} resamples, 7-day blocks)...")
         raw_p10 = self.models['p10'].predict(X_eval)
@@ -1114,7 +1114,6 @@ class ModelTrainer:
         p10_preds, p50_preds, p90_preds = self.apply_monotonic_rearrangement(raw_p10, raw_p50, raw_p90, return_diagnostics=False)
         y_true = np.array(y_eval)
 
-        n_samples = len(y_true)
         block_size = 7
         rng = np.random.default_rng(42)
 
@@ -1168,7 +1167,7 @@ class ModelTrainer:
             'Coverage_CI_95': [round(float(np.percentile(boot_coverages, 2.5)), 2), round(float(np.percentile(boot_coverages, 97.5)), 2)]
         }
 
-        print("95% Circular Block Bootstrap Confidence Intervals (2025 Test Set, Block Length = 7d):")
+        print(f"95% Circular Block Bootstrap Confidence Intervals ({split} split, Block Length = 7d):")
         print(f"- MAE:  Rs {np.mean(boot_maes):.2f} (95% CI: [{ci_95['MAE_CI_95'][0]}, {ci_95['MAE_CI_95'][1]}])")
         print(f"- MAPE: {np.mean(boot_mapes):.2f}% (95% CI: [{ci_95['MAPE_CI_95'][0]}%, {ci_95['MAPE_CI_95'][1]}%])")
         print(f"- R2:   {np.mean(boot_r2s):.3f} (95% CI: [{ci_95['R2_CI_95'][0]}, {ci_95['R2_CI_95'][1]}])")
@@ -1682,7 +1681,7 @@ class ModelTrainer:
             self._save_checkpoint('quantile_crossings')
 
         if not self._stage_done('bootstrap_intervals'):
-            self.compute_bootstrap_confidence_intervals(n_bootstraps=1000, split='validation')
+            self.compute_bootstrap_confidence_intervals(n_bootstraps=1000, split='test')
             self._save_checkpoint('bootstrap_intervals')
 
         if not self._stage_done('test_conformal_calibration'):
