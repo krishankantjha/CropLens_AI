@@ -90,6 +90,8 @@ class ModelTrainer:
         self._optuna_n_trials = 35
         self.optuna_metadata = {}
         self._completed_stages = set()
+        self._final_test_unlocked = False
+        self.cqr_q_offset = None
 
     def _checkpoint_signature(self):
         """Return the data and contract identity required for safe resume."""
@@ -126,6 +128,7 @@ class ModelTrainer:
             'best_params_by_quantile': getattr(self, 'best_params_by_quantile', {}),
             'optuna_metadata': self.optuna_metadata,
             'optuna_n_trials': self._optuna_n_trials,
+            'cqr_q_offset': getattr(self, 'cqr_q_offset', None),
         }
         destination = self._checkpoint_path(stage)
         temporary = destination + '.tmp'
@@ -171,11 +174,13 @@ class ModelTrainer:
     def _restore_checkpoints(self):
         """Restore only checkpoints created for the current data and feature contract."""
         stage_order = [
-            'data_diagnostics', 'quantile_models', 'ridge_baseline',
-            'arima_baseline', 'tree_baselines', 'isolation_forest',
-            'core_models', 'final_evaluation', 'quantile_crossings',
-            'bootstrap_intervals', 'test_conformal_calibration',
-            'explainability_plots', 'final_artifacts'
+            'data_diagnostics', 'quantile_models', 'calibration',
+            'walk_forward_cv', 'ridge_baseline', 'arima_baseline',
+            'tree_baselines', 'comparative_tests', 'isolation_forest',
+            'regime_analysis', 'spatial_validation', 'residual_diagnostics',
+            'final_evaluation', 'quantile_crossings', 'bootstrap_intervals',
+            'test_conformal_calibration', 'explainability_plots',
+            'final_artifacts'
         ]
         expected = self._checkpoint_signature()
         for stage in stage_order:
@@ -193,6 +198,13 @@ class ModelTrainer:
                 self.best_params_by_quantile = payload.get('best_params_by_quantile', {})
                 self.optuna_metadata = payload.get('optuna_metadata', {})
                 self._optuna_n_trials = int(payload.get('optuna_n_trials', 35))
+                self.cqr_q_offset = payload.get('cqr_q_offset', self.cqr_q_offset)
+                if stage in {
+                    'final_evaluation', 'quantile_crossings',
+                    'bootstrap_intervals', 'test_conformal_calibration',
+                    'explainability_plots', 'final_artifacts'
+                }:
+                    self._final_test_unlocked = True
                 self._completed_stages.add(stage)
                 print(f"Resumed checkpoint: {stage}")
             except Exception as exc:
@@ -1390,8 +1402,8 @@ class ModelTrainer:
         eval_summary['Per_Mandi_Breakdown_2025'] = per_mandi_metrics
         self.metrics['performance'] = eval_summary
 
-    def check_quantile_crossings(self, split: str = 'validation'):
-        """Verifies P10 <= P50 <= P90 monotonicity before and after Chernozhukov Monotonic Rearrangement."""
+    def check_quantile_crossings(self, split: str = 'test'):
+        """Verify quantile monotonicity on validation and the locked final test split."""
         X_eval, y_eval, eval_df = self._get_evaluation_split(split)
         print("\nChecking P10 <= P50 <= P90 Quantile Crossings & Before-vs-After Validation...")
         
@@ -1412,7 +1424,7 @@ class ModelTrainer:
                 **diag
             }
             print(f"- {set_name:20s}: Raw Crossings = {diag['raw_crossing_count']:,} ({diag['raw_crossing_rate_pct']:.2f}%) | Post-Rearrangement Crossings = {diag['post_rearrangement_crossing_count']} ({diag['post_rearrangement_crossing_rate_pct']:.2f}%)")
-            print(f"  Validation Shifts: Mean P50 Shift on Crossings = Rs {diag['mean_p50_shift_on_crossings_rs']:.2f}/qtl | Max Shift = Rs {diag['max_p50_shift_rs']:.2f}/qtl | Safety Status = {diag['safety_guard_status']}")
+            print(f"  Rearrangement Shifts: Mean P50 Shift on Crossings = Rs {diag['mean_p50_shift_on_crossings_rs']:.2f}/qtl | Max Shift = Rs {diag['max_p50_shift_rs']:.2f}/qtl | Safety Status = {diag['safety_guard_status']}")
             
         # Breakdown by Commodity on Test Set
         test_df_subset = eval_df.copy()
@@ -1666,7 +1678,7 @@ class ModelTrainer:
             self._save_checkpoint('final_evaluation')
 
         if not self._stage_done('quantile_crossings'):
-            self.check_quantile_crossings(split='validation')
+            self.check_quantile_crossings(split='test')
             self._save_checkpoint('quantile_crossings')
 
         if not self._stage_done('bootstrap_intervals'):
