@@ -59,9 +59,11 @@ class ModelTrainer:
         # Setup output directories
         self.output_dir = output_dir or os.path.abspath(os.path.join(os.getcwd(), 'backend', 'app', 'models'))
         self.figures_dir = figures_dir or os.path.abspath(os.path.join(os.getcwd(), 'reports', 'model_evaluation'))
+        self.checkpoint_dir = os.path.join(self.output_dir, '.checkpoints')
 
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.figures_dir, exist_ok=True)
+        os.makedirs(self.checkpoint_dir, exist_ok=True)
 
         self.df = None
         self.feature_cols = None
@@ -87,6 +89,114 @@ class ModelTrainer:
         self.xgb_imputer = None
         self._optuna_n_trials = 35
         self.optuna_metadata = {}
+        self._completed_stages = set()
+
+    def _checkpoint_signature(self):
+        """Return the data and contract identity required for safe resume."""
+        return {
+            'pipeline_contract_version': 'resume-v1',
+            'data_path': os.path.abspath(self.data_path),
+            'total_rows': int(len(self.df)),
+            'date_min': str(self.df['date'].min()),
+            'date_max': str(self.df['date'].max()),
+            'target_col': self.target_col,
+            'feature_cols': list(self.feature_cols),
+            'train_rows': int(len(self.X_train)),
+            'validation_rows': int(len(self.X_val)),
+            'test_rows': int(len(self.X_test)),
+            'optuna_n_trials': int(self._optuna_n_trials),
+            'quantile_levels': [0.10, 0.50, 0.90],
+            'arima_protocol': 'ARIMA(1,1,1) sequential one-step update refit=False maxiter=50',
+        }
+
+    def _checkpoint_path(self, stage: str) -> str:
+        return os.path.join(self.checkpoint_dir, f'{stage}.joblib')
+
+    def _stage_done(self, stage: str) -> bool:
+        return stage in self._completed_stages
+
+    def _save_checkpoint(self, stage: str):
+        """Atomically persist models, metrics, tuning evidence, and stage identity."""
+        payload = {
+            'stage': stage,
+            'signature': self._checkpoint_signature(),
+            'models': self.models,
+            'metrics': self.metrics,
+            'best_params': self.best_params,
+            'best_params_by_quantile': getattr(self, 'best_params_by_quantile', {}),
+            'optuna_metadata': self.optuna_metadata,
+            'optuna_n_trials': self._optuna_n_trials,
+        }
+        destination = self._checkpoint_path(stage)
+        temporary = destination + '.tmp'
+        joblib.dump(payload, temporary)
+        os.replace(temporary, destination)
+        self._completed_stages.add(stage)
+        self._save_partial_artifacts(stage)
+        print(f"Checkpoint saved: {destination}")
+
+    def _save_partial_artifacts(self, stage: str):
+        """Persist completed model objects and auditable partial metadata immediately."""
+        for name, model in self.models.items():
+            destination = os.path.join(self.output_dir, f'{name}.pkl')
+            temporary = destination + '.tmp'
+            joblib.dump(model, temporary)
+            os.replace(temporary, destination)
+
+        metadata = {
+            'status': 'partial_checkpoint',
+            'completed_stage': stage,
+            'signature': self._checkpoint_signature(),
+            'model_names': sorted(self.models.keys()),
+            'target_variable': self.target_col,
+            'forecast_horizon_days': self.forecast_horizon_days,
+            'feature_contract_version': 'phase1-explicit-v1',
+            'feature_count': len(self.feature_cols),
+            'feature_cols': list(self.feature_cols),
+            'random_seed': 42,
+            'optuna_info': {
+                'n_trials': int(self._optuna_n_trials),
+                'study_evidence_by_quantile': self.optuna_metadata,
+            },
+            'metrics': self.metrics,
+        }
+        destination = os.path.join(self.checkpoint_dir, 'checkpoint_metadata.json')
+        temporary = destination + '.tmp'
+        with open(temporary, 'w') as handle:
+            json.dump(metadata, handle, indent=2, default=str)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, destination)
+
+    def _restore_checkpoints(self):
+        """Restore only checkpoints created for the current data and feature contract."""
+        stage_order = [
+            'data_diagnostics', 'quantile_models', 'ridge_baseline',
+            'arima_baseline', 'tree_baselines', 'isolation_forest',
+            'core_models', 'final_evaluation', 'quantile_crossings',
+            'bootstrap_intervals', 'test_conformal_calibration',
+            'explainability_plots', 'final_artifacts'
+        ]
+        expected = self._checkpoint_signature()
+        for stage in stage_order:
+            path = self._checkpoint_path(stage)
+            if not os.path.exists(path):
+                continue
+            try:
+                payload = joblib.load(path)
+                if payload.get('signature') != expected:
+                    print(f"Skipping stale checkpoint: {path}")
+                    continue
+                self.models = payload.get('models', {})
+                self.metrics = payload.get('metrics', {})
+                self.best_params = payload.get('best_params', {})
+                self.best_params_by_quantile = payload.get('best_params_by_quantile', {})
+                self.optuna_metadata = payload.get('optuna_metadata', {})
+                self._optuna_n_trials = int(payload.get('optuna_n_trials', 35))
+                self._completed_stages.add(stage)
+                print(f"Resumed checkpoint: {stage}")
+            except Exception as exc:
+                raise RuntimeError(f'Unable to load checkpoint {path}: {exc}') from exc
 
     def _pinball_loss(self, y_true, y_pred, alpha: float) -> float:
         """Calculates pinball (quantile) loss for a given quantile alpha."""
@@ -407,49 +517,61 @@ class ModelTrainer:
         print(f"- MAE:  Rs {ridge_mae:.2f}/qtl")
 
     def train_arima_baseline(self):
-        """Trains classical ARIMA(1,1,1) statistical time-series baseline per commodity-mandi group and evaluates on test set."""
+        """Fit an ARIMA(1,1,1) baseline with efficient sequential one-step updates.
+
+        Each group is fitted once on the training history. After each forecast,
+        the observed test value is appended without refitting the optimizer.
+        This preserves one-step-ahead chronology while avoiding one numerical
+        optimization per test observation. Failed groups are excluded and
+        disclosed; no fabricated forecast is inserted into the benchmark.
+        """
         print("\nTraining Classical ARIMA Statistical Baseline per commodity-mandi series...")
         from statsmodels.tsa.arima.model import ARIMA
 
-        # Train separate ARIMA(1,1,1) for each commodity-market series on train data (2019-2023)
         train_df = self.df.loc[self.X_train.index]
         test_df = self.df.loc[self.X_test.index]
 
         arima_predictions = []
         arima_actuals = []
         arima_failures = []
+        groups_attempted = 0
+        groups_succeeded = 0
 
         for (comm, mkt), grp_tr in train_df.groupby(['commodity', 'market']):
             grp_te = test_df[(test_df['commodity'] == comm) & (test_df['market'] == mkt)]
             if len(grp_tr) < 30 or len(grp_te) == 0:
                 continue
+            groups_attempted += 1
 
+            history = list(grp_tr[self.target_col].dropna().astype(float).values)
+            test_vals = list(grp_te[self.target_col].dropna().astype(float).values)
+            group_predictions = []
+            group_actuals = []
             try:
-                # Fit ARIMA(1,1,1) on training modal price series
-                history = list(grp_tr[self.target_col].dropna().values)
-                test_vals = list(grp_te[self.target_col].dropna().values)
-                
-                # Genuine rolling one-step-ahead forecast. Each step is fitted
-                # only on history available before that step, then the observed
-                # test value is appended for the next forecast.
+                if len(history) < 30 or not test_vals:
+                    raise ValueError('Insufficient non-null training or test observations.')
+
+                fit_res = ARIMA(history, order=(1, 1, 1)).fit(method_kwargs={'maxiter': 50})
                 for actual_value in test_vals:
-                    fit_res = ARIMA(history, order=(1, 1, 1)).fit()
-                    forecast_value = float(fit_res.forecast(steps=1)[0])
-                    arima_predictions.append(forecast_value)
-                    arima_actuals.append(float(actual_value))
-                    history.append(float(actual_value))
+                    forecast = np.asarray(fit_res.forecast(steps=1)).reshape(-1)
+                    if len(forecast) != 1 or not np.isfinite(forecast[0]):
+                        raise ValueError('ARIMA produced a non-finite forecast.')
+                    group_predictions.append(float(forecast[0]))
+                    group_actuals.append(float(actual_value))
+                    fit_res = fit_res.append([float(actual_value)], refit=False)
+
+                arima_predictions.extend(group_predictions)
+                arima_actuals.extend(group_actuals)
+                groups_succeeded += 1
             except Exception as exc:
-                # Keep the benchmark complete but disclose every fallback group.
                 arima_failures.append({
                     'commodity': str(comm),
                     'market': str(mkt),
                     'error': str(exc),
-                    'fallback': 'training_mean'
+                    'excluded_from_metrics': True,
+                    'predictions_recorded': len(group_predictions)
                 })
-                print(f"[WARNING] ARIMA fallback for {comm}/{mkt}: {exc}")
-                mean_val = float(grp_tr[self.target_col].mean())
-                arima_predictions.extend([mean_val] * len(test_vals))
-                arima_actuals.extend(test_vals)
+                print(f"[WARNING] ARIMA group excluded for {comm}/{mkt}: {exc}")
 
         if len(arima_predictions) > 0:
             arima_actuals = np.array(arima_actuals)
@@ -472,7 +594,11 @@ class ModelTrainer:
                 'RMSE (Rs/qtl)': round(arima_rmse, 2),
                 'MAPE (%)': round(arima_mape, 2),
                 'R2': round(arima_r2, 3),
+                'protocol': 'ARIMA(1,1,1) one-step sequential update with refit=False',
+                'groups_attempted': groups_attempted,
+                'groups_succeeded': groups_succeeded,
                 'failed_group_count': len(arima_failures),
+                'failed_groups_excluded_from_metrics': True,
                 'failed_groups': arima_failures
             }
 
@@ -1161,8 +1287,8 @@ class ModelTrainer:
     def evaluate_performance(self):
         """Calculates evaluation metrics (MAPE, RMSE, MAE, R2, sMAPE, MASE, Pinball Loss, Coverage) on validation and test sets."""
         self._final_test_unlocked = True
-        self._final_test_unlocked = True
         print("\nEvaluating model performance...")
+        X_eval, y_eval, _ = self._get_evaluation_split('test')
 
         eval_summary = {}
         train_panel = self.df.loc[self.X_train.index, ['market', 'commodity', self.target_col]]
@@ -1473,30 +1599,92 @@ class ModelTrainer:
         print(f"Saved Metadata: {meta_path}")
 
     def run_full_pipeline(self):
-        """Runs the entire training and evaluation pipeline."""
+        """Run the pipeline with safe, signature-validated stage checkpoints.
+
+        Core model families are persisted immediately after completion. Expensive
+        diagnostics run only after core artifacts are checkpointed. A later
+        failure resumes from the last valid stage without retraining it.
+        """
         print("CropLens AI - Model Training Pipeline\n")
         self.load_and_split_data()
-        self.run_granger_causality()
-        self.run_stationarity_tests()
-        self.optimize_hyperparameters()
-        self.train_quantile_models()
-        self.calibrate_conformal_quantiles()
-        self.run_purged_walk_forward_cv(n_splits=5)
-        self.train_and_eval_ridge_baseline()
-        self.train_arima_baseline()
-        self.train_catboost_and_xgboost()
-        self.run_diebold_mariano_tests()
-        self.run_ablation_experiment()
-        self.train_isolation_forest()
-        self.run_covid_analysis()
-        self.run_leave_one_mandi_out_validation()
-        self.run_ljung_box_test()
-        self.evaluate_performance()
-        self.check_quantile_crossings(split='validation')
-        self.compute_bootstrap_confidence_intervals(n_bootstraps=1000, split='validation')
-        self.calibrate_conformal_quantiles(evaluate_test=True)
-        self.generate_explainability_and_plots()
-        self.save_artifacts()
+        self._restore_checkpoints()
+
+        if not self._stage_done('data_diagnostics'):
+            self.run_granger_causality()
+            self.run_stationarity_tests()
+            self._save_checkpoint('data_diagnostics')
+
+        # train_quantile_models performs exactly three independent studies:
+        # P10, P50, and P90. Do not run a separate standalone P50 study here.
+        if not self._stage_done('quantile_models'):
+            self.train_quantile_models()
+            self._save_checkpoint('quantile_models')
+
+        if not self._stage_done('calibration'):
+            self.calibrate_conformal_quantiles()
+            self._save_checkpoint('calibration')
+
+        if not self._stage_done('walk_forward_cv'):
+            self.run_purged_walk_forward_cv(n_splits=5)
+            self._save_checkpoint('walk_forward_cv')
+
+        if not self._stage_done('ridge_baseline'):
+            self.train_and_eval_ridge_baseline()
+            self._save_checkpoint('ridge_baseline')
+
+        if not self._stage_done('arima_baseline'):
+            self.train_arima_baseline()
+            self._save_checkpoint('arima_baseline')
+
+        if not self._stage_done('tree_baselines'):
+            self.train_catboost_and_xgboost()
+            self._save_checkpoint('tree_baselines')
+
+        if not self._stage_done('comparative_tests'):
+            self.run_diebold_mariano_tests()
+            self.run_ablation_experiment()
+            self._save_checkpoint('comparative_tests')
+
+        if not self._stage_done('isolation_forest'):
+            self.train_isolation_forest()
+            self._save_checkpoint('isolation_forest')
+
+        if not self._stage_done('regime_analysis'):
+            self.run_covid_analysis()
+            self._save_checkpoint('regime_analysis')
+
+        if not self._stage_done('spatial_validation'):
+            self.run_leave_one_mandi_out_validation()
+            self._save_checkpoint('spatial_validation')
+
+        if not self._stage_done('residual_diagnostics'):
+            self.run_ljung_box_test()
+            self._save_checkpoint('residual_diagnostics')
+
+        if not self._stage_done('final_evaluation'):
+            self.evaluate_performance()
+            self._save_checkpoint('final_evaluation')
+
+        if not self._stage_done('quantile_crossings'):
+            self.check_quantile_crossings(split='validation')
+            self._save_checkpoint('quantile_crossings')
+
+        if not self._stage_done('bootstrap_intervals'):
+            self.compute_bootstrap_confidence_intervals(n_bootstraps=1000, split='validation')
+            self._save_checkpoint('bootstrap_intervals')
+
+        if not self._stage_done('test_conformal_calibration'):
+            self.calibrate_conformal_quantiles(evaluate_test=True)
+            self._save_checkpoint('test_conformal_calibration')
+
+        if not self._stage_done('explainability_plots'):
+            self.generate_explainability_and_plots()
+            self._save_checkpoint('explainability_plots')
+
+        if not self._stage_done('final_artifacts'):
+            self.save_artifacts()
+            self._save_checkpoint('final_artifacts')
+
         print("\nModel training and evaluation completed successfully!")
 
 
