@@ -90,6 +90,7 @@ class ModelTrainer:
         self._optuna_n_trials = 35
         self.optuna_metadata = {}
         self._completed_stages = set()
+        self._stages_changed_this_run = False
         self._final_test_unlocked = False
         self.cqr_q_offset = None
 
@@ -135,6 +136,7 @@ class ModelTrainer:
         joblib.dump(payload, temporary)
         os.replace(temporary, destination)
         self._completed_stages.add(stage)
+        self._stages_changed_this_run = True
         self._save_partial_artifacts(stage)
         print(f"Checkpoint saved: {destination}")
 
@@ -1692,7 +1694,7 @@ class ModelTrainer:
             self.generate_explainability_and_plots()
             self._save_checkpoint('explainability_plots')
 
-        if not self._stage_done('final_artifacts'):
+        if not self._stage_done('final_artifacts') or self._stages_changed_this_run:
             self.save_artifacts()
             self._save_checkpoint('final_artifacts')
 
