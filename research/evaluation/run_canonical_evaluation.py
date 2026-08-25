@@ -1,7 +1,7 @@
 """
 CropLens AI — Canonical Evaluation Runner & Master Benchmark Suite.
 
-Executes a single authoritative evaluation pipeline on the 2025 out-of-sample test set (19,303 rows).
+Executes a single authoritative evaluation pipeline on the 2025 out-of-sample test set after strict next-calendar-day target construction.
 Evaluates Naive Persistence, Ridge, XGBoost, CatBoost, LightGBM P50/P10/P90, PyTorch LSTM, PyTorch GRU,
 and PyTorch TFT. Performs multi-loss Diebold-Mariano tests, Ljung-Box autocorrelation diagnostics,
 stationarity analysis, price-change diagnostic experiments, Mondrian CQR conformal calibration
@@ -50,8 +50,6 @@ from research.evaluation.baselines import (
     evaluate_naive_persistence,
     compute_improvement_percentage
 )
-from app.core.model_registry import ModelRegistry
-
 warnings.filterwarnings('ignore')
 
 
@@ -118,6 +116,8 @@ def apply_monotonic_rearrangement(p10, p50, p90):
 
 
 def run_canonical_evaluation():
+    from app.core.model_registry import ModelRegistry
+
     print("CropLens AI — Canonical Evaluation Runner & Master Benchmark Suite")
     print(f"Timestamp: {datetime.datetime.now().isoformat()}")
 
@@ -967,7 +967,7 @@ def run_canonical_evaluation():
             'sMAPE (%)': naive_metrics['sMAPE (%)'],
             'R2': naive_metrics['R2'],
             'MASE': naive_metrics['MASE'],
-            'evaluation_scope': 'Exact 2025 Test Set (19,303 rows)'
+            'evaluation_scope': f"Exact 2025 Test Set ({len(test_df)} rows)"
         }
         full_meta['metrics']['diebold_mariano_suite'] = dm_suite
         full_meta['metrics']['canonical_model_comparison'] = comparison_rows
