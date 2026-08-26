@@ -1,17 +1,17 @@
-# CropLens AI — Formal Research Freeze State
+# CropLens AI â€” Formal Research Freeze State
 
-**Date of Freeze:** 2026-08-19  
-**Version:** 1.0.0-RESEARCH-FREEZE  
-**Evaluation Scope:** 2025 Out-of-Sample Holdout Set (19,303 rows)
+**Date of Freeze:** 2026-08-27
+**Version:** 1.0.0-RESEARCH-FREEZE
+**Evaluation Scope:** 2025 Out-of-Sample Holdout Set (19,240 rows)
 
 ---
 
 ## 1. Dataset & Split Specifications
-- **Master Dataset Path:** `data/processed/features_master.parquet` (135,471 rows, 61 columns)
+- **Master Dataset Path:** `data/processed/features_master.parquet` (135,404 rows after valid-target construction, 62 columns)
 - **Temporal Horizon:** 1-Day Ahead ($t+1$) APMC Modal Wholesale Price Prediction
-- **Training Period:** 2019-01-01 to 2023-12-31 (96,770 rows)
-- **Validation Period:** 2024-01-01 to 2024-12-31 (19,398 rows) — strictly used for Optuna tuning and CQR calibration
-- **Test Period:** 2025-01-01 to 2025-12-31 (19,303 rows) — strictly untouched holdout
+- **Training Period:** 2019-01-01 to 2023-12-31 (96,766 rows)
+- **Validation Period:** 2024-01-01 to 2024-12-31 (19,398 rows) â€” strictly used for Optuna tuning and CQR calibration
+- **Test Period:** 2025-01-01 to 2025-12-31 (19,240 rows) â€” strictly untouched holdout
 - **Commodity Scope (10):** Chilli Red, Gram(Chana), Maize, Mustard, Onion, Paddy(Dhan), Potato, Soyabean, Tomato, Wheat
 - **Market Mandi Scope (10):** Agra, Azadpur, Farrukhabad, Guntur, Indore, Karnal, Khanna, Kolkata, Lasalgaon, Mathura
 - **Random Seed:** 42 across all data loaders, model initializers, and bootstrap resamplers
@@ -32,16 +32,16 @@
 
 ## 3. Canonical Frozen Benchmark Results (2025 Test Set)
 
-| Model | MAE (Rs/qtl) | RMSE (Rs/qtl) | MAPE (%) | $R^2$ | MASE | MAE vs Naive (%) | Role in Paper |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **Ridge Regression** | **29.77** | **59.36** | **0.60** | **1.000** | **0.008** | **+37.9%** | Linear Point Forecast Baseline |
-| **Naive Persistence** | 47.95 | 95.15 | 0.93 | 1.000 | 0.013 | 0.0% (Ref) | Zero-Shot Persistence Baseline |
-| **XGBoost** | 57.16 | 198.50 | 0.82 | 0.998 | 0.016 | -19.2% | Non-Linear Point Forecast Baseline |
-| **LightGBM P50** | 59.58 | 212.87 | 0.78 | 0.998 | 0.016 | -24.3% | Multi-Quantile Point Median Model |
-| **CatBoost** | 84.33 | 211.52 | 1.42 | 0.998 | 0.023 | -75.9% | Point Forecast Baseline |
-| **PyTorch TFT** | 87.53 | 112.13 | 3.73 | 0.991 | 0.024 | -82.5% | Proof-of-Concept Sequence Baseline |
-| **PyTorch GRU** | 110.05 | 331.64 | 1.54 | 0.996 | 0.030 | -129.5% | Proof-of-Concept Sequence Baseline |
-| **PyTorch LSTM** | 112.98 | 327.80 | 1.53 | 0.996 | 0.031 | -135.6% | Proof-of-Concept Sequence Baseline |
+| Model                             |   MAE (Rs/qtl) |   RMSE (Rs/qtl) |   MAPE (%) |       R2 |    MASE |   MAE vs Naive (%) | Role in Paper                      |
+|:----------------------------------|---------------:|----------------:|-----------:|---------:|--------:|-------------------:|:-----------------------------------|
+| Naive Persistence (Random Walk)   |          69.37 |          139.09 |       1.34 |   0.9993 |   1.591 |               0    | Zero-shot (Persistence)            |
+| Ridge Regression                  |          56.58 |          113.6  |       1.11 |   0.9995 |   1.298 |              18.44 | Supervised Regression              |
+| XGBoost                           |          80.4  |          219.94 |       1.29 |   0.9981 |   1.844 |             -15.9  | Supervised Regression              |
+| CatBoost                          |          98.55 |          230.27 |       1.71 |   0.9979 |   2.261 |             -42.06 | Supervised Regression              |
+| LightGBM P50                      |          82    |          225.66 |       1.28 |   0.998  |   1.881 |             -18.21 | Quantile Pinball Loss (alpha=0.50) |
+| LSTM (2-Layer)                    |         115.7  |          289.46 |       2.02 |   0.997  | nan     |             -66.79 | Sequence Huber Loss                |
+| GRU (2-Layer)                     |         139.98 |          388.12 |       1.88 |   0.994  | nan     |            -101.79 | Sequence Huber Loss                |
+| Temporal Fusion Transformer (TFT) |          84.75 |          176.99 |       1.66 | nan      | nan     |             -22.17 | Sequence MSE Loss                  |
 
 ---
 
@@ -65,9 +65,9 @@
 ---
 
 ## 6. Forbidden Claims (Must NOT be Written in Paper)
-- ❌ Do NOT claim LightGBM is the superior model on point MSE/MAE over Ridge.
-- ❌ Do NOT claim pinball loss mathematically guarantees non-crossing intervals (rearrangement is required).
-- ❌ Do NOT claim Isolation Forest achieves 42.66% supervised classification accuracy.
-- ❌ Do NOT claim COVID analysis proves generalization to an unseen pandemic.
-- ❌ Do NOT claim Deep Learning is fundamentally unsuitable for crop prices based on default benchmark runs.
-- ❌ Do NOT claim Granger causality proves physical agricultural causality.
+- âŒ Do NOT claim LightGBM is the superior model on point MSE/MAE over Ridge.
+- âŒ Do NOT claim pinball loss mathematically guarantees non-crossing intervals (rearrangement is required).
+- âŒ Do NOT claim Isolation Forest achieves 42.66% supervised classification accuracy.
+- âŒ Do NOT claim COVID analysis proves generalization to an unseen pandemic.
+- âŒ Do NOT claim Deep Learning is fundamentally unsuitable for crop prices based on default benchmark runs.
+- âŒ Do NOT claim Granger causality proves physical agricultural causality.

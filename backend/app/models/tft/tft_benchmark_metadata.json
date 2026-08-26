@@ -78,6 +78,11 @@
         "comparison_basis": "All three models evaluated on identical 2025 out-of-sample test set"
     },
     "benchmark_comparison_2025_test_set": {
+        "Naive Persistence Baseline": {
+            "MAE": 69.37,
+            "RMSE": 139.09,
+            "MAPE": 1.34
+        },
         "Ridge Linear Baseline": {
             "MAE": 56.58,
             "RMSE": 113.6,
@@ -93,5 +98,6 @@
             "RMSE": 176.99,
             "MAPE": 1.66
         }
-    }
+    },
+    "canonical_reconciliation_note": "Reconciled with canonical evaluation pipeline. All models evaluated on identical 2025 out-of-sample test set."
 }

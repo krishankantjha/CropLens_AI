@@ -1,11 +1,11 @@
 commodity,total_observations,adf_statistic,adf_p_value,adf_stationary,kpss_statistic,kpss_p_value,kpss_stationary,inference
-Chilli Red,10228,-2.055,0.263,False,7.3612,0.01,False,Non-Stationary / Trend-Stationary
-Gram(Chana),12785,-1.3,0.6292,False,7.3819,0.01,False,Non-Stationary / Trend-Stationary
-Maize,15342,-2.0817,0.2519,False,5.8404,0.01,False,Non-Stationary / Trend-Stationary
-Mustard,12785,-2.1583,0.2217,False,8.1466,0.01,False,Non-Stationary / Trend-Stationary
-Onion,15328,-2.2287,0.196,False,6.3452,0.01,False,Non-Stationary / Trend-Stationary
-Paddy(Dhan),12785,-2.2758,0.1799,False,5.4591,0.01,False,Non-Stationary / Trend-Stationary
-Potato,15342,-1.7308,0.4153,False,8.2819,0.01,False,Non-Stationary / Trend-Stationary
-Soyabean,10228,-2.6352,0.0859,False,5.5972,0.01,False,Non-Stationary / Trend-Stationary
-Tomato,15306,-2.0142,0.2804,False,7.0111,0.01,False,Non-Stationary / Trend-Stationary
-Wheat,15342,-2.2443,0.1906,False,8.1614,0.01,False,Non-Stationary / Trend-Stationary
+Chilli Red,10224,-5.4479,0.0,True,0.7915,0.01,False,Non-Stationary / Trend-Stationary
+Gram(Chana),12780,-7.2941,0.0,True,0.3288,0.1,True,Stationary
+Maize,15336,-10.1618,0.0,True,0.1426,0.1,True,Stationary
+Mustard,12780,-7.9894,0.0,True,0.7655,0.01,False,Non-Stationary / Trend-Stationary
+Onion,15317,-11.1214,0.0,True,0.2336,0.1,True,Stationary
+Paddy(Dhan),12780,-8.7755,0.0,True,0.9071,0.01,False,Non-Stationary / Trend-Stationary
+Potato,15336,-8.2246,0.0,True,0.3476,0.0997,True,Stationary
+Soyabean,10224,-6.7629,0.0,True,0.2887,0.1,True,Stationary
+Tomato,15291,-8.9114,0.0,True,0.1734,0.1,True,Stationary
+Wheat,15336,-11.5376,0.0,True,0.3418,0.1,True,Stationary
