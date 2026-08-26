@@ -1,5 +1,5 @@
 """
-CropLens AI — Canonical Evaluation Runner & Master Benchmark Suite.
+CropLens AI â€” Canonical Evaluation Runner & Master Benchmark Suite.
 
 Executes a single authoritative evaluation pipeline on the 2025 out-of-sample test set after strict next-calendar-day target construction.
 Evaluates Naive Persistence, Ridge, XGBoost, CatBoost, LightGBM P50/P10/P90, PyTorch LSTM, PyTorch GRU,
@@ -57,7 +57,7 @@ def get_paths():
     """Resolves standard project paths."""
     data_path = os.path.join(BASE_DIR, "data", "processed", "features_master.parquet")
     models_dir = os.path.join(BACKEND_DIR, "app", "models")
-    results_dir = os.path.join(BASE_DIR, "reports", "research_results")
+    results_dir = os.path.join(BASE_DIR, "research", "artifacts", "research_results")
     figures_dir = os.path.join(BASE_DIR, "reports", "model_evaluation")
     
     os.makedirs(results_dir, exist_ok=True)
@@ -118,7 +118,7 @@ def apply_monotonic_rearrangement(p10, p50, p90):
 def run_canonical_evaluation():
     from app.core.model_registry import ModelRegistry
 
-    print("CropLens AI — Canonical Evaluation Runner & Master Benchmark Suite")
+    print("CropLens AI â€” Canonical Evaluation Runner & Master Benchmark Suite")
     print(f"Timestamp: {datetime.datetime.now().isoformat()}")
 
     data_path, models_dir, results_dir, figures_dir = get_paths()
@@ -179,7 +179,7 @@ def run_canonical_evaluation():
     assert test_df['date'].dt.year.min() == 2025 and test_df['date'].dt.year.max() == 2025, "Test split contains non-2025 dates!"
     assert len(feature_cols) == 47, f"Expected 47 feature columns, got {len(feature_cols)}"
 
-    print(f"Dataset split — Train (2019-2023): {len(y_train):,} rows | Val (2024): {len(y_val):,} rows | Test (2025): {len(y_test):,} rows")
+    print(f"Dataset split â€” Train (2019-2023): {len(y_train):,} rows | Val (2024): {len(y_val):,} rows | Test (2025): {len(y_test):,} rows")
     print(f"Total features: {len(feature_cols)} | Target: {target_col}")
 
     # 2. Evaluate Naive Persistence Baseline
@@ -838,7 +838,7 @@ def run_canonical_evaluation():
     # 12. Create Experiment Manifest
     print("\n11. Generating Scientific Experiment Manifest...")
     manifest = {
-        'project': 'CropLens AI — Agricultural Price Intelligence',
+        'project': 'CropLens AI â€” Agricultural Price Intelligence',
         'experiment_name': 'Canonical 2025 Out-of-Sample Benchmark Evaluation',
         'execution_timestamp': datetime.datetime.now().isoformat(),
         'dataset_scope': {
@@ -1024,7 +1024,7 @@ def run_canonical_evaluation():
         'Training Paradigm': 'Role in Paper',
     })[['Model', 'MAE (Rs/qtl)', 'RMSE (Rs/qtl)', 'MAPE (%)', 'R2', 'MASE', 'MAE vs Naive (%)', 'Role in Paper']]
     freeze_table = freeze_table_df.to_markdown(index=False)
-    freeze_content = f"""# CropLens AI — Formal Research Freeze State
+    freeze_content = f"""# CropLens AI â€” Formal Research Freeze State
 
 **Date of Freeze:** {datetime.date.today().isoformat()}  
 **Version:** 1.0.0-RESEARCH-FREEZE  
@@ -1036,8 +1036,8 @@ def run_canonical_evaluation():
 - **Master Dataset Path:** `data/processed/features_master.parquet` ({len(df):,} rows after valid-target construction, {df.shape[1]} columns)
 - **Temporal Horizon:** 1-Day Ahead ($t+1$) APMC Modal Wholesale Price Prediction
 - **Training Period:** 2019-01-01 to 2023-12-31 ({len(y_train):,} rows)
-- **Validation Period:** 2024-01-01 to 2024-12-31 ({len(y_val):,} rows) — strictly used for Optuna tuning and CQR calibration
-- **Test Period:** 2025-01-01 to 2025-12-31 ({len(y_test):,} rows) — strictly untouched holdout
+- **Validation Period:** 2024-01-01 to 2024-12-31 ({len(y_val):,} rows) â€” strictly used for Optuna tuning and CQR calibration
+- **Test Period:** 2025-01-01 to 2025-12-31 ({len(y_test):,} rows) â€” strictly untouched holdout
 - **Commodity Scope (10):** Chilli Red, Gram(Chana), Maize, Mustard, Onion, Paddy(Dhan), Potato, Soyabean, Tomato, Wheat
 - **Market Mandi Scope (10):** Agra, Azadpur, Farrukhabad, Guntur, Indore, Karnal, Khanna, Kolkata, Lasalgaon, Mathura
 - **Random Seed:** 42 across all data loaders, model initializers, and bootstrap resamplers
@@ -1082,12 +1082,12 @@ def run_canonical_evaluation():
 ---
 
 ## 6. Forbidden Claims (Must NOT be Written in Paper)
-- ❌ Do NOT claim LightGBM is the superior model on point MSE/MAE over Ridge.
-- ❌ Do NOT claim pinball loss mathematically guarantees non-crossing intervals (rearrangement is required).
-- ❌ Do NOT claim Isolation Forest achieves 42.66% supervised classification accuracy.
-- ❌ Do NOT claim COVID analysis proves generalization to an unseen pandemic.
-- ❌ Do NOT claim Deep Learning is fundamentally unsuitable for crop prices based on default benchmark runs.
-- ❌ Do NOT claim Granger causality proves physical agricultural causality.
+- âŒ Do NOT claim LightGBM is the superior model on point MSE/MAE over Ridge.
+- âŒ Do NOT claim pinball loss mathematically guarantees non-crossing intervals (rearrangement is required).
+- âŒ Do NOT claim Isolation Forest achieves 42.66% supervised classification accuracy.
+- âŒ Do NOT claim COVID analysis proves generalization to an unseen pandemic.
+- âŒ Do NOT claim Deep Learning is fundamentally unsuitable for crop prices based on default benchmark runs.
+- âŒ Do NOT claim Granger causality proves physical agricultural causality.
 """
     with open(os.path.join(results_dir, "RESEARCH_FREEZE.md"), 'w', encoding='utf-8') as f:
         f.write(freeze_content)

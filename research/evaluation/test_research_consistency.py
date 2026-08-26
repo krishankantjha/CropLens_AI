@@ -1,5 +1,5 @@
 """
-test_research_consistency.py — Automated Consistency & Scientific Rigor Test Suite.
+test_research_consistency.py â€” Automated Consistency & Scientific Rigor Test Suite.
 
 Enforces 10 automated scientific integrity checks:
 1. Canonical test set year == 2025.
@@ -27,7 +27,7 @@ except ImportError:
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_PATH = os.path.join(BASE_DIR, "data", "processed", "features_master.parquet")
-RESULTS_DIR = os.path.join(BASE_DIR, "reports", "research_results")
+RESULTS_DIR = os.path.join(BASE_DIR, "research", "artifacts", "research_results")
 MODELS_DIR = os.path.join(BASE_DIR, "backend", "app", "models")
 
 
