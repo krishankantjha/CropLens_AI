@@ -42,7 +42,6 @@ frontend/.cache/
 # Research & Notebooks
 research/
 notebooks/
-reports/research_results/
 research-requirements.txt
 
 # OS & IDE

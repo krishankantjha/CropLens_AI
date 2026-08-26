@@ -24,7 +24,7 @@ This roadmap is the definitive guide for reviewing the enterprise-hardened **Cro
 
 1. **The Core Engine (`backend/app/services/`)**
    * **`data_resolver.py` (NEW):** Audit the "God-Level" service that unifies live feature extraction and forecasting.
-   * `canonical_features.py`: Verify the 44-feature engineering pipeline used for model parity.
+   * `canonical_features.py`: Verify the current 47-feature engineering pipeline used for model parity.
    * `model_trainer.py`: Review LightGBM multi-quantile (P10, P50, P90) and CQR calibration.
 
 2. **Isolated Research Layer (`/research`) (UPDATED)**
@@ -73,13 +73,12 @@ This roadmap is the definitive guide for reviewing the enterprise-hardened **Cro
 ### Stage 5: Academic Integrity & Publication Docs
 *Focus: Verify the IEEE conference paper and empirical results.*
 
-1. **IEEE Conference Paper (`research/paper/`) (UPDATED)**
-   * `research/paper/CROPLENS_AI_IEEE_FULL_PAPER.md`: Review the consolidated research paper.
-   * `research/paper/croplens_ieee_paper.tex`: Verify the LaTeX manuscript for IEEE compliance.
+1. **IEEE Conference Paper (`reports/research_paper/`) (UPDATED)**
+   * `reports/research_paper/croplens_ieee_paper.tex`: Review the canonical IEEE research paper and verify its LaTeX compliance.
 
-2. **Empirical Results (`research/results/`)**
+2. **Empirical Results (`research/artifacts/research_results/`)**
    * `reports/model_evaluation/`: Inspect the 8 publication-quality charts.
-   * `research/results/canonical_model_comparison.csv`: Check performance benchmarks across models.
+   * `research/artifacts/research_results/canonical_model_comparison.csv`: Check performance benchmarks across models.
 
 ---
 
