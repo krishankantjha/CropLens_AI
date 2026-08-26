@@ -3,15 +3,17 @@
     "phase": "Phase 3 Core AI/ML Engine",
     "dataset_info": {
         "data_path": "data\\processed\\features_master.parquet",
-        "total_rows": 135471,
-        "total_columns": 61,
+        "total_rows": 135404,
+        "total_columns": 62,
         "date_min": "2019-01-01",
-        "date_max": "2025-12-31",
-        "train_rows_2019_2023": 96770,
+        "date_max": "2025-12-30",
+        "train_rows_2019_2023": 96766,
         "val_rows_2024": 19398,
-        "test_rows_2025": 19303
+        "test_rows_2025": 19240
     },
-    "target_variable": "modal_price",
+    "target_variable": "modal_price at t+1 (target_next_day_modal_price)",
+    "forecast_horizon_days": 1,
+    "feature_contract_version": "phase1-explicit-v1",
     "feature_count": 47,
     "feature_cols": [
         "arrivals_in_qtl",
@@ -64,20 +66,186 @@
     ],
     "random_seed": 42,
     "optuna_info": {
-        "n_trials": 15,
+        "n_trials": 35,
         "objective": "quantile",
-        "alpha": 0.5,
+        "alpha": "quantile_specific",
         "metric": "quantile pinball loss",
         "sampler": "TPESampler(seed=42)",
+        "best_hyperparameters_by_quantile": {
+            "p10": {
+                "learning_rate": 0.08033317970036362,
+                "num_leaves": 58,
+                "max_depth": 9,
+                "min_child_samples": 57,
+                "subsample": 0.6866943643706016,
+                "colsample_bytree": 0.9610629101227942,
+                "reg_alpha": 0.5803667555253619,
+                "reg_lambda": 0.08154785694246469,
+                "n_estimators": 600,
+                "objective": "quantile",
+                "alpha": 0.1,
+                "metric": "quantile",
+                "boosting_type": "gbdt",
+                "random_state": 42,
+                "n_jobs": 1,
+                "feature_pre_filter": false,
+                "verbosity": -1
+            },
+            "p50": {
+                "learning_rate": 0.049591340926904516,
+                "num_leaves": 53,
+                "max_depth": 8,
+                "min_child_samples": 57,
+                "subsample": 0.673635653127922,
+                "colsample_bytree": 0.8114766219034936,
+                "reg_alpha": 0.03418918500353222,
+                "reg_lambda": 1.4441810448317525,
+                "n_estimators": 600,
+                "objective": "quantile",
+                "alpha": 0.5,
+                "metric": "quantile",
+                "boosting_type": "gbdt",
+                "random_state": 42,
+                "n_jobs": 1,
+                "feature_pre_filter": false,
+                "verbosity": -1
+            },
+            "p90": {
+                "learning_rate": 0.07959546644666605,
+                "num_leaves": 62,
+                "max_depth": 4,
+                "min_child_samples": 51,
+                "subsample": 0.7055947545794644,
+                "colsample_bytree": 0.752972101230349,
+                "reg_alpha": 0.012000452375522963,
+                "reg_lambda": 5.461436549165029,
+                "n_estimators": 550,
+                "objective": "quantile",
+                "alpha": 0.9,
+                "metric": "quantile",
+                "boosting_type": "gbdt",
+                "random_state": 42,
+                "n_jobs": 1,
+                "feature_pre_filter": false,
+                "verbosity": -1
+            }
+        },
         "best_hyperparameters": {
-            "learning_rate": 0.10180247453373363,
-            "num_leaves": 37,
+            "learning_rate": 0.049591340926904516,
+            "num_leaves": 53,
             "max_depth": 8,
-            "min_child_samples": 33,
-            "subsample": 0.950825041401946,
-            "colsample_bytree": 0.7865962861681258,
-            "reg_alpha": 0.04409206723419559,
-            "reg_lambda": 0.34533871410152994
+            "min_child_samples": 57,
+            "subsample": 0.673635653127922,
+            "colsample_bytree": 0.8114766219034936,
+            "reg_alpha": 0.03418918500353222,
+            "reg_lambda": 1.4441810448317525,
+            "n_estimators": 600,
+            "objective": "quantile",
+            "alpha": 0.5,
+            "metric": "quantile",
+            "boosting_type": "gbdt",
+            "random_state": 42,
+            "n_jobs": 1,
+            "feature_pre_filter": false,
+            "verbosity": -1
+        },
+        "study_evidence_by_quantile": {
+            "p10": {
+                "alpha": 0.1,
+                "n_trials": 35,
+                "direction": "minimize",
+                "sampler": "TPESampler",
+                "sampler_seed": 42,
+                "validation_objective": "pinball_loss",
+                "best_value": 13.872994845627499,
+                "best_trial_number": 25,
+                "best_trial_user_attributes": {
+                    "best_iteration": 596
+                },
+                "selected_params": {
+                    "learning_rate": 0.08033317970036362,
+                    "num_leaves": 58,
+                    "max_depth": 9,
+                    "min_child_samples": 57,
+                    "subsample": 0.6866943643706016,
+                    "colsample_bytree": 0.9610629101227942,
+                    "reg_alpha": 0.5803667555253619,
+                    "reg_lambda": 0.08154785694246469,
+                    "n_estimators": 600,
+                    "objective": "quantile",
+                    "alpha": 0.1,
+                    "metric": "quantile",
+                    "boosting_type": "gbdt",
+                    "random_state": 42,
+                    "n_jobs": 1,
+                    "feature_pre_filter": false,
+                    "verbosity": -1
+                }
+            },
+            "p50": {
+                "alpha": 0.5,
+                "n_trials": 35,
+                "direction": "minimize",
+                "sampler": "TPESampler",
+                "sampler_seed": 42,
+                "validation_objective": "pinball_loss",
+                "best_value": 31.49484059209468,
+                "best_trial_number": 14,
+                "best_trial_user_attributes": {
+                    "best_iteration": 600
+                },
+                "selected_params": {
+                    "learning_rate": 0.049591340926904516,
+                    "num_leaves": 53,
+                    "max_depth": 8,
+                    "min_child_samples": 57,
+                    "subsample": 0.673635653127922,
+                    "colsample_bytree": 0.8114766219034936,
+                    "reg_alpha": 0.03418918500353222,
+                    "reg_lambda": 1.4441810448317525,
+                    "n_estimators": 600,
+                    "objective": "quantile",
+                    "alpha": 0.5,
+                    "metric": "quantile",
+                    "boosting_type": "gbdt",
+                    "random_state": 42,
+                    "n_jobs": 1,
+                    "feature_pre_filter": false,
+                    "verbosity": -1
+                }
+            },
+            "p90": {
+                "alpha": 0.9,
+                "n_trials": 35,
+                "direction": "minimize",
+                "sampler": "TPESampler",
+                "sampler_seed": 42,
+                "validation_objective": "pinball_loss",
+                "best_value": 15.747936319188286,
+                "best_trial_number": 26,
+                "best_trial_user_attributes": {
+                    "best_iteration": 483
+                },
+                "selected_params": {
+                    "learning_rate": 0.07959546644666605,
+                    "num_leaves": 62,
+                    "max_depth": 4,
+                    "min_child_samples": 51,
+                    "subsample": 0.7055947545794644,
+                    "colsample_bytree": 0.752972101230349,
+                    "reg_alpha": 0.012000452375522963,
+                    "reg_lambda": 5.461436549165029,
+                    "n_estimators": 550,
+                    "objective": "quantile",
+                    "alpha": 0.9,
+                    "metric": "quantile",
+                    "boosting_type": "gbdt",
+                    "random_state": 42,
+                    "n_jobs": 1,
+                    "feature_pre_filter": false,
+                    "verbosity": -1
+                }
+            }
         }
     },
     "quantile_models": {
@@ -92,12 +260,12 @@
             "note": "Measures statistical Granger-predictive association, not real-world physical causal proof.",
             "results": {
                 "rainfall_mm": {
-                    "avg_min_p_value": 0.065,
-                    "raw_significant_groups": 36,
-                    "fdr_adjusted_significant_groups": 34,
+                    "avg_min_p_value": 0.0488,
+                    "raw_significant_groups": 38,
+                    "fdr_adjusted_significant_groups": 32,
                     "total_groups": 53,
-                    "raw_significant_percentage": 67.92,
-                    "fdr_adjusted_significant_percentage": 64.15,
+                    "raw_significant_percentage": 71.7,
+                    "fdr_adjusted_significant_percentage": 60.38,
                     "fdr_method": "Benjamini-Hochberg (fdr_bh)",
                     "fdr_alpha": 0.05
                 },
@@ -112,7 +280,7 @@
                     "fdr_alpha": 0.05
                 },
                 "temp_max": {
-                    "avg_min_p_value": 0.0163,
+                    "avg_min_p_value": 0.0338,
                     "raw_significant_groups": 49,
                     "fdr_adjusted_significant_groups": 49,
                     "total_groups": 53,
@@ -125,504 +293,1481 @@
         },
         "stationarity_tests": {
             "Chilli Red": {
-                "ADF_Statistic": -2.055,
-                "ADF_p_value": 0.263,
-                "ADF_Stationary": false,
-                "KPSS_Statistic": 7.3612,
+                "ADF_Statistic": -5.4479,
+                "ADF_p_value": 0.0,
+                "ADF_Stationary": true,
+                "KPSS_Statistic": 0.7915,
                 "KPSS_p_value": 0.01,
                 "KPSS_Stationary": false,
                 "Inference": "Non-Stationary / Trend-Stationary"
             },
             "Gram(Chana)": {
-                "ADF_Statistic": -1.3,
-                "ADF_p_value": 0.6292,
-                "ADF_Stationary": false,
-                "KPSS_Statistic": 7.3819,
-                "KPSS_p_value": 0.01,
-                "KPSS_Stationary": false,
-                "Inference": "Non-Stationary / Trend-Stationary"
+                "ADF_Statistic": -7.2941,
+                "ADF_p_value": 0.0,
+                "ADF_Stationary": true,
+                "KPSS_Statistic": 0.3288,
+                "KPSS_p_value": 0.1,
+                "KPSS_Stationary": true,
+                "Inference": "Stationary"
             },
             "Maize": {
-                "ADF_Statistic": -2.0817,
-                "ADF_p_value": 0.2519,
-                "ADF_Stationary": false,
-                "KPSS_Statistic": 5.8404,
-                "KPSS_p_value": 0.01,
-                "KPSS_Stationary": false,
-                "Inference": "Non-Stationary / Trend-Stationary"
+                "ADF_Statistic": -10.1618,
+                "ADF_p_value": 0.0,
+                "ADF_Stationary": true,
+                "KPSS_Statistic": 0.1426,
+                "KPSS_p_value": 0.1,
+                "KPSS_Stationary": true,
+                "Inference": "Stationary"
             },
             "Mustard": {
-                "ADF_Statistic": -2.1583,
-                "ADF_p_value": 0.2217,
-                "ADF_Stationary": false,
-                "KPSS_Statistic": 8.1466,
+                "ADF_Statistic": -7.9894,
+                "ADF_p_value": 0.0,
+                "ADF_Stationary": true,
+                "KPSS_Statistic": 0.7655,
                 "KPSS_p_value": 0.01,
                 "KPSS_Stationary": false,
                 "Inference": "Non-Stationary / Trend-Stationary"
             },
             "Onion": {
-                "ADF_Statistic": -2.2287,
-                "ADF_p_value": 0.196,
-                "ADF_Stationary": false,
-                "KPSS_Statistic": 6.3452,
-                "KPSS_p_value": 0.01,
-                "KPSS_Stationary": false,
-                "Inference": "Non-Stationary / Trend-Stationary"
+                "ADF_Statistic": -11.1214,
+                "ADF_p_value": 0.0,
+                "ADF_Stationary": true,
+                "KPSS_Statistic": 0.2336,
+                "KPSS_p_value": 0.1,
+                "KPSS_Stationary": true,
+                "Inference": "Stationary"
             },
             "Paddy(Dhan)": {
-                "ADF_Statistic": -2.2758,
-                "ADF_p_value": 0.1799,
-                "ADF_Stationary": false,
-                "KPSS_Statistic": 5.4591,
+                "ADF_Statistic": -8.7755,
+                "ADF_p_value": 0.0,
+                "ADF_Stationary": true,
+                "KPSS_Statistic": 0.9071,
                 "KPSS_p_value": 0.01,
                 "KPSS_Stationary": false,
                 "Inference": "Non-Stationary / Trend-Stationary"
             },
             "Potato": {
-                "ADF_Statistic": -1.7308,
-                "ADF_p_value": 0.4153,
-                "ADF_Stationary": false,
-                "KPSS_Statistic": 8.2819,
-                "KPSS_p_value": 0.01,
-                "KPSS_Stationary": false,
-                "Inference": "Non-Stationary / Trend-Stationary"
+                "ADF_Statistic": -8.2246,
+                "ADF_p_value": 0.0,
+                "ADF_Stationary": true,
+                "KPSS_Statistic": 0.3476,
+                "KPSS_p_value": 0.0997,
+                "KPSS_Stationary": true,
+                "Inference": "Stationary"
             },
             "Soyabean": {
-                "ADF_Statistic": -2.6352,
-                "ADF_p_value": 0.0859,
-                "ADF_Stationary": false,
-                "KPSS_Statistic": 5.5972,
-                "KPSS_p_value": 0.01,
-                "KPSS_Stationary": false,
-                "Inference": "Non-Stationary / Trend-Stationary"
+                "ADF_Statistic": -6.7629,
+                "ADF_p_value": 0.0,
+                "ADF_Stationary": true,
+                "KPSS_Statistic": 0.2887,
+                "KPSS_p_value": 0.1,
+                "KPSS_Stationary": true,
+                "Inference": "Stationary"
             },
             "Tomato": {
-                "ADF_Statistic": -2.0142,
-                "ADF_p_value": 0.2804,
-                "ADF_Stationary": false,
-                "KPSS_Statistic": 7.0111,
-                "KPSS_p_value": 0.01,
-                "KPSS_Stationary": false,
-                "Inference": "Non-Stationary / Trend-Stationary"
+                "ADF_Statistic": -8.9114,
+                "ADF_p_value": 0.0,
+                "ADF_Stationary": true,
+                "KPSS_Statistic": 0.1734,
+                "KPSS_p_value": 0.1,
+                "KPSS_Stationary": true,
+                "Inference": "Stationary"
             },
             "Wheat": {
-                "ADF_Statistic": -2.2443,
-                "ADF_p_value": 0.1906,
-                "ADF_Stationary": false,
-                "KPSS_Statistic": 8.1614,
-                "KPSS_p_value": 0.01,
-                "KPSS_Stationary": false,
-                "Inference": "Non-Stationary / Trend-Stationary"
+                "ADF_Statistic": -11.5376,
+                "ADF_p_value": 0.0,
+                "ADF_Stationary": true,
+                "KPSS_Statistic": 0.3418,
+                "KPSS_p_value": 0.1,
+                "KPSS_Stationary": true,
+                "Inference": "Stationary"
             }
         },
         "conformal_calibration_cqr": {
             "target_nominal_coverage_pct": 80.0,
-            "cqr_offset_qconf_rs_qtl": 0.93,
-            "uncalibrated_test_coverage_pct": 78.24,
-            "uncalibrated_mpiw_rs_qtl": 165.05,
-            "calibrated_test_coverage_pct": 79.85,
-            "calibrated_mpiw_rs_qtl": 166.91
+            "cqr_offset_qconf_rs_qtl": 3.28,
+            "calibration_split": "Validation 2024",
+            "test_evaluation_status": "final_locked_evaluation",
+            "uncalibrated_test_coverage_pct": 76.69,
+            "uncalibrated_test_mpiw_rs_qtl": 222.22,
+            "calibrated_test_coverage_pct": 79.49,
+            "calibrated_test_mpiw_rs_qtl": 228.78
         },
         "purged_walk_forward_cv": {
             "n_splits": 5,
             "purging_buffer_days": 7,
             "evaluation_data_scope": "2019-2024 Train and Validation Data Only (2025 Test Set strictly isolated)",
-            "mean_mae_rs_qtl": 53.8,
-            "mean_rmse_rs_qtl": 182.18,
-            "mean_mape_pct": 0.93
+            "mean_mae_rs_qtl": 64.63,
+            "mean_rmse_rs_qtl": 146.69,
+            "mean_mape_pct": 1.18
         },
         "ridge_baseline": {
-            "MAPE (%)": 0.6,
-            "RMSE (Rs/qtl)": 59.36,
-            "MAE (Rs/qtl)": 29.77
+            "MAPE (%)": 1.11,
+            "RMSE (Rs/qtl)": 113.6,
+            "MAE (Rs/qtl)": 56.58
         },
         "arima_baseline": {
             "order": "(1, 1, 1)",
-            "MAE (Rs/qtl)": 668.08,
-            "RMSE (Rs/qtl)": 1009.8,
-            "MAPE (%)": 14.71,
-            "R2": 0.96
+            "MAE (Rs/qtl)": 48.04,
+            "RMSE (Rs/qtl)": 96.79,
+            "MAPE (%)": 0.93,
+            "R2": 1.0,
+            "protocol": "ARIMA(1,1,1) one-step sequential update with refit=False",
+            "groups_attempted": 53,
+            "groups_succeeded": 53,
+            "failed_group_count": 0,
+            "failed_groups_excluded_from_metrics": true,
+            "failed_groups": []
         },
         "catboost": {
             "R2": 0.998,
-            "RMSE (Rs/qtl)": 211.52,
-            "MAE (Rs/qtl)": 84.33,
-            "MAPE (%)": 1.42,
+            "RMSE (Rs/qtl)": 230.27,
+            "MAE (Rs/qtl)": 98.55,
+            "MAPE (%)": 1.71,
             "latency_ms": 0.0
         },
         "xgboost": {
             "R2": 0.998,
-            "RMSE (Rs/qtl)": 198.5,
-            "MAE (Rs/qtl)": 57.16,
-            "MAPE (%)": 0.82,
+            "RMSE (Rs/qtl)": 219.94,
+            "MAE (Rs/qtl)": 80.4,
+            "MAPE (%)": 1.29,
             "latency_ms": 0.0
         },
         "diebold_mariano_tests": {
             "LightGBM_vs_Ridge": {
-                "loss_function": "Squared Error (MSE)",
-                "variance_estimator": "Newey-West HAC (maxlags=7)",
-                "DM_Statistic": -12.8903,
-                "p_value": 0.0,
-                "Statistically_Significant": true,
-                "Superior_Model": "Ridge"
+                "absolute_loss_mae": {
+                    "loss_function": "Absolute Error Loss (MAE)",
+                    "variance_estimator": "Newey-West HAC (maxlags=7)",
+                    "DM_Statistic": -6.9753,
+                    "p_value": 0.0,
+                    "Statistically_Significant": true,
+                    "Superior_Model": "Ridge"
+                },
+                "squared_loss_mse": {
+                    "loss_function": "Squared Error (MSE)",
+                    "variance_estimator": "Newey-West HAC (maxlags=7)",
+                    "DM_Statistic": -4.485,
+                    "p_value": 7e-06,
+                    "Statistically_Significant": true,
+                    "Superior_Model": "Ridge"
+                }
             },
             "LightGBM_vs_XGBoost": {
-                "loss_function": "Squared Error (MSE)",
-                "variance_estimator": "Newey-West HAC (maxlags=7)",
-                "DM_Statistic": -6.7274,
-                "p_value": 0.0,
-                "Statistically_Significant": true,
-                "Superior_Model": "XGBoost"
+                "absolute_loss_mae": {
+                    "loss_function": "Absolute Error Loss (MAE)",
+                    "variance_estimator": "Newey-West HAC (maxlags=7)",
+                    "DM_Statistic": -0.6536,
+                    "p_value": 0.513346,
+                    "Statistically_Significant": false,
+                    "Superior_Model": "No Statistically Significant Difference"
+                },
+                "squared_loss_mse": {
+                    "loss_function": "Squared Error (MSE)",
+                    "variance_estimator": "Newey-West HAC (maxlags=7)",
+                    "DM_Statistic": -1.8293,
+                    "p_value": 0.06736,
+                    "Statistically_Significant": false,
+                    "Superior_Model": "No Statistically Significant Difference"
+                }
             }
         },
         "ablation_study": {
             "Model_B_No_Price_Lags": {
                 "description": "Removed 7 price lag/velocity momentum features",
                 "removed_feature_count": 10,
-                "MAPE (%)": 1.53,
-                "RMSE (Rs/qtl)": 280.12,
-                "MAE (Rs/qtl)": 100.37
+                "MAPE (%)": 1.85,
+                "RMSE (Rs/qtl)": 301.69,
+                "MAE (Rs/qtl)": 116.76
             },
             "Model_C_No_Weather": {
                 "description": "Removed 12 NASA weather, NDVI, and stress features",
                 "removed_feature_count": 13,
-                "MAPE (%)": 0.93,
-                "RMSE (Rs/qtl)": 223.13,
-                "MAE (Rs/qtl)": 67.29
+                "MAPE (%)": 1.27,
+                "RMSE (Rs/qtl)": 227.65,
+                "MAE (Rs/qtl)": 82.02
             },
             "Model_D_No_Arrivals": {
                 "description": "Removed 5 arrival volume and ratio features",
                 "removed_feature_count": 5,
-                "MAPE (%)": 1.07,
-                "RMSE (Rs/qtl)": 271.58,
-                "MAE (Rs/qtl)": 78.71
+                "MAPE (%)": 1.3,
+                "RMSE (Rs/qtl)": 226.54,
+                "MAE (Rs/qtl)": 83.36
             },
             "Model_E_No_Weather_No_Arrivals": {
                 "description": "Removed all 17 exogenous weather and arrival features",
                 "removed_feature_count": 18,
-                "MAPE (%)": 0.91,
-                "RMSE (Rs/qtl)": 227.13,
-                "MAE (Rs/qtl)": 66.4
+                "MAPE (%)": 1.29,
+                "RMSE (Rs/qtl)": 228.17,
+                "MAE (Rs/qtl)": 82.53
             },
             "Model_F_No_Spatial": {
                 "description": "Removed 3 Haversine distance and spatial price gradient features",
                 "removed_feature_count": 3,
-                "MAPE (%)": 0.86,
-                "RMSE (Rs/qtl)": 209.33,
-                "MAE (Rs/qtl)": 63.68
+                "MAPE (%)": 1.27,
+                "RMSE (Rs/qtl)": 214.7,
+                "MAE (Rs/qtl)": 79.18
             },
             "Model_G_No_Festivals": {
                 "description": "Removed 3 festival demand anticipation and hangover features",
                 "removed_feature_count": 3,
-                "MAPE (%)": 0.9,
-                "RMSE (Rs/qtl)": 219.56,
-                "MAE (Rs/qtl)": 66.1
+                "MAPE (%)": 1.28,
+                "RMSE (Rs/qtl)": 224.78,
+                "MAE (Rs/qtl)": 81.96
             }
         },
         "isolation_forest": {
             "model_class": "IsolationForest",
             "contamination_rate": 0.05,
-            "test_flagged_anomalies": 1286,
-            "test_flagged_percentage": 6.66,
+            "test_flagged_anomalies": 1283,
+            "test_flagged_percentage": 6.67,
             "operational_framing": "Unsupervised supply shock anomaly detector designed to flag extreme volume/price divergence days for market advisory triage.",
             "methodological_disclosure": "Evaluated against operational heuristic proxy rules (arrival_ratio > 1.5 or price_velocity < -50 Rs/qtl/day), not verified historical ground-truth events. High specificity demonstrates strong normal-day retention.",
             "proxy_operational_metrics": {
-                "specificity_pct": 96.05,
-                "precision_proxy_pct": 45.1,
-                "recall_proxy_pct": 40.47,
-                "f1_score_proxy_pct": 42.66
+                "specificity_pct": 96.01,
+                "precision_proxy_pct": 44.58,
+                "recall_proxy_pct": 39.97,
+                "f1_score_proxy_pct": 42.15
             }
         },
-        "covid_period_stress_test": {
-            "study_type": "In-sample training-period robustness analysis during the COVID-19 period (2020-2021 shock vs 2022-2024 normal)",
+        "covid_period_consistency_analysis": {
+            "study_type": "In-sample training-period temporal consistency analysis during the COVID-19 period (2020-2021 shock vs 2022-2024 normal)",
             "covid_shock_2020_2021": {
-                "MAE (Rs/qtl)": 29.42,
-                "RMSE (Rs/qtl)": 98.33,
-                "MAPE (%)": 0.58,
+                "MAE (Rs/qtl)": 45.64,
+                "RMSE (Rs/qtl)": 132.39,
+                "MAPE (%)": 0.99,
                 "R2": 0.999
             },
             "normal_market_2022_2024": {
-                "MAE (Rs/qtl)": 33.67,
-                "RMSE (Rs/qtl)": 88.98,
-                "MAPE (%)": 0.6,
-                "R2": 1.0
+                "MAE (Rs/qtl)": 52.62,
+                "RMSE (Rs/qtl)": 117.89,
+                "MAPE (%)": 1.04,
+                "R2": 0.999
             }
         },
         "leave_one_mandi_out_spatial_cv": {
             "Agra": {
                 "Holdout_Mandi": "Agra",
-                "MAE (Rs/qtl)": 32.95,
-                "RMSE (Rs/qtl)": 62.44,
-                "MAPE (%)": 0.77,
-                "R2": 0.999
-            },
-            "Lasalgaon": {
-                "Holdout_Mandi": "Lasalgaon",
-                "MAE (Rs/qtl)": 29.23,
-                "RMSE (Rs/qtl)": 41.05,
-                "MAPE (%)": 0.8,
-                "R2": 0.999
+                "MAE (Rs/qtl)": 47.76,
+                "RMSE (Rs/qtl)": 79.88,
+                "MAPE (%)": 1.19,
+                "R2": 0.998
             },
             "Azadpur": {
                 "Holdout_Mandi": "Azadpur",
-                "MAE (Rs/qtl)": 575.83,
-                "RMSE (Rs/qtl)": 1200.44,
-                "MAPE (%)": 3.25,
-                "R2": 0.981
+                "MAE (Rs/qtl)": 276.53,
+                "RMSE (Rs/qtl)": 653.47,
+                "MAPE (%)": 2.25,
+                "R2": 0.994
             },
             "Farrukhabad": {
                 "Holdout_Mandi": "Farrukhabad",
-                "MAE (Rs/qtl)": 25.64,
-                "RMSE (Rs/qtl)": 39.9,
-                "MAPE (%)": 0.67,
-                "R2": 1.0
-            },
-            "Mathura": {
-                "Holdout_Mandi": "Mathura",
-                "MAE (Rs/qtl)": 40.93,
-                "RMSE (Rs/qtl)": 78.18,
-                "MAPE (%)": 0.91,
-                "R2": 0.998
-            },
-            "Kolkata": {
-                "Holdout_Mandi": "Kolkata",
-                "MAE (Rs/qtl)": 121.18,
-                "RMSE (Rs/qtl)": 365.21,
-                "MAPE (%)": 1.21,
-                "R2": 0.998
-            },
-            "Indore": {
-                "Holdout_Mandi": "Indore",
-                "MAE (Rs/qtl)": 106.4,
-                "RMSE (Rs/qtl)": 378.33,
-                "MAPE (%)": 1.18,
-                "R2": 0.996
-            },
-            "Karnal": {
-                "Holdout_Mandi": "Karnal",
-                "MAE (Rs/qtl)": 38.73,
-                "RMSE (Rs/qtl)": 153.23,
-                "MAPE (%)": 0.81,
-                "R2": 0.993
-            },
-            "Khanna": {
-                "Holdout_Mandi": "Khanna",
-                "MAE (Rs/qtl)": 9.24,
-                "RMSE (Rs/qtl)": 12.6,
-                "MAPE (%)": 0.38,
-                "R2": 0.998
+                "MAE (Rs/qtl)": 40.03,
+                "RMSE (Rs/qtl)": 59.3,
+                "MAPE (%)": 1.07,
+                "R2": 0.999
             },
             "Guntur": {
                 "Holdout_Mandi": "Guntur",
-                "MAE (Rs/qtl)": 110.95,
-                "RMSE (Rs/qtl)": 192.62,
-                "MAPE (%)": 0.73,
+                "MAE (Rs/qtl)": 152.45,
+                "RMSE (Rs/qtl)": 256.51,
+                "MAPE (%)": 1.03,
                 "R2": 0.999
+            },
+            "Indore": {
+                "Holdout_Mandi": "Indore",
+                "MAE (Rs/qtl)": 110.16,
+                "RMSE (Rs/qtl)": 253.42,
+                "MAPE (%)": 1.29,
+                "R2": 0.998
+            },
+            "Karnal": {
+                "Holdout_Mandi": "Karnal",
+                "MAE (Rs/qtl)": 35.19,
+                "RMSE (Rs/qtl)": 68.08,
+                "MAPE (%)": 0.9,
+                "R2": 0.999
+            },
+            "Khanna": {
+                "Holdout_Mandi": "Khanna",
+                "MAE (Rs/qtl)": 15.14,
+                "RMSE (Rs/qtl)": 19.49,
+                "MAPE (%)": 0.62,
+                "R2": 0.996
+            },
+            "Kolkata": {
+                "Holdout_Mandi": "Kolkata",
+                "MAE (Rs/qtl)": 146.63,
+                "RMSE (Rs/qtl)": 368.68,
+                "MAPE (%)": 1.67,
+                "R2": 0.998
+            },
+            "Lasalgaon": {
+                "Holdout_Mandi": "Lasalgaon",
+                "MAE (Rs/qtl)": 45.87,
+                "RMSE (Rs/qtl)": 61.88,
+                "MAPE (%)": 1.3,
+                "R2": 0.999
+            },
+            "Mathura": {
+                "Holdout_Mandi": "Mathura",
+                "MAE (Rs/qtl)": 53.7,
+                "RMSE (Rs/qtl)": 86.58,
+                "MAPE (%)": 1.29,
+                "R2": 0.998
             }
         },
         "ljung_box_residual_test": {
-            "lag_1": {
-                "lb_stat": 3.848,
-                "p_value": 0.04982
+            "method": "Per commodity-market series; residuals sorted by date",
+            "split": "validation",
+            "group_count": 53,
+            "groups": {
+                "Gram(Chana)__Agra": {
+                    "lag_1": {
+                        "lb_stat": 110.816,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 155.914,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 158.242,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 200.285,
+                        "p_value": 0.0
+                    }
+                },
+                "Maize__Agra": {
+                    "lag_1": {
+                        "lb_stat": 41.702,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 64.869,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 70.706,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 94.925,
+                        "p_value": 0.0
+                    }
+                },
+                "Mustard__Agra": {
+                    "lag_1": {
+                        "lb_stat": 123.949,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 240.4,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 267.946,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 285.217,
+                        "p_value": 0.0
+                    }
+                },
+                "Onion__Agra": {
+                    "lag_1": {
+                        "lb_stat": 43.096,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 54.918,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 65.488,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 78.182,
+                        "p_value": 4e-06
+                    }
+                },
+                "Paddy(Dhan)__Agra": {
+                    "lag_1": {
+                        "lb_stat": 62.282,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 79.572,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 89.425,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 127.737,
+                        "p_value": 0.0
+                    }
+                },
+                "Potato__Agra": {
+                    "lag_1": {
+                        "lb_stat": 44.32,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 55.541,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 63.59,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 88.591,
+                        "p_value": 0.0
+                    }
+                },
+                "Soyabean__Agra": {
+                    "lag_1": {
+                        "lb_stat": 62.198,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 63.649,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 66.234,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 113.641,
+                        "p_value": 0.0
+                    }
+                },
+                "Tomato__Agra": {
+                    "lag_1": {
+                        "lb_stat": 64.799,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 76.743,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 86.818,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 103.102,
+                        "p_value": 0.0
+                    }
+                },
+                "Wheat__Agra": {
+                    "lag_1": {
+                        "lb_stat": 76.765,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 132.696,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 210.742,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 380.621,
+                        "p_value": 0.0
+                    }
+                },
+                "Chilli Red__Azadpur": {
+                    "lag_1": {
+                        "lb_stat": 232.164,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 880.001,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 1430.102,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 1971.883,
+                        "p_value": 0.0
+                    }
+                },
+                "Onion__Azadpur": {
+                    "lag_1": {
+                        "lb_stat": 17.244,
+                        "p_value": 3.3e-05
+                    },
+                    "lag_7": {
+                        "lb_stat": 26.686,
+                        "p_value": 0.00038
+                    },
+                    "lag_14": {
+                        "lb_stat": 39.829,
+                        "p_value": 0.000271
+                    },
+                    "lag_30": {
+                        "lb_stat": 60.4,
+                        "p_value": 0.000823
+                    }
+                },
+                "Potato__Azadpur": {
+                    "lag_1": {
+                        "lb_stat": 9.139,
+                        "p_value": 0.002502
+                    },
+                    "lag_7": {
+                        "lb_stat": 23.665,
+                        "p_value": 0.001304
+                    },
+                    "lag_14": {
+                        "lb_stat": 40.153,
+                        "p_value": 0.000241
+                    },
+                    "lag_30": {
+                        "lb_stat": 71.088,
+                        "p_value": 3.5e-05
+                    }
+                },
+                "Tomato__Azadpur": {
+                    "lag_1": {
+                        "lb_stat": 9.129,
+                        "p_value": 0.002515
+                    },
+                    "lag_7": {
+                        "lb_stat": 18.511,
+                        "p_value": 0.009865
+                    },
+                    "lag_14": {
+                        "lb_stat": 38.184,
+                        "p_value": 0.000487
+                    },
+                    "lag_30": {
+                        "lb_stat": 72.005,
+                        "p_value": 2.6e-05
+                    }
+                },
+                "Gram(Chana)__Farrukhabad": {
+                    "lag_1": {
+                        "lb_stat": 55.552,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 64.97,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 77.012,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 93.358,
+                        "p_value": 0.0
+                    }
+                },
+                "Maize__Farrukhabad": {
+                    "lag_1": {
+                        "lb_stat": 57.94,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 92.859,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 101.311,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 139.644,
+                        "p_value": 0.0
+                    }
+                },
+                "Mustard__Farrukhabad": {
+                    "lag_1": {
+                        "lb_stat": 38.33,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 53.348,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 55.969,
+                        "p_value": 1e-06
+                    },
+                    "lag_30": {
+                        "lb_stat": 83.265,
+                        "p_value": 1e-06
+                    }
+                },
+                "Potato__Farrukhabad": {
+                    "lag_1": {
+                        "lb_stat": 42.704,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 52.494,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 55.575,
+                        "p_value": 1e-06
+                    },
+                    "lag_30": {
+                        "lb_stat": 77.133,
+                        "p_value": 5e-06
+                    }
+                },
+                "Tomato__Farrukhabad": {
+                    "lag_1": {
+                        "lb_stat": 50.147,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 58.72,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 75.939,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 98.391,
+                        "p_value": 0.0
+                    }
+                },
+                "Wheat__Farrukhabad": {
+                    "lag_1": {
+                        "lb_stat": 32.753,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 39.246,
+                        "p_value": 2e-06
+                    },
+                    "lag_14": {
+                        "lb_stat": 45.08,
+                        "p_value": 4e-05
+                    },
+                    "lag_30": {
+                        "lb_stat": 67.966,
+                        "p_value": 9e-05
+                    }
+                },
+                "Chilli Red__Guntur": {
+                    "lag_1": {
+                        "lb_stat": 75.059,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 82.827,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 91.157,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 119.236,
+                        "p_value": 0.0
+                    }
+                },
+                "Paddy(Dhan)__Guntur": {
+                    "lag_1": {
+                        "lb_stat": 45.31,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 54.826,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 67.576,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 111.319,
+                        "p_value": 0.0
+                    }
+                },
+                "Chilli Red__Indore": {
+                    "lag_1": {
+                        "lb_stat": 82.512,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 101.731,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 136.116,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 145.42,
+                        "p_value": 0.0
+                    }
+                },
+                "Gram(Chana)__Indore": {
+                    "lag_1": {
+                        "lb_stat": 54.285,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 69.864,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 100.633,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 138.079,
+                        "p_value": 0.0
+                    }
+                },
+                "Maize__Indore": {
+                    "lag_1": {
+                        "lb_stat": 22.929,
+                        "p_value": 2e-06
+                    },
+                    "lag_7": {
+                        "lb_stat": 31.348,
+                        "p_value": 5.4e-05
+                    },
+                    "lag_14": {
+                        "lb_stat": 35.382,
+                        "p_value": 0.00129
+                    },
+                    "lag_30": {
+                        "lb_stat": 52.148,
+                        "p_value": 0.007341
+                    }
+                },
+                "Mustard__Indore": {
+                    "lag_1": {
+                        "lb_stat": 71.386,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 99.31,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 106.631,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 120.018,
+                        "p_value": 0.0
+                    }
+                },
+                "Onion__Indore": {
+                    "lag_1": {
+                        "lb_stat": 42.025,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 61.784,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 73.241,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 126.429,
+                        "p_value": 0.0
+                    }
+                },
+                "Soyabean__Indore": {
+                    "lag_1": {
+                        "lb_stat": 44.862,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 61.027,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 76.923,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 92.649,
+                        "p_value": 0.0
+                    }
+                },
+                "Wheat__Indore": {
+                    "lag_1": {
+                        "lb_stat": 75.1,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 80.065,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 101.465,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 118.999,
+                        "p_value": 0.0
+                    }
+                },
+                "Maize__Karnal": {
+                    "lag_1": {
+                        "lb_stat": 48.688,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 66.495,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 67.828,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 89.549,
+                        "p_value": 0.0
+                    }
+                },
+                "Mustard__Karnal": {
+                    "lag_1": {
+                        "lb_stat": 160.145,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 612.223,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 863.356,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 947.59,
+                        "p_value": 0.0
+                    }
+                },
+                "Paddy(Dhan)__Karnal": {
+                    "lag_1": {
+                        "lb_stat": 63.331,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 85.785,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 111.609,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 132.281,
+                        "p_value": 0.0
+                    }
+                },
+                "Potato__Karnal": {
+                    "lag_1": {
+                        "lb_stat": 49.425,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 82.608,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 100.578,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 117.532,
+                        "p_value": 0.0
+                    }
+                },
+                "Wheat__Karnal": {
+                    "lag_1": {
+                        "lb_stat": 53.629,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 60.555,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 76.904,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 98.029,
+                        "p_value": 0.0
+                    }
+                },
+                "Maize__Khanna": {
+                    "lag_1": {
+                        "lb_stat": 34.279,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 59.279,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 68.458,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 95.906,
+                        "p_value": 0.0
+                    }
+                },
+                "Paddy(Dhan)__Khanna": {
+                    "lag_1": {
+                        "lb_stat": 38.28,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 42.942,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 56.27,
+                        "p_value": 1e-06
+                    },
+                    "lag_30": {
+                        "lb_stat": 76.287,
+                        "p_value": 7e-06
+                    }
+                },
+                "Wheat__Khanna": {
+                    "lag_1": {
+                        "lb_stat": 46.307,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 48.676,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 55.355,
+                        "p_value": 1e-06
+                    },
+                    "lag_30": {
+                        "lb_stat": 71.485,
+                        "p_value": 3.1e-05
+                    }
+                },
+                "Chilli Red__Kolkata": {
+                    "lag_1": {
+                        "lb_stat": 62.756,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 106.946,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 112.294,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 126.005,
+                        "p_value": 0.0
+                    }
+                },
+                "Onion__Kolkata": {
+                    "lag_1": {
+                        "lb_stat": 41.054,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 52.136,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 60.419,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 81.874,
+                        "p_value": 1e-06
+                    }
+                },
+                "Paddy(Dhan)__Kolkata": {
+                    "lag_1": {
+                        "lb_stat": 74.113,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 100.907,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 132.12,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 173.674,
+                        "p_value": 0.0
+                    }
+                },
+                "Potato__Kolkata": {
+                    "lag_1": {
+                        "lb_stat": 20.256,
+                        "p_value": 7e-06
+                    },
+                    "lag_7": {
+                        "lb_stat": 49.79,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 52.114,
+                        "p_value": 3e-06
+                    },
+                    "lag_30": {
+                        "lb_stat": 82.611,
+                        "p_value": 1e-06
+                    }
+                },
+                "Tomato__Kolkata": {
+                    "lag_1": {
+                        "lb_stat": 60.088,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 73.297,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 96.915,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 137.588,
+                        "p_value": 0.0
+                    }
+                },
+                "Gram(Chana)__Lasalgaon": {
+                    "lag_1": {
+                        "lb_stat": 24.677,
+                        "p_value": 1e-06
+                    },
+                    "lag_7": {
+                        "lb_stat": 33.319,
+                        "p_value": 2.3e-05
+                    },
+                    "lag_14": {
+                        "lb_stat": 40.681,
+                        "p_value": 0.0002
+                    },
+                    "lag_30": {
+                        "lb_stat": 56.069,
+                        "p_value": 0.002681
+                    }
+                },
+                "Maize__Lasalgaon": {
+                    "lag_1": {
+                        "lb_stat": 30.2,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 44.815,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 50.165,
+                        "p_value": 6e-06
+                    },
+                    "lag_30": {
+                        "lb_stat": 80.073,
+                        "p_value": 2e-06
+                    }
+                },
+                "Onion__Lasalgaon": {
+                    "lag_1": {
+                        "lb_stat": 44.96,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 53.542,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 63.15,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 97.158,
+                        "p_value": 0.0
+                    }
+                },
+                "Soyabean__Lasalgaon": {
+                    "lag_1": {
+                        "lb_stat": 74.399,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 88.961,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 90.357,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 114.522,
+                        "p_value": 0.0
+                    }
+                },
+                "Tomato__Lasalgaon": {
+                    "lag_1": {
+                        "lb_stat": 37.458,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 50.483,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 58.324,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 83.647,
+                        "p_value": 1e-06
+                    }
+                },
+                "Gram(Chana)__Mathura": {
+                    "lag_1": {
+                        "lb_stat": 68.91,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 77.652,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 88.23,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 123.444,
+                        "p_value": 0.0
+                    }
+                },
+                "Mustard__Mathura": {
+                    "lag_1": {
+                        "lb_stat": 227.019,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 1051.709,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 1606.016,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 1867.337,
+                        "p_value": 0.0
+                    }
+                },
+                "Onion__Mathura": {
+                    "lag_1": {
+                        "lb_stat": 35.891,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 47.18,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 65.702,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 111.458,
+                        "p_value": 0.0
+                    }
+                },
+                "Potato__Mathura": {
+                    "lag_1": {
+                        "lb_stat": 27.332,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 40.788,
+                        "p_value": 1e-06
+                    },
+                    "lag_14": {
+                        "lb_stat": 43.872,
+                        "p_value": 6.2e-05
+                    },
+                    "lag_30": {
+                        "lb_stat": 56.18,
+                        "p_value": 0.002603
+                    }
+                },
+                "Soyabean__Mathura": {
+                    "lag_1": {
+                        "lb_stat": 34.43,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 58.022,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 64.517,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 73.825,
+                        "p_value": 1.5e-05
+                    }
+                },
+                "Tomato__Mathura": {
+                    "lag_1": {
+                        "lb_stat": 54.306,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 64.918,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 69.764,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 78.94,
+                        "p_value": 3e-06
+                    }
+                },
+                "Wheat__Mathura": {
+                    "lag_1": {
+                        "lb_stat": 89.723,
+                        "p_value": 0.0
+                    },
+                    "lag_7": {
+                        "lb_stat": 143.145,
+                        "p_value": 0.0
+                    },
+                    "lag_14": {
+                        "lb_stat": 167.898,
+                        "p_value": 0.0
+                    },
+                    "lag_30": {
+                        "lb_stat": 249.681,
+                        "p_value": 0.0
+                    }
+                }
             },
-            "lag_7": {
-                "lb_stat": 49.748,
-                "p_value": 0.0
-            },
-            "lag_14": {
-                "lb_stat": 196.081,
-                "p_value": 0.0
-            },
-            "lag_30": {
-                "lb_stat": 683.078,
-                "p_value": 0.0
+            "groups_tested_by_lag": {
+                "1": 53,
+                "7": 53,
+                "14": 53,
+                "30": 53
             }
         },
         "performance": {
             "Validation (2024)": {
-                "MAPE (%)": 0.64,
-                "sMAPE (%)": 0.64,
-                "RMSE (Rs/qtl)": 110.22,
-                "MAE (Rs/qtl)": 39.81,
-                "MASE": 0.011,
-                "R2": 1.0,
-                "P10 Pinball Loss": 9.6388,
-                "P50 Pinball Loss": 19.9065,
-                "P90 Pinball Loss": 11.6181,
-                "P10-P90 Quantile Forecast Band Coverage (%)": 78.07,
+                "MAPE (%)": 1.15,
+                "sMAPE (%)": 1.15,
+                "RMSE (Rs/qtl)": 142.69,
+                "MAE (Rs/qtl)": 62.43,
+                "MASE": 1.514,
+                "R2": 0.999,
+                "P10 Pinball Loss": 13.8392,
+                "P50 Pinball Loss": 31.2152,
+                "P90 Pinball Loss": 15.7276,
+                "P10-P90 Quantile Forecast Band Coverage (%)": 76.82,
                 "rearrangement_diagnostics": {
                     "total_predictions": 19398,
-                    "raw_crossing_count": 2667,
-                    "raw_crossing_rate_pct": 13.749,
+                    "raw_crossing_count": 519,
+                    "raw_crossing_rate_pct": 2.676,
                     "post_rearrangement_crossing_count": 0,
                     "post_rearrangement_crossing_rate_pct": 0.0,
-                    "mean_p50_shift_across_all_rs": 2.31,
-                    "mean_p50_shift_on_crossings_rs": 16.79,
-                    "max_p50_shift_rs": 422.25,
-                    "mean_p10_shift_rs": 0.75,
-                    "mean_p90_shift_rs": 1.66,
-                    "large_shift_anomalies_count": 76,
-                    "safety_guard_status": "FLAGGED (76 large shifts)"
+                    "mean_p50_shift_across_all_rs": 0.83,
+                    "mean_p50_shift_on_crossings_rs": 31.14,
+                    "max_p50_shift_rs": 236.79,
+                    "mean_p10_shift_rs": 0.16,
+                    "mean_p90_shift_rs": 0.68,
+                    "large_shift_anomalies_count": 44,
+                    "safety_guard_status": "FLAGGED (44 large shifts)"
                 }
             },
             "Test (2025)": {
-                "MAPE (%)": 0.78,
-                "sMAPE (%)": 0.79,
-                "RMSE (Rs/qtl)": 212.87,
-                "MAE (Rs/qtl)": 59.58,
-                "MASE": 0.016,
+                "MAPE (%)": 1.28,
+                "sMAPE (%)": 1.29,
+                "RMSE (Rs/qtl)": 225.66,
+                "MAE (Rs/qtl)": 82.0,
+                "MASE": 1.988,
                 "R2": 0.998,
-                "P10 Pinball Loss": 12.195,
-                "P50 Pinball Loss": 29.7878,
-                "P90 Pinball Loss": 23.8801,
-                "P10-P90 Quantile Forecast Band Coverage (%)": 78.24,
+                "P10 Pinball Loss": 16.2197,
+                "P50 Pinball Loss": 41.0016,
+                "P90 Pinball Loss": 24.7611,
+                "P10-P90 Quantile Forecast Band Coverage (%)": 76.69,
                 "rearrangement_diagnostics": {
-                    "total_predictions": 19303,
-                    "raw_crossing_count": 2942,
-                    "raw_crossing_rate_pct": 15.241,
+                    "total_predictions": 19240,
+                    "raw_crossing_count": 652,
+                    "raw_crossing_rate_pct": 3.389,
                     "post_rearrangement_crossing_count": 0,
                     "post_rearrangement_crossing_rate_pct": 0.0,
-                    "mean_p50_shift_across_all_rs": 5.66,
-                    "mean_p50_shift_on_crossings_rs": 37.11,
-                    "max_p50_shift_rs": 871.51,
-                    "mean_p10_shift_rs": 0.9,
-                    "mean_p90_shift_rs": 4.85,
-                    "large_shift_anomalies_count": 286,
-                    "safety_guard_status": "FLAGGED (286 large shifts)"
+                    "mean_p50_shift_across_all_rs": 2.2,
+                    "mean_p50_shift_on_crossings_rs": 65.01,
+                    "max_p50_shift_rs": 481.77,
+                    "mean_p10_shift_rs": 0.18,
+                    "mean_p90_shift_rs": 2.02,
+                    "large_shift_anomalies_count": 170,
+                    "safety_guard_status": "FLAGGED (170 large shifts)"
                 }
             },
             "Per_Commodity_Breakdown_2025": {
                 "Chilli Red": {
-                    "MAE (Rs/qtl)": 421.11,
-                    "RMSE (Rs/qtl)": 740.49,
-                    "MAPE (%)": 1.76,
-                    "sMAPE (%)": 1.8,
-                    "R2": 0.934
+                    "MAE (Rs/qtl)": 511.36,
+                    "RMSE (Rs/qtl)": 769.75,
+                    "MAPE (%)": 2.21,
+                    "sMAPE (%)": 2.25,
+                    "R2": 0.929
                 },
                 "Gram(Chana)": {
-                    "MAE (Rs/qtl)": 46.93,
-                    "RMSE (Rs/qtl)": 74.45,
-                    "MAPE (%)": 0.69,
-                    "sMAPE (%)": 0.69,
-                    "R2": 0.991
+                    "MAE (Rs/qtl)": 69.07,
+                    "RMSE (Rs/qtl)": 100.38,
+                    "MAPE (%)": 1.03,
+                    "sMAPE (%)": 1.03,
+                    "R2": 0.983
                 },
                 "Maize": {
-                    "MAE (Rs/qtl)": 8.38,
-                    "RMSE (Rs/qtl)": 11.03,
-                    "MAPE (%)": 0.36,
-                    "sMAPE (%)": 0.36,
-                    "R2": 0.999
-                },
-                "Mustard": {
-                    "MAE (Rs/qtl)": 98.59,
-                    "RMSE (Rs/qtl)": 165.95,
-                    "MAPE (%)": 1.33,
-                    "sMAPE (%)": 1.35,
-                    "R2": 0.952
-                },
-                "Onion": {
-                    "MAE (Rs/qtl)": 24.45,
-                    "RMSE (Rs/qtl)": 34.73,
-                    "MAPE (%)": 0.86,
-                    "sMAPE (%)": 0.86,
-                    "R2": 0.993
-                },
-                "Paddy(Dhan)": {
-                    "MAE (Rs/qtl)": 9.61,
-                    "RMSE (Rs/qtl)": 13.96,
-                    "MAPE (%)": 0.35,
-                    "sMAPE (%)": 0.35,
-                    "R2": 0.998
-                },
-                "Potato": {
-                    "MAE (Rs/qtl)": 9.56,
-                    "RMSE (Rs/qtl)": 12.41,
-                    "MAPE (%)": 0.52,
-                    "sMAPE (%)": 0.52,
-                    "R2": 0.998
-                },
-                "Soyabean": {
-                    "MAE (Rs/qtl)": 36.22,
-                    "RMSE (Rs/qtl)": 49.38,
-                    "MAPE (%)": 0.61,
-                    "sMAPE (%)": 0.61,
+                    "MAE (Rs/qtl)": 17.22,
+                    "RMSE (Rs/qtl)": 21.78,
+                    "MAPE (%)": 0.75,
+                    "sMAPE (%)": 0.75,
                     "R2": 0.995
                 },
+                "Mustard": {
+                    "MAE (Rs/qtl)": 114.71,
+                    "RMSE (Rs/qtl)": 175.96,
+                    "MAPE (%)": 1.58,
+                    "sMAPE (%)": 1.6,
+                    "R2": 0.946
+                },
+                "Onion": {
+                    "MAE (Rs/qtl)": 47.55,
+                    "RMSE (Rs/qtl)": 60.7,
+                    "MAPE (%)": 1.73,
+                    "sMAPE (%)": 1.73,
+                    "R2": 0.978
+                },
+                "Paddy(Dhan)": {
+                    "MAE (Rs/qtl)": 17.63,
+                    "RMSE (Rs/qtl)": 23.13,
+                    "MAPE (%)": 0.65,
+                    "sMAPE (%)": 0.65,
+                    "R2": 0.995
+                },
+                "Potato": {
+                    "MAE (Rs/qtl)": 20.29,
+                    "RMSE (Rs/qtl)": 25.79,
+                    "MAPE (%)": 1.09,
+                    "sMAPE (%)": 1.09,
+                    "R2": 0.99
+                },
+                "Soyabean": {
+                    "MAE (Rs/qtl)": 62.58,
+                    "RMSE (Rs/qtl)": 91.85,
+                    "MAPE (%)": 1.03,
+                    "sMAPE (%)": 1.03,
+                    "R2": 0.982
+                },
                 "Tomato": {
-                    "MAE (Rs/qtl)": 39.24,
-                    "RMSE (Rs/qtl)": 53.25,
-                    "MAPE (%)": 1.25,
-                    "sMAPE (%)": 1.25,
-                    "R2": 0.986
+                    "MAE (Rs/qtl)": 71.16,
+                    "RMSE (Rs/qtl)": 90.23,
+                    "MAPE (%)": 2.31,
+                    "sMAPE (%)": 2.31,
+                    "R2": 0.958
                 },
                 "Wheat": {
-                    "MAE (Rs/qtl)": 10.02,
-                    "RMSE (Rs/qtl)": 14.43,
-                    "MAPE (%)": 0.35,
-                    "sMAPE (%)": 0.35,
-                    "R2": 0.997
+                    "MAE (Rs/qtl)": 17.33,
+                    "RMSE (Rs/qtl)": 23.02,
+                    "MAPE (%)": 0.62,
+                    "sMAPE (%)": 0.62,
+                    "R2": 0.993
                 }
             },
             "Per_Mandi_Breakdown_2025": {
                 "Agra": {
-                    "MAE (Rs/qtl)": 34.08,
-                    "RMSE (Rs/qtl)": 75.41,
-                    "MAPE (%)": 0.74,
-                    "R2": 0.999
+                    "MAE (Rs/qtl)": 51.33,
+                    "RMSE (Rs/qtl)": 90.91,
+                    "MAPE (%)": 1.24,
+                    "R2": 0.998
                 },
                 "Azadpur": {
-                    "MAE (Rs/qtl)": 171.93,
-                    "RMSE (Rs/qtl)": 493.83,
-                    "MAPE (%)": 1.11,
-                    "R2": 0.997
+                    "MAE (Rs/qtl)": 222.94,
+                    "RMSE (Rs/qtl)": 523.93,
+                    "MAPE (%)": 1.95,
+                    "R2": 0.996
                 },
                 "Farrukhabad": {
-                    "MAE (Rs/qtl)": 24.55,
-                    "RMSE (Rs/qtl)": 39.23,
-                    "MAPE (%)": 0.63,
-                    "R2": 1.0
-                },
-                "Guntur": {
-                    "MAE (Rs/qtl)": 91.3,
-                    "RMSE (Rs/qtl)": 158.42,
-                    "MAPE (%)": 0.6,
-                    "R2": 1.0
-                },
-                "Indore": {
-                    "MAE (Rs/qtl)": 88.52,
-                    "RMSE (Rs/qtl)": 231.03,
-                    "MAPE (%)": 0.87,
+                    "MAE (Rs/qtl)": 40.45,
+                    "RMSE (Rs/qtl)": 61.67,
+                    "MAPE (%)": 1.09,
                     "R2": 0.999
                 },
+                "Guntur": {
+                    "MAE (Rs/qtl)": 144.08,
+                    "RMSE (Rs/qtl)": 244.05,
+                    "MAPE (%)": 1.01,
+                    "R2": 0.999
+                },
+                "Indore": {
+                    "MAE (Rs/qtl)": 113.64,
+                    "RMSE (Rs/qtl)": 245.19,
+                    "MAPE (%)": 1.28,
+                    "R2": 0.998
+                },
                 "Karnal": {
-                    "MAE (Rs/qtl)": 32.61,
-                    "RMSE (Rs/qtl)": 87.36,
-                    "MAPE (%)": 0.65,
+                    "MAE (Rs/qtl)": 39.74,
+                    "RMSE (Rs/qtl)": 83.1,
+                    "MAPE (%)": 0.97,
                     "R2": 0.998
                 },
                 "Khanna": {
-                    "MAE (Rs/qtl)": 7.51,
-                    "RMSE (Rs/qtl)": 9.82,
-                    "MAPE (%)": 0.31,
-                    "R2": 0.999
+                    "MAE (Rs/qtl)": 15.82,
+                    "RMSE (Rs/qtl)": 20.17,
+                    "MAPE (%)": 0.65,
+                    "R2": 0.996
                 },
                 "Kolkata": {
-                    "MAE (Rs/qtl)": 124.14,
-                    "RMSE (Rs/qtl)": 415.48,
-                    "MAPE (%)": 1.11,
+                    "MAE (Rs/qtl)": 152.9,
+                    "RMSE (Rs/qtl)": 411.1,
+                    "MAPE (%)": 1.7,
                     "R2": 0.997
                 },
                 "Lasalgaon": {
-                    "MAE (Rs/qtl)": 26.33,
-                    "RMSE (Rs/qtl)": 37.24,
-                    "MAPE (%)": 0.72,
-                    "R2": 1.0
+                    "MAE (Rs/qtl)": 45.71,
+                    "RMSE (Rs/qtl)": 62.15,
+                    "MAPE (%)": 1.3,
+                    "R2": 0.999
                 },
                 "Mathura": {
-                    "MAE (Rs/qtl)": 40.48,
-                    "RMSE (Rs/qtl)": 82.26,
-                    "MAPE (%)": 0.85,
-                    "R2": 0.998
+                    "MAE (Rs/qtl)": 62.7,
+                    "RMSE (Rs/qtl)": 108.88,
+                    "MAPE (%)": 1.42,
+                    "R2": 0.997
                 }
             }
         },
@@ -630,520 +1775,403 @@
             "val": {
                 "dataset": "Validation (2024)",
                 "total_predictions": 19398,
-                "raw_crossing_count": 2667,
-                "raw_crossing_rate_pct": 13.749,
+                "raw_crossing_count": 519,
+                "raw_crossing_rate_pct": 2.676,
                 "post_rearrangement_crossing_count": 0,
                 "post_rearrangement_crossing_rate_pct": 0.0,
-                "mean_p50_shift_across_all_rs": 2.31,
-                "mean_p50_shift_on_crossings_rs": 16.79,
-                "max_p50_shift_rs": 422.25,
-                "mean_p10_shift_rs": 0.75,
-                "mean_p90_shift_rs": 1.66,
-                "large_shift_anomalies_count": 76,
-                "safety_guard_status": "FLAGGED (76 large shifts)"
+                "mean_p50_shift_across_all_rs": 0.83,
+                "mean_p50_shift_on_crossings_rs": 31.14,
+                "max_p50_shift_rs": 236.79,
+                "mean_p10_shift_rs": 0.16,
+                "mean_p90_shift_rs": 0.68,
+                "large_shift_anomalies_count": 44,
+                "safety_guard_status": "FLAGGED (44 large shifts)"
             },
             "test": {
                 "dataset": "Test (2025)",
-                "total_predictions": 19303,
-                "raw_crossing_count": 2942,
-                "raw_crossing_rate_pct": 15.241,
+                "total_predictions": 19240,
+                "raw_crossing_count": 652,
+                "raw_crossing_rate_pct": 3.389,
                 "post_rearrangement_crossing_count": 0,
                 "post_rearrangement_crossing_rate_pct": 0.0,
-                "mean_p50_shift_across_all_rs": 5.66,
-                "mean_p50_shift_on_crossings_rs": 37.11,
-                "max_p50_shift_rs": 871.51,
-                "mean_p10_shift_rs": 0.9,
-                "mean_p90_shift_rs": 4.85,
-                "large_shift_anomalies_count": 286,
-                "safety_guard_status": "FLAGGED (286 large shifts)"
+                "mean_p50_shift_across_all_rs": 2.2,
+                "mean_p50_shift_on_crossings_rs": 65.01,
+                "max_p50_shift_rs": 481.77,
+                "mean_p10_shift_rs": 0.18,
+                "mean_p90_shift_rs": 2.02,
+                "large_shift_anomalies_count": 170,
+                "safety_guard_status": "FLAGGED (170 large shifts)"
             },
             "per_commodity_test": {
                 "Chilli Red": {
-                    "total_predictions": 1460,
-                    "raw_crossings": 21,
-                    "raw_crossing_rate_pct": 1.438,
+                    "total_predictions": 1456,
+                    "raw_crossings": 7,
+                    "raw_crossing_rate_pct": 0.481,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 37.66
+                    "mean_p50_shift_rs": 30.94
                 },
                 "Gram(Chana)": {
-                    "total_predictions": 1825,
-                    "raw_crossings": 252,
-                    "raw_crossing_rate_pct": 13.808,
+                    "total_predictions": 1820,
+                    "raw_crossings": 121,
+                    "raw_crossing_rate_pct": 6.648,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 71.33
+                    "mean_p50_shift_rs": 93.99
                 },
                 "Maize": {
-                    "total_predictions": 2190,
-                    "raw_crossings": 235,
-                    "raw_crossing_rate_pct": 10.731,
+                    "total_predictions": 2184,
+                    "raw_crossings": 14,
+                    "raw_crossing_rate_pct": 0.641,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 4.05
+                    "mean_p50_shift_rs": 7.94
                 },
                 "Mustard": {
-                    "total_predictions": 1825,
-                    "raw_crossings": 367,
-                    "raw_crossing_rate_pct": 20.11,
+                    "total_predictions": 1820,
+                    "raw_crossings": 201,
+                    "raw_crossing_rate_pct": 11.044,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 149.17
+                    "mean_p50_shift_rs": 130.77
                 },
                 "Onion": {
-                    "total_predictions": 2184,
-                    "raw_crossings": 375,
-                    "raw_crossing_rate_pct": 17.17,
+                    "total_predictions": 2177,
+                    "raw_crossings": 19,
+                    "raw_crossing_rate_pct": 0.873,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 12.65
+                    "mean_p50_shift_rs": 16.96
                 },
                 "Paddy(Dhan)": {
-                    "total_predictions": 1825,
-                    "raw_crossings": 369,
-                    "raw_crossing_rate_pct": 20.219,
+                    "total_predictions": 1820,
+                    "raw_crossings": 63,
+                    "raw_crossing_rate_pct": 3.462,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 7.93
+                    "mean_p50_shift_rs": 6.7
                 },
                 "Potato": {
-                    "total_predictions": 2190,
-                    "raw_crossings": 238,
-                    "raw_crossing_rate_pct": 10.868,
+                    "total_predictions": 2184,
+                    "raw_crossings": 8,
+                    "raw_crossing_rate_pct": 0.366,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 5.19
+                    "mean_p50_shift_rs": 6.84
                 },
                 "Soyabean": {
-                    "total_predictions": 1460,
-                    "raw_crossings": 254,
-                    "raw_crossing_rate_pct": 17.397,
+                    "total_predictions": 1456,
+                    "raw_crossings": 42,
+                    "raw_crossing_rate_pct": 2.885,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 49.3
+                    "mean_p50_shift_rs": 30.2
                 },
                 "Tomato": {
-                    "total_predictions": 2154,
-                    "raw_crossings": 293,
-                    "raw_crossing_rate_pct": 13.603,
+                    "total_predictions": 2139,
+                    "raw_crossings": 61,
+                    "raw_crossing_rate_pct": 2.852,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 29.47
+                    "mean_p50_shift_rs": 19.96
                 },
                 "Wheat": {
-                    "total_predictions": 2190,
-                    "raw_crossings": 538,
-                    "raw_crossing_rate_pct": 24.566,
+                    "total_predictions": 2184,
+                    "raw_crossings": 116,
+                    "raw_crossing_rate_pct": 5.311,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 8.66
+                    "mean_p50_shift_rs": 9.65
                 }
             },
             "per_mandi_test": {
                 "Agra": {
-                    "total_predictions": 3273,
-                    "raw_crossings": 457,
-                    "raw_crossing_rate_pct": 13.963,
+                    "total_predictions": 3262,
+                    "raw_crossings": 126,
+                    "raw_crossing_rate_pct": 3.863,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 43.89
+                    "mean_p50_shift_rs": 82.12
                 },
                 "Azadpur": {
-                    "total_predictions": 1435,
-                    "raw_crossings": 411,
-                    "raw_crossing_rate_pct": 28.641,
+                    "total_predictions": 1426,
+                    "raw_crossings": 32,
+                    "raw_crossing_rate_pct": 2.244,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 17.7
+                    "mean_p50_shift_rs": 23.39
                 },
                 "Farrukhabad": {
-                    "total_predictions": 2190,
-                    "raw_crossings": 255,
-                    "raw_crossing_rate_pct": 11.644,
+                    "total_predictions": 2184,
+                    "raw_crossings": 70,
+                    "raw_crossing_rate_pct": 3.205,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 13.29
+                    "mean_p50_shift_rs": 36.02
                 },
                 "Guntur": {
-                    "total_predictions": 730,
-                    "raw_crossings": 64,
-                    "raw_crossing_rate_pct": 8.767,
+                    "total_predictions": 728,
+                    "raw_crossings": 11,
+                    "raw_crossing_rate_pct": 1.511,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 7.09
+                    "mean_p50_shift_rs": 10.22
                 },
                 "Indore": {
-                    "total_predictions": 2555,
-                    "raw_crossings": 372,
-                    "raw_crossing_rate_pct": 14.56,
+                    "total_predictions": 2548,
+                    "raw_crossings": 94,
+                    "raw_crossing_rate_pct": 3.689,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 55.01
+                    "mean_p50_shift_rs": 59.24
                 },
                 "Karnal": {
-                    "total_predictions": 1825,
-                    "raw_crossings": 316,
-                    "raw_crossing_rate_pct": 17.315,
+                    "total_predictions": 1820,
+                    "raw_crossings": 94,
+                    "raw_crossing_rate_pct": 5.165,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 50.6
+                    "mean_p50_shift_rs": 90.34
                 },
                 "Khanna": {
-                    "total_predictions": 1095,
-                    "raw_crossings": 184,
-                    "raw_crossing_rate_pct": 16.804,
+                    "total_predictions": 1092,
+                    "raw_crossings": 38,
+                    "raw_crossing_rate_pct": 3.48,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 5.59
+                    "mean_p50_shift_rs": 7.25
                 },
                 "Kolkata": {
-                    "total_predictions": 1820,
-                    "raw_crossings": 213,
-                    "raw_crossing_rate_pct": 11.703,
+                    "total_predictions": 1812,
+                    "raw_crossings": 29,
+                    "raw_crossing_rate_pct": 1.6,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 16.96
+                    "mean_p50_shift_rs": 14.29
                 },
                 "Lasalgaon": {
-                    "total_predictions": 1825,
-                    "raw_crossings": 232,
-                    "raw_crossing_rate_pct": 12.712,
+                    "total_predictions": 1820,
+                    "raw_crossings": 26,
+                    "raw_crossing_rate_pct": 1.429,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 15.04
+                    "mean_p50_shift_rs": 19.02
                 },
                 "Mathura": {
-                    "total_predictions": 2555,
-                    "raw_crossings": 438,
-                    "raw_crossing_rate_pct": 17.143,
+                    "total_predictions": 2548,
+                    "raw_crossings": 132,
+                    "raw_crossing_rate_pct": 5.181,
                     "post_rearrangement_crossings": 0,
-                    "mean_p50_shift_rs": 76.31
+                    "mean_p50_shift_rs": 101.63
                 }
             }
         },
         "bootstrap_confidence_intervals_95": {
-            "method": "Circular Block Bootstrap (7-Day Temporal Blocks)",
+            "method": "Panel-Aware Circular Block Bootstrap (7-Day Within-Series Blocks)",
             "block_length_days": 7,
             "n_bootstraps": 1000,
+            "split": "test",
+            "group_count": 53,
             "random_seed": 42,
             "MAE_CI_95": [
-                56.35,
-                62.47
+                77.11,
+                87.37
             ],
             "RMSE_CI_95": [
-                196.25,
-                227.92
+                196.46,
+                254.1
             ],
             "MAPE_CI_95": [
-                0.76,
-                0.8
+                1.26,
+                1.31
             ],
             "R2_CI_95": [
                 0.998,
                 0.998
             ],
             "Coverage_CI_95": [
-                77.62,
-                78.81
+                75.94,
+                77.45
             ]
         },
         "top_15_shap_importance_p50": {
-            "price_lag_1d": 1720.9305,
-            "price_ema_7d": 680.6787,
-            "price_lag_2d": 400.7903,
-            "price_lag_3d": 135.8933,
-            "price_ema_21d": 133.7746,
-            "price_velocity_7d": 31.3166,
-            "price_lag_1w": 30.629,
-            "commodity_price_percentile_rank": 9.9732,
-            "price_channel_width_7d": 7.7407,
-            "rolling_price_reversal_signal": 7.4213,
-            "price_lag_52w": 6.3359,
-            "spatial_price_gradient": 5.0524,
-            "hub_price_diff": 4.515,
-            "price_lag_4w": 4.0962,
-            "ndvi_mean": 3.8711
+            "price_lag_1d": 1833.1381,
+            "price_ema_7d": 870.2221,
+            "price_lag_2d": 432.1495,
+            "price_ema_21d": 66.5528,
+            "price_lag_3d": 60.6741,
+            "price_lag_1w": 41.6078,
+            "price_velocity_7d": 31.69,
+            "rolling_price_reversal_signal": 14.262,
+            "commodity_price_percentile_rank": 11.4309,
+            "price_lag_52w": 9.5334,
+            "is_peak_harvest_month": 7.2965,
+            "price_channel_width_7d": 7.1112,
+            "price_lag_4w": 6.2417,
+            "price_regime_indicator": 5.3065,
+            "price_spread": 4.7708
         },
         "top_15_split_importance_p50": {
-            "price_lag_1d": 2345,
-            "price_velocity_7d": 1732,
-            "price_lag_1w": 1616,
-            "price_channel_width_7d": 898,
-            "price_lag_2d": 592,
-            "price_ema_7d": 493,
-            "hub_price_diff": 400,
-            "rolling_price_reversal_signal": 389,
-            "commodity_price_percentile_rank": 316,
-            "dist_to_hub_km": 210,
-            "price_lag_3d": 169,
-            "spatial_price_gradient": 156,
-            "price_lag_4w": 146,
-            "market_seasonality_deviation": 115,
-            "price_volatility_30d": 113
+            "price_velocity_7d": 3630,
+            "price_lag_1d": 3010,
+            "price_lag_1w": 2301,
+            "price_channel_width_7d": 2212,
+            "rolling_price_reversal_signal": 1321,
+            "commodity_price_percentile_rank": 1275,
+            "hub_price_diff": 1033,
+            "price_lag_52w": 905,
+            "price_lag_2d": 859,
+            "price_volatility_30d": 793,
+            "spatial_price_gradient": 770,
+            "ndvi_momentum_4w": 733,
+            "market_seasonality_deviation": 680,
+            "price_lag_4w": 632,
+            "arrivals_rolling_mean_30d": 602
         },
         "top_15_shap_importance_p10": {
-            "price_lag_1d": 1576.6362,
-            "price_ema_7d": 761.1899,
-            "price_lag_2d": 371.5299,
-            "price_lag_3d": 112.9991,
-            "price_ema_21d": 108.8153,
-            "price_velocity_7d": 38.0156,
-            "price_lag_1w": 32.7632,
-            "hub_price_diff": 7.6722,
-            "rolling_price_reversal_signal": 6.6775,
-            "price_channel_width_7d": 6.584,
-            "price_lag_52w": 5.9775,
-            "price_lag_4w": 4.2729,
-            "price_regime_indicator": 2.732,
-            "spatial_price_gradient": 2.2118,
-            "commodity_price_percentile_rank": 1.8302
+            "price_lag_1d": 1822.8994,
+            "price_ema_7d": 708.7166,
+            "price_lag_2d": 360.2137,
+            "price_ema_21d": 127.749,
+            "price_lag_3d": 104.9947,
+            "price_lag_1w": 52.5691,
+            "price_velocity_7d": 34.694,
+            "price_lag_52w": 22.3416,
+            "rolling_price_reversal_signal": 13.2867,
+            "hub_price_diff": 8.799,
+            "price_lag_4w": 6.7457,
+            "price_channel_width_7d": 6.7256,
+            "commodity_price_percentile_rank": 5.9694,
+            "is_peak_harvest_month": 4.5992,
+            "price_volatility_30d": 4.1881
         },
         "top_15_shap_importance_p90": {
-            "price_lag_1d": 1879.8276,
-            "price_ema_7d": 722.8201,
-            "price_lag_2d": 302.499,
-            "price_ema_21d": 61.2793,
-            "price_lag_1w": 31.4395,
-            "price_velocity_7d": 29.5373,
-            "commodity_price_percentile_rank": 21.6954,
-            "hub_price_diff": 18.3208,
-            "price_spread": 16.4788,
-            "price_lag_3d": 12.1918,
-            "rolling_price_reversal_signal": 8.588,
-            "price_lag_4w": 6.9553,
-            "price_channel_width_7d": 6.5329,
-            "price_lag_52w": 5.3534,
-            "arrivals_rolling_mean_30d": 5.308
+            "price_lag_1d": 1767.6807,
+            "price_ema_7d": 784.7872,
+            "price_lag_2d": 340.7804,
+            "price_ema_21d": 220.9304,
+            "price_lag_1w": 35.2607,
+            "price_spread": 31.0969,
+            "price_velocity_7d": 30.9961,
+            "price_lag_52w": 23.7749,
+            "commodity_price_percentile_rank": 23.5487,
+            "price_lag_3d": 19.1802,
+            "rolling_price_reversal_signal": 13.0145,
+            "hub_price_diff": 10.4389,
+            "price_lag_4w": 8.9071,
+            "arrivals_in_qtl": 8.7608,
+            "price_channel_width_7d": 7.4505
         },
         "lstm_benchmark": {
             "model_type": "PyTorch 2-Layer LSTM",
+            "target_variable": "target_next_day_modal_price",
             "lookback_window_days": 7,
             "hidden_units": 64,
             "feature_count": 47,
-            "MAE (Rs/qtl)": 112.98,
-            "RMSE (Rs/qtl)": 327.8,
-            "MAPE (%)": 1.53,
-            "sMAPE (%)": 1.55,
-            "R2": 0.996,
-            "train_duration_sec": 121.1
+            "feature_columns": [
+                "arrivals_in_qtl",
+                "rainfall_mm",
+                "temp_max",
+                "temp_min",
+                "ndvi_mean",
+                "is_festive_season",
+                "price_lag_1d",
+                "price_lag_2d",
+                "price_lag_3d",
+                "price_lag_1w",
+                "price_lag_4w",
+                "price_lag_52w",
+                "price_ema_7d",
+                "price_ema_21d",
+                "price_channel_width_7d",
+                "price_velocity_7d",
+                "price_volatility_30d",
+                "price_spread",
+                "rolling_price_reversal_signal",
+                "modal_vs_midpoint_bias",
+                "commodity_price_percentile_rank",
+                "price_quality_premium",
+                "arrivals_rolling_mean_30d",
+                "arrival_ratio",
+                "arrival_velocity_7d",
+                "arrival_price_divergence_signal",
+                "temp_range",
+                "rainfall_rolling_sum_14d",
+                "rain_x_ndvi_interaction",
+                "temp_stress_days_7d",
+                "consecutive_dry_days",
+                "vegetative_stress_ratio",
+                "heat_wave_event_flag",
+                "ndvi_momentum_4w",
+                "harvest_glut_index",
+                "festival_price_anticipation_score",
+                "post_festival_demand_hangover",
+                "dist_to_hub_km",
+                "hub_price_diff",
+                "spatial_price_gradient",
+                "sin_month",
+                "cos_month",
+                "sin_dow",
+                "cos_dow",
+                "is_peak_harvest_month",
+                "market_seasonality_deviation",
+                "price_regime_indicator"
+            ],
+            "train_years": "2019-2023",
+            "validation_year": 2024,
+            "test_year": 2025,
+            "MAE (Rs/qtl)": 115.7,
+            "RMSE (Rs/qtl)": 289.46,
+            "MAPE (%)": 2.02,
+            "sMAPE (%)": 2.04,
+            "R2": 0.997,
+            "train_duration_sec": 132.2
         },
         "gru_benchmark": {
             "model_type": "PyTorch 2-Layer GRU",
+            "target_variable": "target_next_day_modal_price",
             "lookback_window_days": 7,
             "hidden_units": 64,
             "feature_count": 47,
-            "MAE (Rs/qtl)": 110.05,
-            "RMSE (Rs/qtl)": 331.64,
-            "MAPE (%)": 1.54,
-            "sMAPE (%)": 1.56,
-            "R2": 0.996,
-            "train_duration_sec": 170.86
-        },
-        "naive_persistence_baseline": {
-            "MAE (Rs/qtl)": 47.95,
-            "RMSE (Rs/qtl)": 95.15,
-            "MAPE (%)": 0.93,
-            "sMAPE (%)": 0.93,
-            "R2": 0.9996,
-            "MASE": 0.013,
-            "evaluation_scope": "Exact 2025 Test Set (19,303 rows)"
-        },
-        "diebold_mariano_suite": {
-            "LightGBM_vs_Ridge_Regression": {
-                "competitor": "Ridge Regression",
-                "absolute_loss_mae": {
-                    "loss_function": "Absolute Error Loss (MAE)",
-                    "variance_estimator": "Newey-West HAC (maxlags=7)",
-                    "dm_statistic": -20.8805,
-                    "p_value": 0.0,
-                    "statistically_significant": true,
-                    "mean_loss_differential": -29.8033
-                },
-                "squared_loss_mse": {
-                    "loss_function": "Squared Error Loss (MSE)",
-                    "variance_estimator": "Newey-West HAC (maxlags=7)",
-                    "dm_statistic": -12.4054,
-                    "p_value": 0.0,
-                    "statistically_significant": true,
-                    "mean_loss_differential": -41788.1023
-                },
-                "percentage_loss_mape": {
-                    "loss_function": "Absolute Percentage Error Loss (MAPE)",
-                    "variance_estimator": "Newey-West HAC (maxlags=7)",
-                    "dm_statistic": -21.3638,
-                    "p_value": 0.0,
-                    "statistically_significant": true,
-                    "mean_loss_differential": -0.0018
-                },
-                "methodological_interpretation": "Under Absolute Error loss (matching LightGBM quantile pinball median loss), DM stat is -20.881 (p = 0.0000). Under Squared Error loss (which penalizes outlier volatility heavily), DM stat is -12.405."
-            },
-            "LightGBM_vs_XGBoost": {
-                "competitor": "XGBoost",
-                "absolute_loss_mae": {
-                    "loss_function": "Absolute Error Loss (MAE)",
-                    "variance_estimator": "Newey-West HAC (maxlags=7)",
-                    "dm_statistic": -6.3717,
-                    "p_value": 0.0,
-                    "statistically_significant": true,
-                    "mean_loss_differential": -2.4117
-                },
-                "squared_loss_mse": {
-                    "loss_function": "Squared Error Loss (MSE)",
-                    "variance_estimator": "Newey-West HAC (maxlags=7)",
-                    "dm_statistic": -5.347,
-                    "p_value": 0.0,
-                    "statistically_significant": true,
-                    "mean_loss_differential": -5911.3825
-                },
-                "percentage_loss_mape": {
-                    "loss_function": "Absolute Percentage Error Loss (MAPE)",
-                    "variance_estimator": "Newey-West HAC (maxlags=7)",
-                    "dm_statistic": 9.6532,
-                    "p_value": 0.0,
-                    "statistically_significant": true,
-                    "mean_loss_differential": 0.0004
-                },
-                "methodological_interpretation": "Under Absolute Error loss (matching LightGBM quantile pinball median loss), DM stat is -6.372 (p = 0.0000). Under Squared Error loss (which penalizes outlier volatility heavily), DM stat is -5.347."
-            },
-            "LightGBM_vs_CatBoost": {
-                "competitor": "CatBoost",
-                "absolute_loss_mae": {
-                    "loss_function": "Absolute Error Loss (MAE)",
-                    "variance_estimator": "Newey-West HAC (maxlags=7)",
-                    "dm_statistic": 34.2592,
-                    "p_value": 0.0,
-                    "statistically_significant": true,
-                    "mean_loss_differential": 24.752
-                },
-                "squared_loss_mse": {
-                    "loss_function": "Squared Error Loss (MSE)",
-                    "variance_estimator": "Newey-West HAC (maxlags=7)",
-                    "dm_statistic": -0.4272,
-                    "p_value": 0.669206,
-                    "statistically_significant": false,
-                    "mean_loss_differential": -569.3591
-                },
-                "percentage_loss_mape": {
-                    "loss_function": "Absolute Percentage Error Loss (MAPE)",
-                    "variance_estimator": "Newey-West HAC (maxlags=7)",
-                    "dm_statistic": 67.3125,
-                    "p_value": 0.0,
-                    "statistically_significant": true,
-                    "mean_loss_differential": 0.0064
-                },
-                "methodological_interpretation": "Under Absolute Error loss (matching LightGBM quantile pinball median loss), DM stat is 34.259 (p = 0.0000). Under Squared Error loss (which penalizes outlier volatility heavily), DM stat is -0.427."
-            }
-        },
-        "canonical_model_comparison": [
-            {
-                "Model": "Naive Persistence (Random Walk)",
-                "Model Family": "Heuristic Baseline",
-                "Features Used": 1,
-                "Test Rows": 19303,
-                "MAE (Rs/qtl)": 47.95,
-                "RMSE (Rs/qtl)": 95.15,
-                "MAPE (%)": 0.93,
-                "sMAPE (%)": 0.93,
-                "R2": 0.9996,
-                "MASE": 0.013,
-                "Improvement over Naive (MAE %)": 0.0,
-                "Improvement over Naive (MAPE %)": 0.0,
-                "Training Paradigm": "Zero-shot (Persistence)",
-                "Evaluation Scope": "Exact 2025 Test Set (19,303 rows)"
-            },
-            {
-                "Model": "Ridge Regression",
-                "Model Family": "Linear",
-                "Features Used": 47,
-                "Test Rows": 19303,
-                "MAE (Rs/qtl)": 29.77,
-                "RMSE (Rs/qtl)": 59.36,
-                "MAPE (%)": 0.6,
-                "sMAPE (%)": 0.6,
-                "R2": 0.9999,
-                "MASE": 0.008,
-                "Improvement over Naive (MAE %)": 37.91,
-                "Improvement over Naive (MAPE %)": 35.48,
-                "Training Paradigm": "Supervised Regression",
-                "Evaluation Scope": "Exact 2025 Test Set (19,303 rows)"
-            },
-            {
-                "Model": "XGBoost",
-                "Model Family": "Gradient Boosted Trees",
-                "Features Used": 47,
-                "Test Rows": 19303,
-                "MAE (Rs/qtl)": 57.16,
-                "RMSE (Rs/qtl)": 198.5,
-                "MAPE (%)": 0.82,
-                "sMAPE (%)": 0.83,
-                "R2": 0.9985,
-                "MASE": 0.016,
-                "Improvement over Naive (MAE %)": -19.21,
-                "Improvement over Naive (MAPE %)": 11.83,
-                "Training Paradigm": "Supervised Regression",
-                "Evaluation Scope": "Exact 2025 Test Set (19,303 rows)"
-            },
-            {
-                "Model": "CatBoost",
-                "Model Family": "Gradient Boosted Trees",
-                "Features Used": 47,
-                "Test Rows": 19303,
-                "MAE (Rs/qtl)": 84.33,
-                "RMSE (Rs/qtl)": 211.52,
-                "MAPE (%)": 1.42,
-                "sMAPE (%)": 1.43,
-                "R2": 0.9983,
-                "MASE": 0.023,
-                "Improvement over Naive (MAE %)": -75.87,
-                "Improvement over Naive (MAPE %)": -52.69,
-                "Training Paradigm": "Supervised Regression",
-                "Evaluation Scope": "Exact 2025 Test Set (19,303 rows)"
-            },
-            {
-                "Model": "LightGBM P50",
-                "Model Family": "Gradient Boosted Trees",
-                "Features Used": 47,
-                "Test Rows": 19303,
-                "MAE (Rs/qtl)": 59.58,
-                "RMSE (Rs/qtl)": 212.87,
-                "MAPE (%)": 0.78,
-                "sMAPE (%)": 0.79,
-                "R2": 0.9982,
-                "MASE": 0.016,
-                "Improvement over Naive (MAE %)": -24.25,
-                "Improvement over Naive (MAPE %)": 16.13,
-                "Training Paradigm": "Quantile Pinball Loss (alpha=0.50)",
-                "Evaluation Scope": "Exact 2025 Test Set (19,303 rows)"
-            },
-            {
-                "Model": "LSTM (2-Layer)",
-                "Model Family": "Deep Recurrent Neural Network",
-                "Features Used": 47,
-                "Test Rows": 19303,
-                "MAE (Rs/qtl)": 112.98,
-                "RMSE (Rs/qtl)": 327.8,
-                "MAPE (%)": 1.53,
-                "sMAPE (%)": 1.55,
-                "R2": 0.996,
-                "MASE": 0.031,
-                "Improvement over Naive (MAE %)": -135.62,
-                "Improvement over Naive (MAPE %)": -64.52,
-                "Training Paradigm": "Sequence Huber Loss",
-                "Evaluation Scope": "2025 Test Set (Sliding Window Sequence Alignment)"
-            },
-            {
-                "Model": "GRU (2-Layer)",
-                "Model Family": "Deep Recurrent Neural Network",
-                "Features Used": 47,
-                "Test Rows": 19303,
-                "MAE (Rs/qtl)": 110.05,
-                "RMSE (Rs/qtl)": 331.64,
-                "MAPE (%)": 1.54,
-                "sMAPE (%)": 1.56,
-                "R2": 0.996,
-                "MASE": 0.03,
-                "Improvement over Naive (MAE %)": -129.51,
-                "Improvement over Naive (MAPE %)": -65.59,
-                "Training Paradigm": "Sequence Huber Loss",
-                "Evaluation Scope": "2025 Test Set (Sliding Window Sequence Alignment)"
-            },
-            {
-                "Model": "Temporal Fusion Transformer (TFT)",
-                "Model Family": "Temporal Attention Network",
-                "Features Used": 47,
-                "Test Rows": 19303,
-                "MAE (Rs/qtl)": 87.53,
-                "RMSE (Rs/qtl)": 112.13,
-                "MAPE (%)": 3.73,
-                "sMAPE (%)": 3.78,
-                "R2": 0.991,
-                "MASE": 0.024,
-                "Improvement over Naive (MAE %)": -82.54,
-                "Improvement over Naive (MAPE %)": -301.08,
-                "Training Paradigm": "Sequence MSE Loss",
-                "Evaluation Scope": "2025 Test Set (Sliding Window Sequence Alignment)"
-            }
-        ]
+            "feature_columns": [
+                "arrivals_in_qtl",
+                "rainfall_mm",
+                "temp_max",
+                "temp_min",
+                "ndvi_mean",
+                "is_festive_season",
+                "price_lag_1d",
+                "price_lag_2d",
+                "price_lag_3d",
+                "price_lag_1w",
+                "price_lag_4w",
+                "price_lag_52w",
+                "price_ema_7d",
+                "price_ema_21d",
+                "price_channel_width_7d",
+                "price_velocity_7d",
+                "price_volatility_30d",
+                "price_spread",
+                "rolling_price_reversal_signal",
+                "modal_vs_midpoint_bias",
+                "commodity_price_percentile_rank",
+                "price_quality_premium",
+                "arrivals_rolling_mean_30d",
+                "arrival_ratio",
+                "arrival_velocity_7d",
+                "arrival_price_divergence_signal",
+                "temp_range",
+                "rainfall_rolling_sum_14d",
+                "rain_x_ndvi_interaction",
+                "temp_stress_days_7d",
+                "consecutive_dry_days",
+                "vegetative_stress_ratio",
+                "heat_wave_event_flag",
+                "ndvi_momentum_4w",
+                "harvest_glut_index",
+                "festival_price_anticipation_score",
+                "post_festival_demand_hangover",
+                "dist_to_hub_km",
+                "hub_price_diff",
+                "spatial_price_gradient",
+                "sin_month",
+                "cos_month",
+                "sin_dow",
+                "cos_dow",
+                "is_peak_harvest_month",
+                "market_seasonality_deviation",
+                "price_regime_indicator"
+            ],
+            "train_years": "2019-2023",
+            "validation_year": 2024,
+            "test_year": 2025,
+            "MAE (Rs/qtl)": 139.98,
+            "RMSE (Rs/qtl)": 388.12,
+            "MAPE (%)": 1.88,
+            "sMAPE (%)": 1.9,
+            "R2": 0.994,
+            "train_duration_sec": 169.5
+        }
     }
 }
