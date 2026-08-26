@@ -64,6 +64,3 @@ Thumbs.db
 .env.*.local
 *.pem
 *.key
-# Generated research evaluation outputs
-reports/research_results/*
-!reports/research_results/.gitkeep

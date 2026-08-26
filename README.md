@@ -141,6 +141,14 @@ npm run dev
 
 ---
 
+## Research Artifacts and Paper Ownership
+
+The canonical IEEE manuscript is `reports/research_paper/croplens_ieee_paper.tex`, with its bibliography in `reports/research_paper/references.bib` and manuscript-specific figures in `reports/research_paper/figures/`. Exploratory analysis figures belong in `reports/eda_insights/`, model-evaluation figures belong in `reports/model_evaluation/`, and frozen tabular research evidence belongs in `research/artifacts/research_results/`.
+
+The evaluation figure set and manuscript figure set are maintained separately because the corresponding files are not byte-identical: the former records evaluation outputs, while the latter contains the exact assets referenced by the paper source. Generated model binaries, checkpoints, local backups, caches, logs, frontend build output, and LaTeX auxiliary files remain local and are excluded from version control.
+
+---
+
 ## 🧪 Automated Testing
 
 * **Backend Unit & Integration Tests (`pytest`):**
