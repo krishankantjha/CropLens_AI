@@ -2,6 +2,56 @@
     "project": "CropLens AI",
     "phase": "Phase 4 Deep Learning Benchmark",
     "model_architecture": "PyTorch Temporal Fusion Transformer (TFT)",
+    "target_variable": "target_next_day_modal_price",
+    "feature_columns": [
+        "arrivals_in_qtl",
+        "rainfall_mm",
+        "temp_max",
+        "temp_min",
+        "ndvi_mean",
+        "is_festive_season",
+        "price_lag_1d",
+        "price_lag_2d",
+        "price_lag_3d",
+        "price_lag_1w",
+        "price_lag_4w",
+        "price_lag_52w",
+        "price_ema_7d",
+        "price_ema_21d",
+        "price_channel_width_7d",
+        "price_velocity_7d",
+        "price_volatility_30d",
+        "price_spread",
+        "rolling_price_reversal_signal",
+        "modal_vs_midpoint_bias",
+        "commodity_price_percentile_rank",
+        "price_quality_premium",
+        "arrivals_rolling_mean_30d",
+        "arrival_ratio",
+        "arrival_velocity_7d",
+        "arrival_price_divergence_signal",
+        "temp_range",
+        "rainfall_rolling_sum_14d",
+        "rain_x_ndvi_interaction",
+        "temp_stress_days_7d",
+        "consecutive_dry_days",
+        "vegetative_stress_ratio",
+        "heat_wave_event_flag",
+        "ndvi_momentum_4w",
+        "harvest_glut_index",
+        "festival_price_anticipation_score",
+        "post_festival_demand_hangover",
+        "dist_to_hub_km",
+        "hub_price_diff",
+        "spatial_price_gradient",
+        "sin_month",
+        "cos_month",
+        "sin_dow",
+        "cos_dow",
+        "is_peak_harvest_month",
+        "market_seasonality_deviation",
+        "price_regime_indicator"
+    ],
     "tft_config": {
         "seq_len": 30,
         "d_model": 64,
@@ -28,26 +78,20 @@
         "comparison_basis": "All three models evaluated on identical 2025 out-of-sample test set"
     },
     "benchmark_comparison_2025_test_set": {
-        "Naive Persistence Baseline": {
-            "MAE": 47.95,
-            "RMSE": 95.15,
-            "MAPE": 0.93
-        },
         "Ridge Linear Baseline": {
-            "MAE": 29.77,
-            "RMSE": 59.36,
-            "MAPE": 0.6
+            "MAE": 56.58,
+            "RMSE": 113.6,
+            "MAPE": 1.11
         },
         "LightGBM P50 (Production)": {
-            "MAE": 59.58,
-            "RMSE": 212.87,
-            "MAPE": 0.78
+            "MAE": 82.0,
+            "RMSE": 225.66,
+            "MAPE": 1.28
         },
         "PyTorch TFT (Benchmark)": {
-            "MAE": 87.53,
-            "RMSE": 112.13,
-            "MAPE": 3.73
+            "MAE": 84.75,
+            "RMSE": 176.99,
+            "MAPE": 1.66
         }
-    },
-    "canonical_reconciliation_note": "Reconciled with canonical evaluation pipeline. All models evaluated on identical 2025 out-of-sample test set."
+    }
 }
