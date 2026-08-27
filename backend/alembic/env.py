@@ -1,4 +1,5 @@
 import os
+import importlib
 import sys
 from logging.config import fileConfig
 
@@ -15,7 +16,8 @@ for path in (project_root, backend_dir):
         sys.path.insert(0, path)
 
 from backend.app.db.database import Base, DATABASE_URL
-from backend.app.db.models import User, AlertSubscription, AlertLog, MarketData, WeatherData  # noqa
+importlib.import_module("backend.app.db.models")
+importlib.import_module("backend.app.db.ndvi_model")
 
 config = context.config
 

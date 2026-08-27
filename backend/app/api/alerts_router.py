@@ -4,7 +4,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from backend.app.db.database import get_db
-from backend.app.db.models import AlertSubscription, AlertLog
+from backend.app.db.models import AlertSubscription, AlertLog, User
+from backend.app.api.auth_router import get_current_user
 from backend.app.services.whatsapp_service import (
     send_whatsapp_message,
     format_advisory_message,
@@ -17,7 +18,11 @@ from backend.app.services.telegram_service import (
     get_telegram_bot_status
 )
 
-alerts_router = APIRouter(prefix="/alerts", tags=["WhatsApp & Market Alerts"])
+alerts_router = APIRouter(
+    prefix="/alerts",
+    tags=["WhatsApp & Market Alerts"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 class SendWhatsappAdvisoryRequest(BaseModel):
@@ -56,12 +61,18 @@ class TestTelegramRequest(BaseModel):
 
 
 @alerts_router.post("/send-whatsapp", status_code=status.HTTP_200_OK)
-def send_whatsapp_advisory_endpoint(req: SendWhatsappAdvisoryRequest) -> Dict[str, Any]:
+def send_whatsapp_advisory_endpoint(
+    req: SendWhatsappAdvisoryRequest,
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
     """
     Automated Direct WhatsApp Dispatcher Endpoint.
     Formats advisory and returns live dispatch details + 1-click wa.me deep-link URL.
     """
-    if not req.mobile_number:
+    requested_mobile = "".join(filter(str.isdigit, req.mobile_number))[-10:]
+    if requested_mobile != current_user.mobile_number:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You may only send alerts to your verified mobile number.")
+    if not requested_mobile:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Mobile number is required for WhatsApp dispatches."
@@ -83,11 +94,18 @@ def send_whatsapp_advisory_endpoint(req: SendWhatsappAdvisoryRequest) -> Dict[st
 
 
 @alerts_router.post("/test-whatsapp", status_code=status.HTTP_200_OK)
-def test_whatsapp_endpoint(req: TestWhatsappRequest) -> Dict[str, Any]:
+def test_whatsapp_endpoint(
+    req: TestWhatsappRequest,
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
     """
     Instant Test Trigger Endpoint ([⚡ Send Test WhatsApp Alert Now]).
     Immediately returns formatted test advisory and direct wa.me URL within 2 seconds.
     """
+    requested_mobile = "".join(filter(str.isdigit, req.mobile_number))[-10:]
+    if requested_mobile != current_user.mobile_number:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You may only send alerts to your verified mobile number.")
+
     formatted_msg = format_advisory_message(
         crop=req.crop,
         mandi=req.mandi,
@@ -105,11 +123,17 @@ def test_whatsapp_endpoint(req: TestWhatsappRequest) -> Dict[str, Any]:
 
 
 @alerts_router.post("/subscribe", status_code=status.HTTP_200_OK)
-def subscribe_alert_endpoint(req: SubscribeAlertRequest, db: Session = Depends(get_db)) -> Dict[str, Any]:
+def subscribe_alert_endpoint(
+    req: SubscribeAlertRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
     """
     Saves or updates a farmer's daily alert subscription for WhatsApp and/or Telegram in SQLite.
     """
     clean_mobile = "".join(filter(str.isdigit, req.mobile_number))[-10:]
+    if clean_mobile != current_user.mobile_number:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You may only manage subscriptions for your verified mobile number.")
     # Check if active subscription already exists for this mobile number
     existing = db.query(AlertSubscription).filter(
         AlertSubscription.mobile_number == clean_mobile,
@@ -156,7 +180,11 @@ def subscribe_alert_endpoint(req: SubscribeAlertRequest, db: Session = Depends(g
 
 
 @alerts_router.get("/subscriptions", status_code=status.HTTP_200_OK)
-def list_subscriptions_endpoint(mobile_number: Optional[str] = None, db: Session = Depends(get_db)) -> Dict[str, Any]:
+def list_subscriptions_endpoint(
+    mobile_number: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
     """Lists registered active alert subscriptions for a specific verified mobile number."""
     if not mobile_number:
         raise HTTPException(
@@ -164,6 +192,8 @@ def list_subscriptions_endpoint(mobile_number: Optional[str] = None, db: Session
             detail="Mobile number query parameter is required to view alert subscriptions."
         )
     clean_mobile = "".join(filter(str.isdigit, mobile_number))[-10:]
+    if clean_mobile != current_user.mobile_number:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You may only view subscriptions for your verified mobile number.")
     subs = db.query(AlertSubscription).filter(
         AlertSubscription.mobile_number == clean_mobile
     ).order_by(AlertSubscription.created_at.desc()).all()
@@ -178,13 +208,18 @@ def list_subscriptions_endpoint(mobile_number: Optional[str] = None, db: Session
 def delete_subscription_endpoint(
     subscription_id: int,
     mobile_number: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """Deactivates/deletes an alert subscription with optional ownership verification."""
-    query = db.query(AlertSubscription).filter(AlertSubscription.id == subscription_id)
+    query = db.query(AlertSubscription).filter(
+        AlertSubscription.id == subscription_id,
+        AlertSubscription.mobile_number == current_user.mobile_number,
+    )
     if mobile_number:
         clean_mobile = "".join(filter(str.isdigit, mobile_number))[-10:]
-        query = query.filter(AlertSubscription.mobile_number == clean_mobile)
+        if clean_mobile != current_user.mobile_number:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You may only manage subscriptions for your verified mobile number.")
     sub = query.first()
     if not sub:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found or access denied")
@@ -226,7 +261,11 @@ def dispatch_now_endpoint(request: Request) -> Dict[str, Any]:
 
 
 @alerts_router.get("/logs", status_code=status.HTTP_200_OK)
-def get_alert_logs_endpoint(limit: int = 50, db: Session = Depends(get_db)) -> Dict[str, Any]:
+def get_alert_logs_endpoint(
+    limit: int = 50,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
     """Returns recent alert dispatch history logs."""
     logs = db.query(AlertLog).order_by(AlertLog.dispatched_at.desc()).limit(limit).all()
     return {

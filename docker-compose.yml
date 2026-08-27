@@ -9,11 +9,15 @@ services:
       - "8000:8000"
     environment:
       - PORT=8000
+      - DATABASE_URL=sqlite:////app/backend/app/croplens.db
+      - MODEL_REGISTRY_PATH=/app/backend/app/models/registry.json
       - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173
       - PYTHONUNBUFFERED=1
     volumes:
       - ./data:/app/data
       - ./backend/app/croplens.db:/app/backend/app/croplens.db
+      # Provision backend/app/models on the host; model binaries stay outside Git.
+      - ./backend/app/models:/app/backend/app/models:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
