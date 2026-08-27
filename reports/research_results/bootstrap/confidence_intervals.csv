@@ -1,0 +1,2 @@
+method,block_length_days,n_bootstraps,split,group_count,random_seed,MAE_CI_95,RMSE_CI_95,MAPE_CI_95,R2_CI_95,Coverage_CI_95
+Panel-Aware Circular Block Bootstrap (7-Day Within-Series Blocks),7,1000,test,53,42,"[77.11, 87.37]","[196.46, 254.1]","[1.26, 1.31]","[0.998, 0.998]","[75.94, 77.45]"
