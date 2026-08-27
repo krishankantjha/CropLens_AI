@@ -11,8 +11,9 @@
 \usepackage{microtype}
 \usepackage{fontspec}
 \setmainfont{TeX Gyre Termes}
+\renewcommand{\IEEEkeywordsname}{Keywords}
 
-\title{CropLens AI: Leakage-Controlled Uncertainty-Aware Forecasting for Agricultural Spot Markets}
+\title{CropLens AI: APMC Market Intelligence, Supply Shock Detection \& Procurement Intelligence Platform}
 
 \author{
     \IEEEauthorblockN{Krishan Kant Jha}
@@ -52,7 +53,7 @@
 \maketitle
 
 \begin{abstract}
-Agricultural spot prices move constantly --- across commodities, markets, seasons, weather, arrivals, and demand cycles. A single point forecast can't tell a farmer or buyer what the downside risk actually looks like. This paper presents CropLens AI --- a leakage-controlled forecasting and market-intelligence system built for India's APMC markets. It combines historical prices and arrivals with weather, satellite vegetation, calendar, and spatial signals, all organized under a 47-feature contract. Targets are built one day ahead within each commodity--mandi series, chronological order is preserved, and the 2025 period is kept fully untouched as a holdout. The core forecasting model trains independent LightGBM regressors for the 10th, 50th, and 90th quantiles, fixes crossing violations through monotonic rearrangement, and calibrates the resulting interval using validation-only Mondrian CQR. The canonical benchmark compares Ridge, Naive Persistence, XGBoost, CatBoost, ARIMA, LSTM, GRU, and Temporal Fusion Transformer models under a common evaluation scope. On the frozen 2025 holdout, Ridge provides the lowest aggregate point error, whereas the LightGBM system supplies calibrated uncertainty with 79.85\% empirical coverage against an 80\% target and zero post-rearrangement crossings. The results make the case for reporting both accuracy and uncertainty together --- and subgroup, spatial, and residual checks surface weaknesses that a single pooled score would otherwise hide.
+Agricultural spot prices move constantly --- across commodities, markets, seasons, weather, arrivals, and demand cycles. A single point forecast can't tell a farmer or buyer what the downside risk actually looks like. This paper presents CropLens AI --- a leakage-controlled forecasting and market-intelligence system built for India's APMC markets. It combines historical prices and arrivals with weather, satellite vegetation, calendar, and spatial signals, all organized under a 47-feature contract. Targets are built one day ahead within each commodity--mandi series, chronological order is preserved, and the 2025 period is kept fully untouched as a holdout. The core forecasting model trains independent LightGBM regressors for the 10th, 50th, and 90th quantiles, fixes crossing violations through monotonic rearrangement, and calibrates the resulting interval using validation-only Mondrian CQR. The canonical benchmark reports Ridge, Naive Persistence, XGBoost, CatBoost, LightGBM P50, LSTM, GRU, and Temporal Fusion Transformer models under a common evaluation scope; ARIMA remains a separate series-level baseline in the implemented platform. On the frozen 2025 holdout, Ridge provides the lowest aggregate point error, whereas the LightGBM system supplies calibrated uncertainty with 79.49\% empirical coverage against an 80\% target and zero post-rearrangement crossings. The results make the case for reporting both accuracy and uncertainty together --- and subgroup, spatial, and residual checks surface weaknesses that a single pooled score would otherwise hide.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -64,9 +65,9 @@ Agricultural prices are shaped by a mix of supply, demand, weather, transport, s
 
 For many of these decisions, a single point estimate just isn't enough. A farmer deciding whether to harvest and transport a perishable crop needs to understand the potential downside price, while a procurement agency needs a realistic price range to plan budgets and storage. The same central forecast can support very different decisions depending on the width and reliability of its uncertainty interval.
 
-CropLens AI tackles this as a full software and machine-learning system, tying together data ingestion, feature construction, model training, uncertainty calibration, inference, caching, and the frontend. The system is designed around a strict separation between historical training data and live serving data. That separation matters: a model can look accurate offline and still fail in production if feature names, ordering, missing-value handling, or target definitions drift.
+CropLens AI tackles this as an end-to-end machine-learning decision-support system, tying together data ingestion, feature construction, model training, uncertainty calibration, inference, caching, and the user-facing client layer. The system is designed around a strict separation between historical training data and live serving data. That separation matters: a model can look accurate offline and still fail in production if feature names, ordering, missing-value handling, or target definitions drift.
 
-The core contribution is bringing multimodal agricultural features, multi-quantile forecasting, conformal calibration, and operational validation together into one evidence-based system. The work does not claim a new learning algorithm or state-of-the-art performance. Instead, it presents and evaluates a reproducible domain-specific pipeline in which target construction, feature contracts, chronological evaluation, and artifact validation are treated as first-class research requirements.
+The core contribution is bringing multimodal agricultural features, multi-quantile forecasting, conformal calibration, and operational validation together into one evidence-based system. The work does not claim a new learning algorithm or state-of-the-art performance. Instead, it presents and evaluates a reproducible domain-specific pipeline in which target construction, feature contracts, chronological evaluation, and evidence-package validation are treated as first-class research requirements. This leads to the guiding research question: can a leakage-controlled, uncertainty-aware, and deployment-validated agricultural forecasting pipeline provide more useful market intelligence than a point forecast alone?
 
 There are four main contributions. First, the system organizes market, weather, satellite, calendar, and spatial information into a canonical feature representation covering 10 commodities and 10 mandis. Second, it trains separate LightGBM models for the 10th, 50th, and 90th conditional quantiles and records the tuning evidence for each one. Third, it combines rearrangement and conformal calibration to produce ordered, empirically assessable intervals. And finally, it benchmarks the production model against linear, tree-based, statistical, recurrent, and attention-based approaches, while surfacing the limitations of pooled metrics and heterogeneous deployment conditions.
 
@@ -81,11 +82,11 @@ Quantile regression works by minimizing asymmetric loss to estimate a conditiona
 
 \section{System and Data Architecture}
 \subsection{End-to-End System}
-The repository runs on a FastAPI backend and a React frontend. The backend alone covers API routing, services, database models, migrations, model loading, live sync, caching, alerts, and reporting. SQLAlchemy provides database access and Alembic manages schema migrations. Redis is configured for caching and rate-limiting-related operations, while the application includes an in-memory fallback for selected development conditions.
+The implemented platform uses a FastAPI server layer and a React-based client layer. The server layer covers API routing, data services, database access, schema evolution, model loading, online data synchronization, caching, alerts, and reporting. SQLAlchemy provides database access and Alembic manages schema migrations. Redis is configured for caching and rate-limiting-related operations, while the application includes an in-memory fallback for selected development conditions.
 
-The application loads a versioned production model bundle through a model registry. The registry requires the three LightGBM quantile artifacts and metadata describing the active feature contract. Startup also validates the serving dataset. If the bundle or dataset is incomplete, the system flags a degraded state instead of falsely signaling readiness. The health endpoint reports model readiness, dataset readiness, loaded model names, feature count, and active model version.
+The application loads a versioned production model bundle through a model registry. The model loader requires the three LightGBM quantile estimates and evaluation metadata describing the active feature contract. Service initialization also validates the serving dataset. If the bundle or dataset is incomplete, the system enters a failure-safe state instead of falsely signaling readiness. The service-health interface reports model readiness, dataset readiness, loaded model names, feature count, and active model version.
 
-The frontend consumes backend responses for forecasting, alerts, procurement, analytics, and reporting. Data moves through the system in a fixed order --- observations enter the ingestion layer, canonical feature logic builds the serving features, the registry loads validated artifacts, the API generates predictions, and the frontend renders the result. This keeps the interface from quietly showing stale placeholder data.
+The user-facing client layer consumes server responses for forecasting, alerts, procurement, analytics, and reporting. Data moves through the system in a fixed order --- observations enter the ingestion layer, canonical feature logic builds the serving features, the model loader loads the validated model package, the API generates predictions, and the client layer renders the result. This keeps the interface from quietly showing stale placeholder data.
 
 \subsection{Data Scope}
 The processed dataset spans 2019--2025 across 10 commodities and 10 representative mandis. The preflight validation found 135,471 processed rows and all 47 canonical feature columns. The training pipeline reported 135,404 usable rows after strict next-day target construction, since rows missing a valid next-day target can't be used for supervised training.
@@ -97,7 +98,7 @@ The processed dataset spans 2019--2025 across 10 commodities and 10 representati
 \small
 \begin{tabular}{@{}ll@{}}
 \toprule
-Property & Repository-backed value \\
+Property & Verified study value \\
 \midrule
 Time period & 2019--2025 \\
 Commodities & 10 \\
@@ -112,7 +113,7 @@ Forecast horizon & Next calendar day \\
 \end{tabular}
 \end{table}
 
-The repository contains raw market prices, daily weather, satellite NDVI, mandi locations, and festival-calendar data, together with processed features and EDA artifacts. Historical data coverage and live-source availability aren't the same thing, and shouldn't be treated as such. A static historical record is evidence for offline training, whereas a live provider is evidence for current serving only when the required observation is actually available.
+The study uses raw market prices, daily weather, satellite NDVI, mandi locations, and festival-calendar data, together with processed features and exploratory-analysis outputs. Historical data coverage and live-source availability aren't the same thing, and shouldn't be treated as such. A static historical record is evidence for offline training, whereas a live provider is evidence for current serving only when the required observation is actually available.
 
 \begin{table}[t]
 \caption{Historical source inventory used by the feature pipeline}
@@ -142,7 +143,7 @@ For commodity--market group $g$, let $p_{g,t}$ be the observed modal price at da
 y_{g,t}=p_{g,t+1},
 \label{eq:target}
 \end{equation}
-where $t+1$ denotes the next calendar day required by the target-construction logic. The feature vector $\mathbf{x}_{g,t}$ contains only information available at the forecast cut-off. The model input order is governed by the canonical 47-feature tuple, not by automatic discovery of numeric columns. The online feature extractor combines the current observation with a history window and recomputes the same batch feature logic for the latest row. Because the contract includes a 52-week price lag, the serving history must be long enough to support the largest declared temporal dependency; a short history cannot be treated as equivalent to a complete feature vector.
+where $t+1$ denotes the next calendar day required by the target-construction logic. The feature vector $\mathbf{x}_{g,t}$ contains only information available at the forecast cut-off. The model input order is governed by the canonical 47-feature tuple, not by automatic discovery of numeric columns. The online feature-construction procedure combines the current observation with a history window and recomputes the same batch feature logic for the latest row. Because the contract includes a 52-week price lag, the serving history must be long enough to support the largest declared temporal dependency; a short history cannot be treated as equivalent to a complete feature vector.
 
 The 47 variables are grouped into twelve autoregressive price-history features, four market-microstructure and rank features, five supply-and-arrival features, twelve meteorological and satellite-NDVI features, two harvest indicators, three festival-demand features, three spatial features, and six calendar or regime features. This grouping is meant for interpretation and ablation only --- it doesn't imply the groups are statistically independent.
 
@@ -155,7 +156,7 @@ For quantile level $\alpha$, the pinball loss is
 \end{equation}
 where $u=y-\hat{q}_{\alpha}(\mathbf{x})$. CropLens AI trains separate LightGBM estimators for $\alpha\in\{0.10,0.50,0.90\}$. Each quantile gets its own independent Optuna search, tuning learning rate, tree complexity, minimum child samples, subsampling, column subsampling, and regularization.
 
-The validation partition is used for parameter selection and early stopping, while the test partition remains untouched. The implementation records the sampler seed, trial count, objective, best validation value, quantile level, and selected estimator parameters. We fix the seed at 42 and run single-threaded to keep results stable and memory use predictable. The training pipeline also writes stage checkpoints and validates checkpoint signatures, so a failure downstream doesn't force retraining of an already-completed model family. Model files and metadata are persisted immediately after the relevant family is complete, while optional diagnostics are generated later.
+The validation partition is used for parameter selection and early stopping, while the test partition remains untouched. The experimental protocol records the sampler seed, trial count, objective, best validation value, quantile level, and selected estimator parameters. We fix the seed at 42 and run single-threaded to keep results stable and memory use predictable. The training pipeline also writes stage checkpoints and validates checkpoint signatures, so a failure downstream doesn't force retraining of an already-completed model family. Serialized model parameters and evaluation metadata are persisted immediately after the relevant family is complete, while optional diagnostics are generated later.
 
 \subsection{Monotonic Rearrangement}
 Because the three quantile models train independently, their outputs can end up logically inconsistent. For each input, the raw values are rearranged so that
@@ -171,10 +172,10 @@ Let $\hat{q}^{*}_{\ell}$ and $\hat{q}^{*}_{u}$ be the rearranged lower and upper
 r_i=\max\{\hat{q}^{*}_{\ell}(\mathbf{x}_i)-y_i, y_i-\hat{q}^{*}_{u}(\mathbf{x}_i)\}.
 \label{eq:conformal}
 \end{equation}
-A calibration quantile of the validation scores expands the lower and upper limits. The implementation applies the calibration after model fitting and uses metadata to carry the resulting evidence into inference. Coverage and interval width must be measured on the held-out test period; calibration results from an outdated artifact can't be reused as final evidence.
+A calibration quantile of the validation scores expands the lower and upper limits. The implementation applies the calibration after model fitting and uses metadata to carry the resulting evidence into inference. Coverage and interval width must be measured on the held-out test period; calibration results from an earlier evaluation record can't be reused as final evidence.
 
 \subsection{Benchmark Models}
-The repository includes Ridge, XGBoost, CatBoost, ARIMA, LSTM, GRU, and TFT components. Ridge is the regularized linear baseline. XGBoost and CatBoost cover the nonlinear tabular benchmarks, and ARIMA serves as the series-level statistical baseline. LSTM, GRU, and TFT use grouped sequence windows and the corrected next-day target. Isolation Forest is used for anomaly analysis, not price prediction, while Naive Persistence is a simple reference baseline rather than a trained model.
+The implemented platform includes Ridge, XGBoost, CatBoost, ARIMA, LSTM, GRU, and TFT components. Ridge is the regularized linear baseline. XGBoost and CatBoost cover the nonlinear tabular benchmarks, and ARIMA serves as the series-level statistical baseline. LSTM, GRU, and TFT use grouped sequence windows and the corrected next-day target. Isolation Forest is used for anomaly analysis, not price prediction, while Naive Persistence is a simple reference baseline rather than a trained model.
 
 \begin{table}[t]
 \caption{Model components and declared roles}
@@ -221,7 +222,7 @@ All models share the same evaluation contract, but they aren't run as interchang
 We also keep model selection strictly separate from evidence generation. Validation data drive hyperparameter choices and conformal adjustments; the 2025 holdout is touched only for final metrics, interval coverage, subgroup summaries, and diagnostics --- never to pick between quantile levels, retune the production estimators, or revise the feature contract. That ordering matters most for uncertainty reporting: an interval can look well calibrated on a reused sample and still fail to hold on a genuinely untouched period. The frozen test is what keeps both point accuracy and risk-aware output honest.
 
 \section{Results and Discussion}
-All results in this section are taken from the formal research freeze dated 2026-08-19. The evaluation covers the untouched 2025 holdout containing 19,303 supervised rows. This frozen comparison isn't meant to declare one model the outright winner: Ridge is the strongest aggregate point forecaster, while LightGBM is retained for its quantile outputs and calibrated uncertainty layer.
+All results in this section are taken from the frozen evaluation record dated 2026-08-27. The evaluation covers the untouched 2025 holdout containing 19,240 supervised rows. This frozen comparison isn't meant to declare one model the outright winner: Ridge is the strongest aggregate point forecaster, while LightGBM is retained for its quantile outputs and calibrated uncertainty layer.
 
 \begin{table*}[t]
 \caption{Canonical 2025 out-of-sample benchmark. Errors are in INR per quintal.}
@@ -232,33 +233,33 @@ All results in this section are taken from the formal research freeze dated 2026
 \toprule
 Model & MAE & RMSE & MAPE (\%) & sMAPE (\%) & $R^2$ & MASE \\
 \midrule
-Naive persistence & 47.95 & 95.15 & 0.93 & 0.93 & 0.9996 & 0.013 \\
-Ridge regression & \textbf{29.77} & \textbf{59.36} & \textbf{0.60} & \textbf{0.60} & 0.9999 & \textbf{0.008} \\
-XGBoost & 57.16 & 198.50 & 0.82 & 0.83 & 0.9985 & 0.016 \\
-LightGBM P50 & 59.58 & 212.87 & 0.78 & 0.79 & 0.9982 & 0.016 \\
-CatBoost & 84.33 & 211.52 & 1.42 & 1.43 & 0.9983 & 0.023 \\
-TFT & 87.53 & \textbf{112.13} & 3.73 & 3.78 & 0.9910 & 0.024 \\
-GRU & 110.05 & 331.64 & 1.54 & 1.56 & 0.9960 & 0.030 \\
-LSTM & 112.98 & 327.80 & 1.53 & 1.55 & 0.9960 & 0.031 \\
+Naive persistence & 69.37 & 139.09 & 1.34 & 1.34 & 0.9993 & 1.591 \\
+Ridge regression & \textbf{56.58} & \textbf{113.60} & \textbf{1.11} & \textbf{1.11} & 0.9995 & \textbf{1.298} \\
+XGBoost & 80.40 & 219.94 & 1.29 & 1.29 & 0.9981 & 1.844 \\
+LightGBM P50 & 82.00 & 225.66 & 1.28 & 1.29 & 0.9980 & 1.881 \\
+CatBoost & 98.55 & 230.27 & 1.71 & 1.72 & 0.9979 & 2.261 \\
+TFT & 84.75 & 176.99 & 1.66 & 1.66 & -- & -- \\
+GRU & 139.98 & 388.12 & 1.88 & 1.90 & 0.9940 & -- \\
+LSTM & 115.70 & 289.46 & 2.02 & 2.04 & 0.9970 & -- \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
-Table~\ref{tab:benchmark} shows why: Ridge wins on raw point accuracy, but that's only part of the picture. Ridge achieves an MAE of INR 29.77 per quintal, compared with INR 47.95 for persistence, so the aggregate point forecast advantage belongs to the linear baseline. That fits the strong short-memory behavior of the price series, and it doesn't undercut the quantile system: Ridge does not produce the lower and upper limits required for risk-aware decisions. LightGBM P50 obtains MAE 59.58 and MAPE 0.78\%, and its principal role is the joint production of P10, P50, and P90 forecasts together with an uncertainty calibration workflow.
+Table~\ref{tab:benchmark} shows why: Ridge wins on raw point accuracy, but that's only part of the picture. Ridge achieves an MAE of INR 56.58 per quintal, compared with INR 69.37 for persistence, so the aggregate point forecast advantage belongs to the linear baseline. That fits the strong short-memory behavior of the price series, and it doesn't undercut the quantile system: Ridge does not produce the lower and upper limits required for risk-aware decisions. LightGBM P50 obtains MAE 82.00 and MAPE 1.28\%, and its principal role is the joint production of P10, P50, and P90 forecasts together with an uncertainty calibration workflow. That’s the real trade-off: use Ridge when minimizing point error is all that matters, but use LightGBM when the decision needs calibrated upper and lower risk bounds instead.
 
 The neural models here are proof-of-concept baselines, not a verdict on deep learning --- they weren't tuned nearly as extensively as the LightGBM family. TFT has the lowest RMSE among the listed neural models but a higher MAPE than the tabular point baselines, illustrating why model ranking depends on the selected loss and the distribution of price levels.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/8_model_benchmark_comparison.png}
-\caption{Repository-generated model benchmark comparison on the frozen 2025 test scope.}
+\caption{Model benchmark comparison on the frozen 2025 test scope.}
 \label{fig:benchmark}
 \end{figure}
 
 \subsection{Uncertainty Calibration and Quantile Validity}
-The uncertainty layer targets an 80\% prediction interval formed by the lower and upper quantiles. Before calibration, empirical test coverage is 78.24\% with mean prediction interval width 165.05 INR per quintal. Mondrian CQR increases coverage to 79.85\% and produces a mean width of 166.91 INR per quintal. The calibrated result lands close to the nominal target, though that's no guarantee it'll hold under future distribution shift.
+The uncertainty layer targets an 80\% prediction interval formed by the lower and upper quantiles. Before calibration, empirical test coverage is 76.69\% with mean prediction interval width 222.22 INR per quintal. Mondrian CQR increases coverage to 79.49\% and produces a mean width of 228.78 INR per quintal. The calibrated result lands close to the nominal target, though that's no guarantee it'll hold under future distribution shift.
 
-Independent quantile regressors can violate the required ordering. On the test set, 2,942 of 19,303 raw prediction triplets contain a crossing, corresponding to 15.24\%. Monotonic rearrangement reduces the post-processing count to zero. This is a structural fix, not a calibration step --- rearrangement just enforces order, while CQR separately uses held-out residuals to adjust interval width.
+Independent quantile regressors can violate the required ordering. On the test set, 652 of 19,240 raw prediction triplets contain a crossing, corresponding to 3.39\%. Monotonic rearrangement reduces the post-processing count to zero. This is a structural fix, not a calibration step --- rearrangement just enforces order, while CQR separately uses held-out residuals to adjust interval width.
 
 \begin{table}[t]
 \caption{Frozen uncertainty results on the 2025 holdout}
@@ -270,25 +271,25 @@ Independent quantile regressors can violate the required ordering. On the test s
 Quantity & Uncalibrated & Mondrian CQR \\\\
 \midrule
 Nominal coverage (\%) & 80.00 & 80.00 \\\\
-Empirical coverage (\%) & 78.24 & 79.85 \\\\
-MPIW (INR/qtl) & 165.05 & 166.91 \\\\
-Raw crossings & 2,942 & 2,942 \\\\
+Empirical coverage (\%) & 76.69 & 79.49 \\\\
+MPIW (INR/qtl) & 222.22 & 228.78 \\\\
+Raw crossings & 652 & 652 \\\\
 Post-rearrangement crossings & 0 & 0 \\\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The calibrated interval is only 1.61 percentage points wider in empirical coverage than the uncalibrated version, and its mean width grows by just 1.86 INR per quintal. That's a small, tidy adjustment within the frozen sample --- but it doesn't mean every individual subgroup hits exactly nominal coverage.
+The calibrated interval is 2.80 percentage points wider in empirical coverage than the uncalibrated version, and its mean width grows by 6.56 INR per quintal. In practical terms, the 79.49\% figure describes how often the interval contained the observed outcome across this frozen sample; it is not a probability guarantee for any individual forecast. Buyers can use the lower bound for downside planning and the upper bound for procurement-budget or inventory-risk planning. That's a small, tidy adjustment within the frozen sample --- but it doesn't mean every individual subgroup hits exactly nominal coverage.
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/6_prediction_intervals_p10_p90.png}
-\caption{Repository-generated P10--P90 prediction interval artifact for the agricultural price forecasts.}
+\caption{P10--P90 prediction interval evaluation output for the agricultural price forecasts.}
 \label{fig:intervals}
 \end{figure}
 
 \subsection{Ablation and Market-Group Behavior}
-The ablation evidence shows that price history is the dominant information source, but exogenous variables provide complementary signal. Removing price-lag and momentum features increases MAE from the full-model reference to INR 100.37 per quintal and raises MAPE to 1.53\%. Removing arrival features yields MAE 78.71 and MAPE 1.07\%, while removing festival features yields MAE 66.10 and MAPE 0.90\%. The weather-and-arrivals results need care, since removing them shifts several correlated variables at once --- they point to complementary predictive value, not causation.
+The ablation evidence shows that price history is the dominant information source, but exogenous variables provide complementary signal. Removing price-lag and momentum features increases MAE from the full-model reference of INR 82.00 per quintal to INR 116.76 and raises MAPE from 1.28\% to 1.85\%. Removing arrival features yields MAE 83.36 and MAPE 1.30\%, while removing festival features yields MAE 81.96 and MAPE 1.28\%. The weather-and-arrivals results need care, since removing them shifts several correlated variables at once --- they point to complementary predictive value, not causation.
 
 The commodity breakdown is heterogeneous. LightGBM P50 obtains its smallest errors on Maize, Paddy, Potato, and Wheat, while Chilli Red and Mustard show substantially larger errors. That lines up with what we already know --- high-volatility spice and cash-crop series tend to inflate the pooled error. The model is therefore evaluated at both aggregate and subgroup levels rather than relying on the overall score alone.
 
@@ -301,21 +302,21 @@ The commodity breakdown is heterogeneous. LightGBM P50 obtains its smallest erro
 \toprule
 Commodity & MAE & RMSE & MAPE (\%) \\
 \midrule
-Chilli Red & 421.11 & 740.49 & 1.76 \\
-Gram (Chana) & 46.93 & 74.45 & 0.69 \\
-Maize & 8.38 & 11.03 & 0.36 \\
-Mustard & 98.59 & 165.95 & 1.33 \\
-Onion & 24.45 & 34.73 & 0.86 \\
-Paddy (Dhan) & 9.61 & 13.96 & 0.35 \\
-Potato & 9.56 & 12.41 & 0.52 \\
-Soyabean & 36.22 & 49.38 & 0.61 \\
-Tomato & 39.24 & 53.25 & 1.25 \\
-Wheat & 10.02 & 14.43 & 0.35 \\
+Chilli Red & 511.36 & 769.75 & 2.21 \\
+Gram (Chana) & 69.07 & 100.38 & 1.03 \\
+Maize & 17.22 & 21.78 & 0.75 \\
+Mustard & 114.71 & 175.96 & 1.58 \\
+Onion & 47.55 & 60.70 & 1.73 \\
+Paddy (Dhan) & 17.63 & 23.13 & 0.65 \\
+Potato & 20.29 & 25.79 & 1.09 \\
+Soyabean & 62.58 & 91.85 & 1.03 \\
+Tomato & 71.16 & 90.23 & 2.31 \\
+Wheat & 17.33 & 23.02 & 0.62 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-At the spatial level, Leave-One-Mandi-Out validation reports MAE between approximately INR 25 and INR 45 per quintal for eight of ten held-out markets, while the Azadpur holdout is substantially harder with MAE INR 575.83. That shows solid spatial transfer across most markets, but also that a structurally different hub like a terminal market can break the assumptions learned elsewhere.
+At the spatial level, Leave-One-Mandi-Out validation reports MAE from INR 15.14 to INR 276.53 per quintal across the ten held-out markets. Azadpur remains the hardest holdout, with MAE INR 276.53, while Guntur, Kolkata, and Indore are also materially harder than the lowest-error markets. That shows solid spatial transfer across most markets, but also that a structurally different hub like a terminal market can break the assumptions learned elsewhere.
 
 \begin{table}[t]
 \caption{Selected Leave-One-Mandi-Out spatial results}
@@ -326,11 +327,11 @@ At the spatial level, Leave-One-Mandi-Out validation reports MAE between approxi
 \toprule
 Held-out mandi & MAE & RMSE & MAPE (\%) \\\\
 \midrule
-Agra & 32.95 & 62.44 & 0.77 \\\\
-Farrukhabad & 25.64 & 39.90 & 0.67 \\\\
-Khanna & 9.24 & 12.60 & 0.38 \\\\
-Kolkata & 121.18 & 365.21 & 1.21 \\\\
-Azadpur & 575.83 & 1200.44 & 3.25 \\\\
+Agra & 47.76 & 79.88 & 1.19 \\\\
+Farrukhabad & 40.03 & 59.30 & 1.07 \\\\
+Khanna & 15.14 & 19.49 & 0.62 \\\\
+Kolkata & 146.63 & 368.68 & 1.67 \\\\
+Azadpur & 276.53 & 653.47 & 2.25 \\\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -338,7 +339,7 @@ Azadpur & 575.83 & 1200.44 & 3.25 \\\\
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/5_shap_feature_importance.png}
-\caption{Repository-generated feature-attribution artifact for the quantile forecasting system.}
+\caption{Feature-attribution analysis for the quantile forecasting system.}
 \label{fig:shap}
 \end{figure}
 
@@ -348,7 +349,7 @@ The Diebold--Mariano suite uses Newey--West heteroskedasticity and autocorrelati
 Ljung--Box diagnostics indicate residual autocorrelation at lags 7, 14, and 30 with $p<0.001$. This pattern is consistent with periodic auction cycles and unobserved calendar or policy effects remaining in the residuals. That leftover autocorrelation is a reminder that a high $R^2$ doesn't mean the forecasting problem is fully solved. It also motivates future work on explicit hierarchical and seasonal residual models.
 
 \subsection{Operational Anomaly Triage}
-Isolation Forest is trained as an unsupervised operational filter on arrival-ratio, arrival-velocity, price-volatility, and price-spread signals. In the frozen test scope it flags 1,286 observations, or 6.66\% of the test rows. The repository evaluates these flags against proxy rules based on extreme arrival ratios or negative price velocity rather than against verified historical event labels. The resulting specificity of 96.05\%, precision proxy of 45.10\%, recall proxy of 40.47\%, and F1 proxy of 42.66\% therefore describe agreement with an operational heuristic, not supervised classification accuracy.
+Isolation Forest is trained as an unsupervised operational filter on arrival-ratio, arrival-velocity, price-volatility, and price-spread signals. In the frozen test scope it flags 1,283 observations, or 6.67\% of the test rows. The implemented platform evaluates these flags against proxy rules based on an arrival ratio above 1.5 or a seven-day price velocity below -50 INR/qtl/day rather than against verified historical event labels. The resulting specificity of 96.01\%, precision proxy of 44.58\%, recall proxy of 39.97\%, and F1 proxy of 42.15\% therefore describe agreement with an operational heuristic, not supervised classification accuracy.
 
 This matters for deployment: a flagged observation is a signal for an analyst to review, not proof a supply shock actually happened. In the interface, the anomaly channel should be displayed alongside the price interval and its provenance, allowing users to distinguish a forecast, an uncertainty estimate, and an operational warning.
 \subsection{Fairness and Spatial Transfer}
@@ -358,16 +359,16 @@ By ``fairness'' here, we mean comparable evaluation conditions --- not identical
 TreeSHAP is used for feature attribution in tree models \cite{lundberg2020local}. Feature attribution describes patterns, not causes. Grouped Granger tests can show predictive precedence, but they don't establish an actual physical mechanism \cite{granger1969investigating}. The paper should distinguish these interpretations when discussing weather, arrivals, NDVI, or festival variables.
 
 \section{Operational Integration}
-The production registry loads an active version and requires P10, P50, and P90 model artifacts together with metadata. It rejects anything incomplete or inconsistent --- a partial quantile bundle, missing feature metadata, the wrong feature order, an incorrect target declaration, or a mismatched feature count. Startup validates that the serving dataset is non-empty, has valid dates, and contains the required model columns.
+The production model loader loads an active version and requires the P10, P50, and P90 estimates together with evaluation metadata. It rejects anything incomplete or inconsistent --- a partial quantile bundle, missing feature metadata, the wrong feature order, an incorrect target declaration, or a mismatched feature count. Service initialization validates that the serving dataset is non-empty, has valid dates, and contains the required model columns.
 
-Live sync no longer invents values for weather, NDVI, price bounds, variety, or grade when the real data is missing. Incomplete live rows are skipped and logged. Cache warming requires both models and the serving dataset to be initialized. Alert dispatch similarly skips incomplete forecasts instead of sending invented prices or decisions.
+Online data synchronization no longer invents values for weather, NDVI, price bounds, variety, or grade when the real data is missing. Incomplete live rows are skipped and logged. Cache initialization requires both models and the serving dataset to be initialized. Alert dispatch similarly skips incomplete forecasts instead of sending invented prices or decisions.
 
-These controls matter because an offline metric alone doesn't prove production readiness. The final certification must verify both the model outputs and the ability of the API to load the same artifacts without entering degraded mode.
+These controls matter because an offline metric alone doesn't prove production readiness. The final certification must verify both the model outputs and the ability of the API to load the same model package without entering a failure-safe state.
 
-\subsection{Reproducibility and Artifact Certification}
-The repository treats reproducibility as an artifact property rather than only a narrative claim. The experiment manifest records the dataset path, date range, split sizes, commodity list, mandi list, feature count, target variable, forecast horizon, random seed, and evaluation rules. The claims matrix then maps each proposed scientific statement to a concrete experiment, result summary, confidence level, and allowed wording. That separation matters because a number can be technically correct and still get overinterpreted if its evaluation scope isn't made clear.
+\subsection{Reproducibility and Model Certification}
+Reproducibility is treated as a property of the evaluated model and evidence package rather than only a narrative claim. A frozen experiment record specifies the dataset scope, date range, split sizes, commodity list, mandi list, feature count, target variable, forecast horizon, random seed, and evaluation rules. A pre-specified claim--evidence mapping then links each scientific statement to a concrete experiment, result summary, confidence level, and allowed wording. That separation matters because a number can be technically correct and still get overinterpreted if its evaluation scope isn't made clear.
 
-The final model bundle contains the three quantile estimators and metadata describing the active feature contract. The registry checks that the bundle is complete and that the model version, target declaration, feature count, and feature ordering agree. It does not silently load a partial bundle as a production model. The same principle applies to serving data: the API verifies that required model columns are present and that dates are valid before generating predictions.
+The final versioned model package contains the three quantile estimators and evaluation metadata describing the active feature contract. The model loader checks that the package is complete and that the model version, target declaration, feature count, and feature ordering agree. It does not silently load a partial bundle as a production model. The same principle applies to serving data: the API verifies that required model columns are present and that dates are valid before generating predictions.
 
 \begin{table}[t]
 \caption{Certification controls and failure behavior}
@@ -382,14 +383,14 @@ Target signature & Confirms that the model predicts next-day modal price rather 
 Feature signature & Confirms the 47-feature count, names, and order used in training and inference. \\\\
 Temporal signature & Confirms the 2019--2023 training, 2024 validation, and 2025 test protocol. \\\\
 Bundle completeness & Prevents serving with only one or two quantiles. \\\\
-Checkpoint signature & Allows completed stages to resume without silently mixing incompatible artifacts. \\\\
+Checkpoint signature & Allows completed stages to resume without silently mixing incompatible model packages. \\\\
 Live-row validation & Skips incomplete upstream observations instead of fabricating weather, NDVI, or market values. \\\\
 Evidence freeze & Ensures that paper metrics are copied from one dated evaluation record. \\\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-These controls also define the boundary of the paper’s claims. A successful local compilation, model file, or API health response does not by itself establish predictive validity. Predictive claims lean on the frozen test metrics, deployment claims on successful artifact loading and serving checks, and anomaly claims on being upfront that the labels are heuristic, not ground truth. The paper consequently reports methodology, predictive evidence, and operational readiness as related but distinct forms of evidence.
+These controls also define the boundary of the paper’s claims. A successful software build, saved model, or service-health response does not by itself establish predictive validity. Predictive claims lean on the frozen test metrics, deployment claims on successful model-package loading and serving checks, and anomaly claims on being upfront that the labels are heuristic, not ground truth. The paper consequently reports methodology, predictive evidence, and operational readiness as related but distinct forms of evidence.
 
 \section{Limitations and Future Work}
 The results come with several limitations worth stating plainly. The strongest aggregate point forecast is Ridge, not the quantile LightGBM system --- the production model earns its place through uncertainty estimation and operational output, not through the lowest MAE. Relatedly, modal prices are highly persistent, which makes naive and linear baselines unusually hard to beat; performance here should be read relative to those baselines rather than against some arbitrary zero-error ideal.
@@ -401,9 +402,9 @@ LSTM, GRU, and TFT remain proof-of-concept sequence baselines, never tuned with 
 Finally, conformal calibration is estimated from historical validation data and can degrade under distribution shift. The 47-feature contract limits feature-order drift but does not remove measurement error, missingness, multicollinearity, or upstream-provider changes. Future work should evaluate online recalibration, external-market validation, hierarchical commodity--mandi models, stronger probabilistic sequence baselines, and event-labeled anomaly evaluation while preserving strict test isolation.
 
 \section{Conclusion}
-CropLens AI presents a repository-grounded framework for next-day agricultural modal-price forecasting across ten commodities and ten Indian mandis. Its core methodological contribution is bringing all of this together: a strict next-day target, an explicit 47-feature contract, chronological test isolation, independent multi-quantile LightGBM models, monotonic rearrangement, validation-only conformal calibration, and a broad benchmark and diagnostic suite.
+CropLens AI presents an empirically validated framework for next-day agricultural modal-price forecasting across ten commodities and ten Indian mandis. Its core methodological contribution is bringing all of this together: a strict next-day target, an explicit 47-feature contract, chronological test isolation, independent multi-quantile LightGBM models, monotonic rearrangement, validation-only conformal calibration, and a broad benchmark and diagnostic suite.
 
-The frozen 2025 evaluation yields an important qualified conclusion. Ridge provides the lowest aggregate point error, while LightGBM supplies the calibrated lower, median, and upper forecasts needed for uncertainty-aware decisions. The CQR interval reaches 79.85\% empirical coverage against an 80\% target, and rearrangement eliminates all observed post-processing quantile crossings. Subgroup and spatial results show meaningful but nonuniform transfer, and residual autocorrelation demonstrates that the market process retains unexplained temporal structure. These findings back up a reproducible decision-support system --- but they stop short of proving universal model superiority, causal weather effects, supervised-level anomaly detection, or generalization to crises the model has never seen.
+The frozen 2025 evaluation yields an important qualified conclusion. Ridge provides the lowest aggregate point error, while LightGBM supplies the calibrated lower, median, and upper forecasts needed for uncertainty-aware decisions. The CQR interval reaches 79.49\% empirical coverage against an 80\% target, and rearrangement eliminates all observed post-processing quantile crossings. Subgroup and spatial results show meaningful but nonuniform transfer, and residual autocorrelation demonstrates that the market process retains unexplained temporal structure. These findings back up a reproducible decision-support system --- but they stop short of proving universal model superiority, causal weather effects, supervised-level anomaly detection, or generalization to crises the model has never seen.
 \section*{Acknowledgment}
 The authors thank their mentors and faculty for guidance on agricultural data analysis, machine learning evaluation, software engineering, and scientific communication.
 
