@@ -3,6 +3,7 @@ Pydantic Schemas for CropLens AI Production API Endpoints.
 Defines strict validation for price prediction, supply shock alerts, spatial arbitrage, and analytics trends.
 """
 
+from datetime import date as Date
 from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 from backend.app.core.constants import VALID_COMMODITIES, VALID_MARKETS
@@ -17,6 +18,16 @@ class PricePredictionRequest(BaseModel):
     arrivals_in_qtl: Optional[float] = Field(None, ge=0.0, le=50000.0, description="Optional custom mandi arrival quantity in quintals", json_schema_extra={"example": 1250.0})
     rainfall_mm: Optional[float] = Field(None, ge=0.0, le=500.0, description="Optional custom daily rainfall in mm", json_schema_extra={"example": 0.0})
     temp_max: Optional[float] = Field(None, ge=-10.0, le=60.0, description="Optional custom maximum temperature in Celsius", json_schema_extra={"example": 36.5})
+
+    @field_validator("date")
+    @classmethod
+    def validate_date(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        try:
+            return Date.fromisoformat(v.strip()).isoformat()
+        except (TypeError, ValueError) as exc:
+            raise ValueError("date must use YYYY-MM-DD format.") from exc
 
     @field_validator("commodity")
     @classmethod
@@ -76,6 +87,16 @@ class MultiDayForecastRequest(BaseModel):
     market: str = Field(..., description="Target APMC mandi name", json_schema_extra={"example": "Agra"})
     start_date: Optional[str] = Field(None, description="Starting reference date (YYYY-MM-DD)", json_schema_extra={"example": "2025-06-15"})
     horizon_days: int = Field(default=7, ge=1, le=14, description="Forecast horizon in days (default 7)", json_schema_extra={"example": 7})
+
+    @field_validator("start_date")
+    @classmethod
+    def validate_start_date(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        try:
+            return Date.fromisoformat(v.strip()).isoformat()
+        except (TypeError, ValueError) as exc:
+            raise ValueError("start_date must use YYYY-MM-DD format.") from exc
 
     @field_validator("commodity")
     @classmethod

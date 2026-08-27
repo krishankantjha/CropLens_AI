@@ -3,6 +3,7 @@ test_alerts.py — Integration test suite for Dual-Channel Alert Dispatcher (Wha
 """
 
 import pytest
+import time
 from fastapi.testclient import TestClient
 from backend.app.main import app
 
@@ -11,13 +12,41 @@ from backend.app.main import app
 def client():
     """TestClient fixture with app lifespan model loading."""
     with TestClient(app) as test_client:
+        mobile = f"97{str(time.time_ns())[-8:]}"
+        response = test_client.post("/api/v1/auth/register", json={
+            "mobile_number": mobile,
+            "password": "testpassword123",
+            "full_name": "Alert Test User",
+            "role": "farmer",
+            "home_mandi": "Agra",
+            "preferred_commodity": "Potato",
+            "language": "en",
+        })
+        assert response.status_code == 201
+        test_client.headers.update({"Authorization": f"Bearer {response.json()['access_token']}"})
+        test_client.test_mobile = mobile
         yield test_client
+
+
+def test_alert_routes_require_authentication():
+    with TestClient(app) as unauthenticated:
+        response = unauthenticated.get("/api/v1/alerts/logs")
+        assert response.status_code == 401
+
+
+def test_alert_mobile_ownership_is_enforced(client: TestClient):
+    response = client.post("/api/v1/alerts/subscribe", json={
+        "mobile_number": "9812345678",
+        "crop": "Potato",
+        "mandi": "Agra",
+    })
+    assert response.status_code == 403
 
 
 def test_send_whatsapp_advisory(client: TestClient):
     """Tests POST /api/v1/alerts/send-whatsapp endpoint."""
     payload = {
-        "mobile_number": "9876543210",
+        "mobile_number": client.test_mobile,
         "crop": "Potato",
         "mandi": "Agra",
         "decision": "HOLD FOR 5 DAYS",
@@ -37,7 +66,7 @@ def test_send_whatsapp_advisory(client: TestClient):
 def test_test_whatsapp_alert(client: TestClient):
     """Tests POST /api/v1/alerts/test-whatsapp endpoint."""
     payload = {
-        "mobile_number": "9876543210",
+        "mobile_number": client.test_mobile,
         "crop": "Tomato",
         "mandi": "Azadpur",
         "lang": "en"
@@ -54,7 +83,7 @@ def test_subscribe_alert_flow(client: TestClient):
     """Tests subscription creation, retrieval, update, and deletion in SQLite."""
     # 1. Create subscription
     sub_payload = {
-        "mobile_number": "9998887776",
+        "mobile_number": client.test_mobile,
         "telegram_chat_id": "123456789",
         "channel": "both",
         "crop": "Onion",
@@ -69,7 +98,7 @@ def test_subscribe_alert_flow(client: TestClient):
     sub_id = sub_data["subscription_id"]
 
     # 2. List subscriptions
-    res_list = client.get("/api/v1/alerts/subscriptions?mobile_number=9998887776")
+    res_list = client.get(f"/api/v1/alerts/subscriptions?mobile_number={client.test_mobile}")
     assert res_list.status_code == 200
     list_data = res_list.json()
     assert list_data["total_count"] >= 1
@@ -110,7 +139,7 @@ def test_dispatch_now_and_logs(client: TestClient):
         pytest.skip("Production model bundle is required for forecast-backed alert dispatch")
     # Subscribe temporary user
     client.post("/api/v1/alerts/subscribe", json={
-        "mobile_number": "9123456780",
+        "mobile_number": client.test_mobile,
         "telegram_chat_id": "999888",
         "channel": "both",
         "crop": "Potato",

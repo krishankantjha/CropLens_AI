@@ -25,6 +25,8 @@ graph TD
 
 ### Prerequisites
 * Docker Engine 20.10+ and Docker Compose v2+ installed.
+* A provisioned production model bundle containing `registry.json`, the versioned P10/P50/P90 artifacts, `model_metadata.json`, and `isolation_forest.pkl`. These binaries are intentionally excluded from GitHub and must be supplied on the deployment host.
+* Reachable Redis in production for shared OTP storage and distributed rate limiting. The in-memory fallback is development-only.
 
 ### Quick Start (Single Command)
 To build and launch the entire CropLens AI stack in background mode:
@@ -66,6 +68,8 @@ CropLens AI is completely self-contained with no paid cloud dependencies. You ca
 
 ### Option A: Render.com (Free Web Services)
 1. **Backend Service:**
+   * Provision the model bundle outside Git and set `MODEL_REGISTRY_PATH` to its `registry.json` path. The directory containing the registry must also contain the versioned quantile artifacts and auxiliary `isolation_forest.pkl`.
+   * Set `DATABASE_URL` to the writable persistent database location for the service and set `REDIS_URL` to a reachable Redis instance.
    * Create a new **Web Service** pointing to your GitHub repository.
    * Environment: `Docker` (select root `Dockerfile`).
    * Port: `8000`.
@@ -106,7 +110,9 @@ CropLens AI is completely self-contained with no paid cloud dependencies. You ca
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Allowed CORS origins for browser security |
 | `TELEGRAM_BOT_TOKEN` | *(Optional)* | Telegram Bot API Token for live automated push alerts |
 | `JWT_SECRET_KEY` | *(Production Secret)* | Secret key for signing JWT user access tokens |
-| `DATABASE_URL` | `sqlite:///./croplens.db` | SQLAlchemy database connection string |
+| `DATABASE_URL` | `sqlite:///./backend/app/croplens.db` locally; explicit container path in Compose | SQLAlchemy database connection string |
+| `MODEL_REGISTRY_PATH` | Repository model registry by default | Optional path to a separately provisioned `registry.json` model bundle |
+| `REDIS_URL` | `redis://localhost:6379/0` | Redis endpoint; required in production |
 
 ---
 

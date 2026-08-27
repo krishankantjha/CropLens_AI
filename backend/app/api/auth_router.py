@@ -54,9 +54,14 @@ def get_current_user(authorization: Optional[str] = Header(None), db: Session = 
             detail="Missing or invalid Authorization header format. Expected 'Bearer <token>'"
         )
 
-    token = authorization.split(" ")[1]
+    token = authorization.removeprefix("Bearer ").strip()
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired JWT access token"
+        )
     payload = decode_access_token(token)
-    if not payload or "sub" not in payload:
+    if not payload or payload.get("type") != "access" or "sub" not in payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired JWT access token"

@@ -34,6 +34,17 @@ def test_user_registration_and_login():
     assert data["user"]["language"] == "hi"
 
     token = data["access_token"]
+    refresh_token = data["refresh_token"]
+
+    # Protected routes must accept access tokens only.
+    assert client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {refresh_token}"},
+    ).status_code == 401
+    assert client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": "Bearer "},
+    ).status_code == 401
 
     # 2. Attempt duplicate registration (should fail with 400)
     dup_response = client.post("/api/v1/auth/register", json=reg_payload)

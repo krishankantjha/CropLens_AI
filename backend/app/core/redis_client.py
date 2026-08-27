@@ -8,7 +8,7 @@ import time
 import logging
 import threading
 from typing import Optional, Dict, List, Any
-from backend.app.core.config import REDIS_URL
+from backend.app.core.config import ENVIRONMENT, REDIS_URL
 
 logger = logging.getLogger("croplens.redis")
 
@@ -45,6 +45,10 @@ class RedisStoreManager:
                 self._connected = True
                 logger.info("Successfully connected to Redis instance.")
             except Exception as e:
+                if ENVIRONMENT == "production":
+                    raise RuntimeError(
+                        f"Redis is required in production but could not be reached at {REDIS_URL}"
+                    ) from e
                 logger.warning(f"Could not connect to Redis at {REDIS_URL}: {e}. Falling back to in-memory store.")
                 self._connected = False
 

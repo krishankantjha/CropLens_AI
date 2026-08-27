@@ -7,6 +7,16 @@ from fastapi.testclient import TestClient
 from backend.app.main import app
 
 
+def test_forecast_rejects_ambiguous_date_format():
+    response = TestClient(app).post("/api/v1/predict/forecast", json={
+        "commodity": "Potato",
+        "market": "Agra",
+        "start_date": "27/08/2026",
+        "horizon_days": 7,
+    })
+    assert response.status_code == 422
+
+
 @pytest.fixture(scope="module")
 def client():
     """TestClient fixture with app lifespan model loading."""

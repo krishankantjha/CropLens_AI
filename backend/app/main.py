@@ -11,7 +11,7 @@ from requests.exceptions import RequestsDependencyWarning
 warnings.simplefilter('ignore', RequestsDependencyWarning)
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 import joblib
 import pandas as pd
@@ -53,7 +53,12 @@ def load_model_artifacts() -> Dict[str, Any]:
     """
     base_dir = get_base_dir()
 
-    registry_path = os.path.join(base_dir, "backend", "app", "models", "registry.json")
+    configured_registry_path = os.getenv("MODEL_REGISTRY_PATH", "").strip()
+    registry_path = configured_registry_path or os.path.join(
+        base_dir, "backend", "app", "models", "registry.json"
+    )
+    if not os.path.isabs(registry_path):
+        registry_path = os.path.abspath(os.path.join(base_dir, registry_path))
     registry = ModelRegistry(registry_path=registry_path)
     try:
         registry_artifacts = registry.load_model()
@@ -160,6 +165,7 @@ async def lifespan(app: FastAPI):
         app.state.model_version = artifacts["model_version"]
         app.state.models_loaded = True
         app.state.dataset_loaded = True
+        app.state.startup_error = None
         app.state.startup_timestamp = datetime.now(timezone.utc).isoformat()
         app.state.startup_duration_ms = round((time.time() - start_time) * 1000, 2)
 
@@ -206,12 +212,15 @@ allowed_origins_env = os.getenv("CORS_ORIGINS", "")
 if allowed_origins_env:
     allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
 else:
-    allowed_origins = [
+    allowed_origins = [] if ENVIRONMENT == "production" else [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173"
     ]
+
+if ENVIRONMENT == "production" and "*" in allowed_origins:
+    raise RuntimeError("CORS_ORIGINS must list explicit origins when production credentials are enabled")
 
 
 enable_docs = ENVIRONMENT != "production" or os.getenv("ENABLE_PRODUCTION_DOCS", "false").lower() == "true"
@@ -255,17 +264,20 @@ class HealthResponse(BaseModel):
     feature_count: int = Field(..., json_schema_extra={"example": 47})
     startup_timestamp: str = Field(...)
     startup_duration_ms: float = Field(..., json_schema_extra={"example": 120.45})
+    startup_error: Optional[str] = Field(default=None, description="Sanitized startup diagnostic when the service is degraded")
 
 
 @app.get("/", response_model=RootResponse, tags=["General"])
 def read_root() -> RootResponse:
     """Root Endpoint welcoming users and providing documentation links."""
+    models_loaded = getattr(app.state, "models_loaded", False)
+    dataset_loaded = getattr(app.state, "dataset_loaded", False)
     return RootResponse(
         name="CropLens AI: APMC Market Intelligence Platform",
         version="1.0.0",
-        status="operational",
-        documentation="/docs",
-        redoc="/redoc"
+        status="operational" if models_loaded and dataset_loaded else "degraded",
+        documentation="/docs" if enable_docs else "",
+        redoc="/redoc" if enable_docs else ""
     )
 
 
@@ -277,9 +289,12 @@ def health_check() -> HealthResponse:
     
     status_str = "healthy" if (models_loaded and dataset_loaded) else "degraded"
     
-    loaded_model_names = list(app.state.models.keys()) if app.state.models else []
-    dataset_rows = len(app.state.dataset)
-    feature_count = len(app.state.metadata.get("feature_cols", []))
+    models = getattr(app.state, "models", None) or {}
+    metadata = getattr(app.state, "metadata", None) or {}
+    dataset = getattr(app.state, "dataset", None)
+    loaded_model_names = list(models.keys())
+    dataset_rows = len(dataset) if dataset is not None else 0
+    feature_count = len(metadata.get("feature_cols", []))
 
     return HealthResponse(
         status=status_str,
@@ -290,7 +305,8 @@ def health_check() -> HealthResponse:
         dataset_rows=dataset_rows,
         feature_count=feature_count,
         startup_timestamp=getattr(app.state, "startup_timestamp", ""),
-        startup_duration_ms=getattr(app.state, "startup_duration_ms", 0.0)
+        startup_duration_ms=getattr(app.state, "startup_duration_ms", 0.0),
+        startup_error=getattr(app.state, "startup_error", None)
     )
 
 
