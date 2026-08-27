@@ -106,6 +106,8 @@ def test_telegram_bot_status(client: TestClient):
 
 def test_dispatch_now_and_logs(client: TestClient):
     """Tests POST /api/v1/alerts/dispatch-now and GET /api/v1/alerts/logs."""
+    if not getattr(app.state, "models_loaded", False):
+        pytest.skip("Production model bundle is required for forecast-backed alert dispatch")
     # Subscribe temporary user
     client.post("/api/v1/alerts/subscribe", json={
         "mobile_number": "9123456780",
