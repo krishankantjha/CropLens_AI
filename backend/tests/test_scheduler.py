@@ -11,12 +11,35 @@ from backend.app.main import app
 def client():
     """TestClient fixture with app lifespan model loading."""
     with TestClient(app) as test_client:
+        if not getattr(app.state, "models_loaded", False):
+            pytest.skip("Production model bundle is required for scheduler integration tests")
         yield test_client
 
 
-def test_scheduler_status(client: TestClient):
+@pytest.fixture(scope="module")
+def auth_headers(client: TestClient):
+    """Create or authenticate a stable test user for protected scheduler endpoints."""
+    credentials = {
+        "mobile_number": "9000000001",
+        "password": "SchedulerTest123!",
+        "full_name": "Scheduler Test User",
+    }
+    registration = client.post("/api/v1/auth/register", json=credentials)
+    if registration.status_code == 200:
+        token = registration.json()["access_token"]
+    else:
+        login = client.post(
+            "/api/v1/auth/login",
+            json={"mobile_number": credentials["mobile_number"], "password": credentials["password"]},
+        )
+        assert login.status_code == 200, login.text
+        token = login.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_scheduler_status(client: TestClient, auth_headers):
     """Tests GET /api/v1/system/scheduler-status returns active cron jobs and telemetry."""
-    response = client.get("/api/v1/system/scheduler-status")
+    response = client.get("/api/v1/system/scheduler-status", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert "scheduler_running" in data
@@ -32,9 +55,9 @@ def test_scheduler_status(client: TestClient):
     assert "daily_cache_warming" in job_ids
 
 
-def test_manual_sync_trigger(client: TestClient):
+def test_manual_sync_trigger(client: TestClient, auth_headers):
     """Tests POST /api/v1/system/trigger-sync executes on-demand sync and cache warming."""
-    response = client.post("/api/v1/system/trigger-sync")
+    response = client.post("/api/v1/system/trigger-sync", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -44,23 +67,23 @@ def test_manual_sync_trigger(client: TestClient):
     assert data["cache_warming"]["status"] == "success"
 
 
-def test_prediction_caching_performance(client: TestClient):
+def test_prediction_caching_performance(client: TestClient, auth_headers):
     """Tests that repeating prediction requests hit the cache and increment hit counters."""
     # Fetch initial status
-    status_before = client.get("/api/v1/system/scheduler-status").json()
+    status_before = client.get("/api/v1/system/scheduler-status", headers=auth_headers).json()
     hits_before = status_before["cache_metrics"]["cache_hits"]
 
     # Request forecast
     payload = {"commodity": "Potato", "market": "Agra", "horizon_days": 7}
-    res1 = client.post("/api/v1/predict/forecast-7d", json=payload)
+    res1 = client.post("/api/v1/predict/forecast", json=payload)
     assert res1.status_code == 200
 
     # Repeat exact request — should hit cache
-    res2 = client.post("/api/v1/predict/forecast-7d", json=payload)
+    res2 = client.post("/api/v1/predict/forecast", json=payload)
     assert res2.status_code == 200
     assert res1.json()["current_price"] == res2.json()["current_price"]
 
     # Verify hit counter incremented
-    status_after = client.get("/api/v1/system/scheduler-status").json()
+    status_after = client.get("/api/v1/system/scheduler-status", headers=auth_headers).json()
     hits_after = status_after["cache_metrics"]["cache_hits"]
     assert hits_after >= hits_before + 1

@@ -32,7 +32,8 @@ def db_session():
         engine.dispose()
 
 
-def test_ndvi_sync_not_configured(db_session):
+def test_ndvi_sync_not_configured(monkeypatch, db_session):
+    monkeypatch.setattr(sentinel_hub_sync, "SENTINEL_HUB_API_KEY", None)
     result = sentinel_hub_sync.fetch_live_ndvi("Agra", db=db_session)
     assert result["status"] == "not_configured"
 

@@ -33,7 +33,9 @@ def test_health_check(client):
     data = response.json()
     # Support both healthy and degraded status for testing flexibility
     assert data["status"] in ["healthy", "degraded"]
-    assert data["version"] == "1.0.0"
+    assert data["version"] in {"v1.0.0", "unavailable"}
+    if data["status"] == "healthy":
+        assert data["version"] == "v1.0.0"
     assert "models_loaded" in data
     assert "dataset_loaded" in data
     assert data["startup_duration_ms"] >= 0

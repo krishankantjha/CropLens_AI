@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Request, Query, status, Response, Depends
 
 from backend.app.schemas import (
+    PricePredictionRequest, PricePredictionResponse,
     MultiDayForecastRequest, MultiDayForecastResponse,
     SupplyShockResponse, ArbitrageResponse, AnalyticsTrendResponse
 )
@@ -32,6 +33,46 @@ from backend.app.core.constants import VALID_COMMODITIES, VALID_MARKETS
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_router)
 api_router.include_router(alerts_router)
+
+
+@api_router.post(
+    "/predict/price",
+    response_model=PricePredictionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Single-Day Price Prediction",
+    description="Generates a single-day P10/P50/P90 price forecast with optional feature overrides.",
+    tags=["Price Forecasting"]
+)
+def predict_price(req: PricePredictionRequest, request: Request) -> PricePredictionResponse:
+    return predict_price_service(
+        req=req,
+        models=request.app.state.models,
+        metadata=request.app.state.metadata,
+        dataset=request.app.state.dataset
+    )
+
+
+@api_router.post(
+    "/predict/forecast-7d",
+    response_model=MultiDayForecastResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Seven-Day Recursive Price Forecast",
+    description="Backward-compatible alias for the unified multi-day forecast endpoint.",
+    tags=["Price Forecasting"]
+)
+def predict_forecast_7d(req: MultiDayForecastRequest, request: Request) -> MultiDayForecastResponse:
+    cached = get_cached_forecast_7d(req.commodity, req.market, req.start_date)
+    if cached and cached.get("forecast_horizon_days") == req.horizon_days:
+        return MultiDayForecastResponse(**cached)
+
+    res = predict_7day_forecast_service(
+        req=req,
+        models=request.app.state.models,
+        metadata=request.app.state.metadata,
+        dataset=request.app.state.dataset
+    )
+    set_cached_forecast_7d(req.commodity, req.market, res.model_dump(), req.start_date)
+    return res
 
 
 @api_router.post(

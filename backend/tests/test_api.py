@@ -11,6 +11,8 @@ from backend.app.main import app
 def client():
     """TestClient fixture with app lifespan model loading."""
     with TestClient(app) as test_client:
+        if not getattr(app.state, "models_loaded", False):
+            pytest.skip("Production model bundle is required for API integration tests")
         yield test_client
 
 

@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 
 from backend.app.db.database import Base
 from backend.app.db.models import MarketData, WeatherData
+from backend.app.db.ndvi_model import NdviData
 from backend.app.services import agmarknet_sync, nasa_power_sync
 
 
@@ -171,6 +172,7 @@ def test_refresh_application_dataset_incorporates_persisted_live_row(monkeypatch
             solar_radiation=20.0,
         )
     )
+    db_session.add(NdviData(market="Agra", date="2026-08-06", ndvi_mean=0.62))
     db_session.commit()
 
     monkeypatch.setattr(scheduler_service, "SessionLocal", lambda: db_session)
