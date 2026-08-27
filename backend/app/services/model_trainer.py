@@ -27,7 +27,6 @@ from sklearn.metrics import mean_absolute_percentage_error, root_mean_squared_er
 from statsmodels.tsa.stattools import grangercausalitytests, adfuller, kpss
 from statsmodels.stats.multitest import multipletests
 from statsmodels.regression.linear_model import OLS
-from scipy import stats
 
 import optuna
 import shap
@@ -255,13 +254,6 @@ class ModelTrainer:
         self.df = self.df[self.df[self.target_col].notna()].copy()
         if self.df.empty:
             raise ValueError('No valid next-calendar-day targets remain after target construction.')
-
-        # Exclude metadata and all target/source columns from model features.
-        metadata_cols = [
-            'state', 'district', 'market', 'commodity', 'variety',
-            'market_id', 'harvest_season_type', 'festival_name', 'date',
-            'latitude', 'longitude', 'modal_price', 'min_price', 'max_price'
-        ]
 
         unexpected_contract = [c for c in self.model_feature_cols if c not in self.df.columns]
         if unexpected_contract:
@@ -641,7 +633,6 @@ class ModelTrainer:
         t0 = time.time()
         cb = CatBoostRegressor(iterations=300, learning_rate=0.08, depth=6, verbose=0, random_seed=42)
         cb.fit(X_tr_imp, self.y_train)
-        t_cb_fit = (time.time() - t0) * 1000
 
         t0 = time.time()
         cb_preds = cb.predict(X_te_imp)
@@ -666,7 +657,6 @@ class ModelTrainer:
         t0 = time.time()
         xgb = XGBRegressor(n_estimators=300, learning_rate=0.08, max_depth=6, random_state=42)
         xgb.fit(X_tr_imp, self.y_train)
-        t_xgb_fit = (time.time() - t0) * 1000
 
         t0 = time.time()
         xgb_preds = xgb.predict(X_te_imp)
@@ -754,7 +744,6 @@ class ModelTrainer:
 
         imputer = SimpleImputer(strategy='median')
         X_train_shock = imputer.fit_transform(self.X_train[shock_features])
-        X_test_shock = imputer.transform(self.X_test[shock_features])
 
         iso_forest = IsolationForest(
             n_estimators=150,
@@ -774,17 +763,15 @@ class ModelTrainer:
         flagged_pct = float((flagged_anomalies / total_test_rows) * 100)
 
         print("Isolation Forest Unsupervised Summary (2025 Test Set):")
-        print(f"- Contamination parameter: 0.05 (5%)")
+        print("- Contamination parameter: 0.05 (5%)")
         print(f"- Flagged supply shock anomalies: {flagged_anomalies} out of {total_test_rows} days ({flagged_pct:.2f}%)")
 
         # Operational heuristic proxy evaluation disclosure
         proxy_label = ((self.X_test['arrival_ratio'] > 1.5) | (self.X_test['price_velocity_7d'] < -50)).astype(int)
         predicted_label = (test_preds == -1).astype(int)
 
-        tp = np.sum((proxy_label == 1) & (predicted_label == 1))
         tn = np.sum((proxy_label == 0) & (predicted_label == 0))
         fp = np.sum((proxy_label == 0) & (predicted_label == 1))
-        fn = np.sum((proxy_label == 1) & (predicted_label == 0))
 
         specificity = float(tn / (tn + fp) * 100) if (tn + fp) > 0 else 0.0
         precision = float(precision_score(proxy_label, predicted_label, zero_division=0) * 100)

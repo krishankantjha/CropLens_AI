@@ -2,7 +2,7 @@ import os
 import requests
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 import holidays
 
 # Configure target file paths for saving raw datasets

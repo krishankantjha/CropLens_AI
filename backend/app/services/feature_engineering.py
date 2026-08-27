@@ -335,7 +335,6 @@ def _compute_weather_features(df: pd.DataFrame) -> pd.DataFrame:
     ).fillna(0).astype(int)
 
     # Calculate 4 week crop greenness momentum
-    ndvi_lag_28 = df.groupby(["district"])["ndvi_mean"].shift(28)
     ndvi_lag_1 = df.groupby(["district"])['ndvi_mean'].shift(1)
     ndvi_lag_29 = df.groupby(["district"])['ndvi_mean'].shift(29)
     df["ndvi_momentum_4w"] = ndvi_lag_1 - ndvi_lag_29

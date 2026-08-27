@@ -7,7 +7,7 @@ Backed by Redis (with robust in-memory fallback) for OTP storage and distributed
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 import secrets
-from typing import Optional, Dict, Any, List
+from typing import Optional
 
 from backend.app.db.database import get_db
 from backend.app.db.models import User

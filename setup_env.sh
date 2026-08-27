@@ -13,14 +13,5 @@ if [ -f "backend/.env.example" ]; then
     fi
 fi
 
-# 2. Setup Frontend .env
-if [ -f "frontend/.env.example" ]; then
-    if [ ! -f "frontend/.env" ]; then
-        cp frontend/.env.example frontend/.env
-        echo "[✓] Created frontend/.env"
-    else
-        echo "[!] frontend/.env already exists. Skipping."
-    fi
-fi
 
-echo -e "\nSetup Complete! Now open the .env files and paste your API keys."
+echo -e "\nSetup Complete! Review backend/.env and add any required secrets."

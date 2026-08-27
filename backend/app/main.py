@@ -5,7 +5,6 @@ Exposes root documentation and health check endpoints.
 """
 
 import os
-import json
 import time
 import warnings
 from requests.exceptions import RequestsDependencyWarning
@@ -17,7 +16,7 @@ from typing import Dict, Any, List
 import joblib
 import pandas as pd
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -131,6 +130,10 @@ async def lifespan(app: FastAPI):
             from alembic.config import Config
             from alembic import command
             alembic_cfg = Config(alembic_ini_path)
+            alembic_cfg.set_main_option(
+                "script_location",
+                os.path.join(os.path.dirname(alembic_ini_path), "alembic")
+            )
             from backend.app.db.database import DATABASE_URL
             alembic_cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
             try:
@@ -148,7 +151,6 @@ async def lifespan(app: FastAPI):
                     raise migration_error
         else:
             from backend.app.db.database import engine, Base
-            from backend.app.db.models import User
             Base.metadata.create_all(bind=engine)
 
         artifacts = load_model_artifacts()
@@ -162,7 +164,7 @@ async def lifespan(app: FastAPI):
         app.state.startup_duration_ms = round((time.time() - start_time) * 1000, 2)
 
         # Initialize and start APScheduler background worker
-        from backend.app.services.scheduler_service import init_scheduler, warm_prediction_cache, trigger_manual_sync, scheduler as bg_scheduler
+        from backend.app.services.scheduler_service import init_scheduler, warm_prediction_cache, trigger_manual_sync
         init_scheduler(app)
         print("[INFO] Initializing startup live-data synchronization...")
         try:

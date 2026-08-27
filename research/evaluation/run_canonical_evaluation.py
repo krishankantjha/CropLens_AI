@@ -12,7 +12,6 @@ and exports all structured research artifacts alongside RESEARCH_FREEZE.md.
 import os
 import sys
 import json
-import time
 import joblib
 import warnings
 import datetime
@@ -21,13 +20,8 @@ import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import seaborn as sns
 
-import torch
-import lightgbm as lgb
 from sklearn.linear_model import Ridge
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from statsmodels.tsa.stattools import adfuller, kpss, acf
 
 # Add repository and backend directories to sys.path for both module and
@@ -42,7 +36,6 @@ for import_root in (BASE_DIR, BACKEND_DIR):
 
 from research.evaluation.metrics import (
     calculate_point_metrics,
-    calculate_quantile_metrics,
     calculate_diebold_mariano,
     calculate_ljung_box
 )
@@ -528,12 +521,9 @@ def run_canonical_evaluation():
     # Price-Change Model Experiment (Experiment B: Predicting Delta y)
     print("  Training Experiment B (Price-Change Model: Delta_y(t+1) = y(t+1) - y(t))...")
     delta_y_train = y_train - df.loc[train_mask, 'price_lag_1d'].values
-    delta_y_val = y_val - df.loc[val_mask, 'price_lag_1d'].values
-    delta_y_test = y_test - df.loc[test_mask, 'price_lag_1d'].values
 
     # Clean NaNs in delta if any
     valid_tr = ~np.isnan(delta_y_train)
-    valid_te = ~np.isnan(delta_y_test)
 
     m_delta = Ridge(alpha=10.0, random_state=42)
     m_delta.fit(X_train.loc[valid_tr].fillna(X_train.median()), delta_y_train[valid_tr])
@@ -905,9 +895,9 @@ def run_canonical_evaluation():
         },
         {
             'Claim': 'Model demonstrates spatial generalization across Indian agricultural markets',
-            'Evidence': 'Leave-One-Mandi-Out Spatial CV demonstrates MAE of Rs 25-45/qtl across 8 of 10 holdout mandis.',
+            'Evidence': 'Leave-One-Mandi-Out Spatial CV reports MAE from Rs 15.14 to Rs 276.53/qtl across all 10 held-out mandis.',
             'Metric/Experiment': 'Leave-One-Mandi-Out (LOMO) Spatial CV',
-            'Result': 'Solid spatial transfer for 8 secondary/primary mandis; expected degradation on Azadpur terminal hub (Rs 575/qtl).',
+            'Result': 'Spatial transfer is nonuniform: Khanna is the lowest-error holdout at Rs 15.14/qtl, while Azadpur is the hardest at Rs 276.53/qtl.',
             'Confidence': 'High',
             'Allowed in Paper?': 'Yes'
         },

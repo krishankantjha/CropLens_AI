@@ -64,3 +64,14 @@ Thumbs.db
 .env.*.local
 *.pem
 *.key
+
+# Local audit, research, and training artifacts
+.ruff_cache/
+.mypy_cache/
+.vite/
+local_*/
+backend/app/models/.checkpoints/
+backend/app/models/registry.json
+backend/app/models/v1.0.0/
+reports/research_results/RESEARCH_FREEZE.md
+research/artifacts/research_results/RESEARCH_FREEZE.md

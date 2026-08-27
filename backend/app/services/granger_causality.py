@@ -5,7 +5,6 @@ Runs Granger causality tests using statsmodels between weather/arrivals and whol
 
 import os
 import pandas as pd
-import numpy as np
 
 
 def run_granger_causality_test(data_path: str = None, max_lag: int = 7) -> dict:

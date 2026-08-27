@@ -6,7 +6,6 @@ NASA weather observations, and MODIS NDVI satellite series across 8 Indian state
 """
 
 import os
-import datetime
 import numpy as np
 import pandas as pd
 

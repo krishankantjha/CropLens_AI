@@ -1,4 +1,0 @@
-model,target_variable,features_used,sequence_length_days,hidden_units,num_layers,dropout,learning_rate,loss_function,batch_size,optimizer,random_seed,tuning_scope,research_classification,d_model,num_heads
-PyTorch 2-Layer LSTM,target_next_day_modal_price,47,7,64.0,2.0,0.15,0.005,Huber Loss,256,Adam,42,Fixed validation prototype,Proof-of-Concept Sequence Baseline,,
-PyTorch 2-Layer GRU,target_next_day_modal_price,47,7,64.0,2.0,0.15,0.005,Huber Loss,256,Adam,42,Fixed validation prototype,Proof-of-Concept Sequence Baseline,,
-PyTorch Temporal Fusion Transformer (TFT),target_next_day_modal_price,47,30,,,0.1,0.001,Huber / MSE Loss Selection on 2024 Val,64,AdamW,42,Validation selection between MSE and Huber,Proof-of-Concept Sequence Baseline,64.0,4.0
