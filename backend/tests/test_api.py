@@ -17,6 +17,14 @@ def test_forecast_rejects_ambiguous_date_format():
     assert response.status_code == 422
 
 
+def test_forecast_returns_service_unavailable_without_runtime_bundle():
+    response = TestClient(app).get(
+        "/api/v1/predict/forecast?commodity=Potato&market=Agra&horizon=7"
+    )
+    assert response.status_code == 503
+    assert "production model bundle" in response.json()["detail"]
+
+
 @pytest.fixture(scope="module")
 def client():
     """TestClient fixture with app lifespan model loading."""
