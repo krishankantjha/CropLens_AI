@@ -1568,7 +1568,8 @@ class ModelTrainer:
                 'val_rows_2024': self.X_val.shape[0],
                 'test_rows_2025': self.X_test.shape[0]
             },
-            'target_variable': 'modal_price at t+1 (target_next_day_modal_price)',
+            'target_variable': self.target_col,
+            'target_description': 'modal_price at t+1 (next calendar day)',
             'forecast_horizon_days': self.forecast_horizon_days,
             'feature_contract_version': 'phase1-explicit-v1',
             'feature_count': len(self.feature_cols),
