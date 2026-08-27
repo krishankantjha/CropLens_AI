@@ -45,7 +45,11 @@ class ModelRegistry:
 
     def get_active_version(self) -> str:
         """Returns the current production model version string."""
-        return os.getenv("PROD_MODEL_VERSION", self._registry_cache.get("active_version", "v1.0.0"))
+        return (
+            os.getenv("PROD_MODEL_VERSION")
+            or self._registry_cache.get("active_version")
+            or "v1.0.0"
+        )
 
     def load_model(self, version: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -58,7 +62,15 @@ class ModelRegistry:
         if not ver_info:
             raise FileNotFoundError(f"Model version {ver!r} is not registered in {self.registry_path}")
 
-        ver_path = os.path.join(self.models_dir, ver_info.get("path", ver))
+        configured_path = ver_info.get("path", ver)
+        ver_path = os.path.abspath(os.path.join(self.models_dir, configured_path))
+        models_root = os.path.abspath(self.models_dir)
+        try:
+            within_models_root = os.path.commonpath([ver_path, models_root]) == models_root
+        except ValueError:
+            within_models_root = False
+        if not within_models_root:
+            raise ValueError(f"Model version {ver} resolves outside the model registry root")
         
         artifacts = {
             "version": ver,
