@@ -1,0 +1,16 @@
+feature,mean_shap_value
+price_lag_1d,1833.1381
+price_ema_7d,870.2221
+price_lag_2d,432.1495
+price_ema_21d,66.5528
+price_lag_3d,60.6741
+price_lag_1w,41.6078
+price_velocity_7d,31.69
+rolling_price_reversal_signal,14.262
+commodity_price_percentile_rank,11.4309
+price_lag_52w,9.5334
+is_peak_harvest_month,7.2965
+price_channel_width_7d,7.1112
+price_lag_4w,6.2417
+price_regime_indicator,5.3065
+price_spread,4.7708
