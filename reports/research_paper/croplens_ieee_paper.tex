@@ -21,7 +21,7 @@
         \textit{Department of Information Technology}\\
         \textit{ABES Engineering College}\\
         Ghaziabad, India\\
-        krishankant4019@gmail.com
+        jhakrishankant89@gmail.com
     }
     \and
     \IEEEauthorblockN{Hemant Raghav}
@@ -65,7 +65,7 @@ Agricultural prices are shaped by a mix of supply, demand, weather, transport, s
 
 For many of these decisions, a single point estimate just isn't enough. A farmer deciding whether to harvest and transport a perishable crop needs to understand the potential downside price, while a procurement agency needs a realistic price range to plan budgets and storage. The same central forecast can support very different decisions depending on the width and reliability of its uncertainty interval.
 
-CropLens AI tackles this as an end-to-end machine-learning decision-support system, tying together data ingestion, feature construction, model training, uncertainty calibration, inference, caching, and the user-facing client layer. The system is designed around a strict separation between historical training data and live serving data. That separation matters: a model can look accurate offline and still fail in production if feature names, ordering, missing-value handling, or target definitions drift.
+CropLens AI tackles this as an end-to-end machine-learning decision-support system, tying together data ingestion, feature construction, model training, uncertainty calibration, inference, caching, alerts, reporting, and a documented API boundary. The current certified audit baseline is backend-first; the user-facing client is being rebuilt separately against that verified contract. The system is designed around a strict separation between historical training data and live serving data. That separation matters: a model can look accurate offline and still fail in production if feature names, ordering, missing-value handling, or target definitions drift.
 
 The core contribution is bringing multimodal agricultural features, multi-quantile forecasting, conformal calibration, and operational validation together into one evidence-based system. The work does not claim a new learning algorithm or state-of-the-art performance. Instead, it presents and evaluates a reproducible domain-specific pipeline in which target construction, feature contracts, chronological evaluation, and evidence-package validation are treated as first-class research requirements. This leads to the guiding research question: can a leakage-controlled, uncertainty-aware, and deployment-validated agricultural forecasting pipeline provide more useful market intelligence than a point forecast alone?
 
@@ -82,11 +82,11 @@ Quantile regression works by minimizing asymmetric loss to estimate a conditiona
 
 \section{System and Data Architecture}
 \subsection{End-to-End System}
-The implemented platform uses a FastAPI server layer and a React-based client layer. The server layer covers API routing, data services, database access, schema evolution, model loading, online data synchronization, caching, alerts, and reporting. SQLAlchemy provides database access and Alembic manages schema migrations. Redis is configured for caching and rate-limiting-related operations, while the application includes an in-memory fallback for selected development conditions.
+The implemented platform uses a FastAPI server layer with a documented client-facing API. The server layer covers API routing, data services, database access, schema evolution, model loading, online data synchronization, caching, alerts, and reporting. SQLAlchemy provides database access and Alembic manages schema migrations. Redis is configured for caching and rate-limiting-related operations, while the application includes an in-memory fallback for selected development conditions.
 
 The application loads a versioned production model bundle through a model registry. The model loader requires the three LightGBM quantile estimates and evaluation metadata describing the active feature contract. Service initialization also validates the serving dataset. If the bundle or dataset is incomplete, the system enters a failure-safe state instead of falsely signaling readiness. The service-health interface reports model readiness, dataset readiness, loaded model names, feature count, and active model version.
 
-The user-facing client layer consumes server responses for forecasting, alerts, procurement, analytics, and reporting. Data moves through the system in a fixed order --- observations enter the ingestion layer, canonical feature logic builds the serving features, the model loader loads the validated model package, the API generates predictions, and the client layer renders the result. This keeps the interface from quietly showing stale placeholder data.
+The API exposes responses for forecasting, alerts, procurement, analytics, and reporting, and the replacement client is intended to consume those responses directly. Data moves through the system in a fixed order --- observations enter the ingestion layer, canonical feature logic builds the serving features, the model loader loads the validated model package, and the API generates predictions. This boundary prevents a client from quietly showing stale placeholder data.
 
 \subsection{Data Scope}
 The processed dataset spans 2019--2025 across 10 commodities and 10 representative mandis. The preflight validation found 135,471 processed rows and all 47 canonical feature columns. The training pipeline reported 135,404 usable rows after strict next-day target construction, since rows missing a valid next-day target can't be used for supervised training.
