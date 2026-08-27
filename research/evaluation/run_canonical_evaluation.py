@@ -126,25 +126,14 @@ def run_canonical_evaluation():
     if df['date'].isna().any():
         raise ValueError('Evaluation dataset contains invalid dates.')
     df = df.sort_values(['market', 'commodity', 'date']).reset_index(drop=True)
+    duplicate_count = int(df.duplicated(['market', 'commodity', 'date']).sum())
+    if duplicate_count:
+        raise ValueError(
+            f'Evaluation dataset contains {duplicate_count} duplicate market-commodity-date rows.'
+        )
 
-    feature_cols = [
-        'arrivals_in_qtl', 'rainfall_mm', 'temp_max', 'temp_min', 'ndvi_mean',
-        'is_festive_season', 'price_lag_1d', 'price_lag_2d', 'price_lag_3d',
-        'price_lag_1w', 'price_lag_4w', 'price_lag_52w', 'price_ema_7d',
-        'price_ema_21d', 'price_channel_width_7d', 'price_velocity_7d',
-        'price_volatility_30d', 'price_spread', 'rolling_price_reversal_signal',
-        'modal_vs_midpoint_bias', 'commodity_price_percentile_rank',
-        'price_quality_premium', 'arrivals_rolling_mean_30d', 'arrival_ratio',
-        'arrival_velocity_7d', 'arrival_price_divergence_signal', 'temp_range',
-        'rainfall_rolling_sum_14d', 'rain_x_ndvi_interaction',
-        'temp_stress_days_7d', 'consecutive_dry_days', 'vegetative_stress_ratio',
-        'heat_wave_event_flag', 'ndvi_momentum_4w', 'harvest_glut_index',
-        'festival_price_anticipation_score', 'post_festival_demand_hangover',
-        'dist_to_hub_km', 'hub_price_diff', 'spatial_price_gradient',
-        'sin_month', 'cos_month', 'sin_dow', 'cos_dow',
-        'is_peak_harvest_month', 'market_seasonality_deviation',
-        'price_regime_indicator',
-    ]
+    from backend.app.services.canonical_features import MODEL_FEATURE_COLUMNS
+    feature_cols = list(MODEL_FEATURE_COLUMNS)
     missing_features = sorted(set(feature_cols).difference(df.columns))
     if missing_features:
         raise ValueError('Evaluation dataset is missing feature contract columns: ' + ', '.join(missing_features))
@@ -553,7 +542,7 @@ def run_canonical_evaluation():
             'rmse_rs_qtl': m_delta_point['RMSE (Rs/qtl)'],
             'mape_pct': m_delta_point['MAPE (%)'],
             'r2': m_delta_point['R2'],
-            'research_note': 'Stationary difference formulation achieves near-identical MAE (Rs 29.80 vs Rs 29.77/qtl).'
+            'research_note': f"Stationary difference formulation MAE is Rs {m_delta_point['MAE (Rs/qtl)']:.2f}/qtl versus Rs {m_raw_point['MAE (Rs/qtl)']:.2f}/qtl for the raw-price formulation."
         },
         {
             'formulation': 'Zero-Change Persistence Baseline (y_hat_{t+1} = y_t)',
@@ -697,7 +686,7 @@ def run_canonical_evaluation():
             'test_2025_coverage_pct': round(cal_cov_split, 2),
             'target_coverage_pct': 80.0,
             'test_2025_mpiw_rs_qtl': round(cal_mpiw_split, 2),
-            'methodological_note': 'Proves CQR calibration remains rock-solid (79.91% vs 79.85%) even on isolated subsplit.'
+            'methodological_note': f"Isolated split coverage is {cal_cov_split:.2f}% versus {cal_cov_full:.2f}% on the full calibration design."
         }
     ]
     pd.DataFrame(cqr_split_analysis).to_csv(os.path.join(results_dir, "uncertainty", "cqr_split_independence.csv"), index=False)
@@ -858,60 +847,72 @@ def run_canonical_evaluation():
     with open(os.path.join(results_dir, "experiment_manifest.json"), 'w') as f:
         json.dump(manifest, f, indent=4)
 
-    # 13. Create Research Claims Matrix (PHASE 10)
+    # 13. Create Research Claims Matrix
     print("\n12. Generating Research Claims Matrix...")
+    comparison_by_model = master_df.set_index('Model').to_dict('index')
+    ridge_claim = comparison_by_model.get('Ridge Regression', {})
+    lgb_claim = comparison_by_model.get('LightGBM P50', {})
+    improved = comm_breakdown_df[comm_breakdown_df['mae_improvement_pct'] > 0]
+    improved_names = ', '.join(improved['commodity'].tolist())
+    improved_min = float(improved['mae_improvement_pct'].min()) if not improved.empty else 0.0
+    improved_max = float(improved['mae_improvement_pct'].max()) if not improved.empty else 0.0
+    stored_granger = metrics_dict.get('granger_causality', {}).get('results', {}) if 'metrics_dict' in locals() else {}
+    granger_values = {
+        key: float(value.get('fdr_adjusted_significant_percentage', np.nan))
+        for key, value in stored_granger.items()
+    }
     claims = [
         {
             'Claim': 'LightGBM model outperforms Naive persistence on majority of individual commodities',
-            'Evidence': 'LightGBM P50 achieves 20.3% to 46.6% lower MAE than persistence across 7 of 10 individual commodity markets (Potato, Maize, Onion, Paddy, Tomato, Soyabean, Wheat).',
+            'Evidence': f"LightGBM P50 improves MAE over persistence in {len(improved)} of {len(comm_breakdown_df)} commodities, with observed improvements from {improved_min:.2f}% to {improved_max:.2f}% ({improved_names}).",
             'Metric/Experiment': 'Per-Commodity Out-of-Sample Benchmark (2025)',
-            'Result': '7 of 10 commodities show substantial gain; Aggregate MAE is higher due to spice/cash crop outliers (Chilli Red/Mustard).',
+            'Result': f"{len(improved)} of {len(comm_breakdown_df)} commodities show a positive MAE improvement; aggregate behavior is reported from the current breakdown.",
             'Confidence': 'High',
             'Allowed in Paper?': 'Yes (with commodity-level breakdown)'
         },
         {
             'Claim': 'Ridge Linear Regression achieves lowest aggregate point forecast error',
-            'Evidence': 'Ridge achieves MAE of Rs 29.77/qtl and RMSE of Rs 59.36/qtl on the 2025 test set, significantly outperforming tree ensembles on squared error loss.',
+            'Evidence': f"Ridge achieves MAE of Rs {ridge_claim.get('MAE (Rs/qtl)', float('nan')):.2f}/qtl and RMSE of Rs {ridge_claim.get('RMSE (Rs/qtl)', float('nan')):.2f}/qtl on the 2025 test set.",
             'Metric/Experiment': 'Canonical Model Comparison & Diebold-Mariano Tests',
-            'Result': 'Ridge MAE = Rs 29.77/qtl vs LightGBM Rs 59.58/qtl (DM stat = -20.88, p < 0.001).',
+            'Result': f"Ridge MAE = Rs {ridge_claim.get('MAE (Rs/qtl)', float('nan')):.2f}/qtl versus LightGBM P50 Rs {lgb_claim.get('MAE (Rs/qtl)', float('nan')):.2f}/qtl; the paired DM result is stored in the statistical-test artifact.",
             'Confidence': 'High',
             'Allowed in Paper?': 'Yes (Reported honestly as linear point-forecast baseline)'
         },
         {
             'Claim': 'Multi-source features provide incremental predictive power',
-            'Evidence': 'Feature Ablation: Removing arrivals increases MAE by +32.1%; removing festivals increases MAE by +10.9%; removing price lags increases MAE by +68.5%.',
+            'Evidence': 'Feature-ablation metrics are copied from the current model metadata and exported with the canonical evaluation run.',
             'Metric/Experiment': '7-Way Feature Ablation Study',
-            'Result': 'Price history dominates, but arrivals, festivals, and weather provide meaningful complementary accuracy.',
+            'Result': 'The ablation ranking and effect sizes are defined by the current evidence artifact; no historical constants are embedded here.',
             'Confidence': 'High',
             'Allowed in Paper?': 'Yes'
         },
         {
             'Claim': 'Prediction intervals achieve nominal 80% coverage via Conformal Quantile Regression',
-            'Evidence': 'Mondrian CQR calibrated coverage is 79.85% on the untouched 2025 test set (within 0.15% of nominal 80.0% target) with an MPIW of Rs 166.91/qtl.',
+            'Evidence': f"Mondrian CQR calibrated coverage is {cal_cov_full:.2f}% on the untouched 2025 test set against the nominal 80.0% target, with MPIW of Rs {cal_mpiw_full:.2f}/qtl.",
             'Metric/Experiment': 'Conformalized Quantile Regression (CQR)',
-            'Result': '79.85% Empirical Coverage on 2025 Test Set.',
+            'Result': f"{cal_cov_full:.2f}% empirical coverage on the 2025 test set.",
             'Confidence': 'High',
             'Allowed in Paper?': 'Yes'
         },
         {
             'Claim': 'Model demonstrates spatial generalization across Indian agricultural markets',
-            'Evidence': 'Leave-One-Mandi-Out Spatial CV reports MAE from Rs 15.14 to Rs 276.53/qtl across all 10 held-out mandis.',
+            'Evidence': 'Leave-One-Mandi-Out Spatial CV reports the computed MAE range across all held-out mandis in the current evaluation artifact.',
             'Metric/Experiment': 'Leave-One-Mandi-Out (LOMO) Spatial CV',
-            'Result': 'Spatial transfer is nonuniform: Khanna is the lowest-error holdout at Rs 15.14/qtl, while Azadpur is the hardest at Rs 276.53/qtl.',
+            'Result': 'Spatial transfer is nonuniform; the current per-mandi values are retained in the LOMO evidence artifact.',
             'Confidence': 'High',
             'Allowed in Paper?': 'Yes'
         },
         {
             'Claim': 'Price series non-stationarity is verified and addressed via lag differences/EMAs',
-            'Evidence': 'ADF and KPSS confirm unit roots in price levels. Price-change model (Experiment B) confirms delta-prediction achieves near-identical MAE (Rs 29.80 vs Rs 29.77/qtl).',
+            'Evidence': 'ADF, KPSS, and the price-change diagnostic results are reported from the current evaluation run without hardcoded metric values.',
             'Metric/Experiment': 'Stationarity Diagnostic & Price-Change Experiment',
-            'Result': 'Raw price tree models with lag levels and velocity features implicitly operate on difference momentum.',
+            'Result': 'The canonical raw-price contract is retained after the current stationarity and price-change diagnostics.',
             'Confidence': 'High',
             'Allowed in Paper?': 'Yes'
         },
         {
             'Claim': 'Exogenous agricultural drivers share Granger-predictive association with modal prices',
-            'Evidence': 'Arrivals significant in 100.0%, Max Temp in 92.45%, Rainfall in 64.15% under Benjamini-Hochberg FDR correction at alpha=0.05.',
+            'Evidence': f"FDR-adjusted grouped Granger significance rates are computed from the current run: arrivals {granger_values.get('arrivals_in_qtl', float('nan')):.2f}%, maximum temperature {granger_values.get('temp_max', float('nan')):.2f}%, and rainfall {granger_values.get('rainfall_mm', float('nan')):.2f}%.",
             'Metric/Experiment': 'Grouped Granger Causality with BH-FDR Correction',
             'Result': 'Empirically supported statistical association (not physical causal proof).',
             'Confidence': 'High',
@@ -1054,10 +1055,10 @@ def run_canonical_evaluation():
 
 ## 4. Probabilistic Uncertainty & Conformal Coverage
 - **Target Nominal Coverage:** 80.00%
-- **Uncalibrated Empirical Coverage:** 78.24% (MPIW: Rs 165.05/qtl)
-- **Mondrian CQR Calibrated Coverage:** **79.85%** (MPIW: Rs 166.91/qtl)
-- **Raw Quantile Crossings:** 2,942 (15.24%)
-- **Post-Rearrangement Crossings:** **0 (0.00%)** via Chernozhukov Monotonic Rearrangement
+- **Uncalibrated Empirical Coverage:** {raw_cov:.2f}% (MPIW: Rs {raw_mpiw:.2f}/qtl)
+- **Mondrian CQR Calibrated Coverage:** **{cal_cov_full:.2f}%** (MPIW: Rs {cal_mpiw_full:.2f}/qtl)
+- **Raw Quantile Crossings:** {rear_diag.get('raw_crossing_count', 'unavailable')} ({rear_diag.get('raw_crossing_rate_pct', 0.0):.2f}%)
+- **Post-Rearrangement Crossings:** **{rear_diag.get('post_rearrangement_crossing_count', 0)} ({rear_diag.get('post_rearrangement_crossing_rate_pct', 0.0):.2f}%)** via Chernozhukov Monotonic Rearrangement
 
 ---
 
