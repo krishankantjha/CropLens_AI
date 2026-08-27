@@ -7,7 +7,6 @@ from typing import Optional
 from fastapi import APIRouter, Request, Query, status, Response, Depends
 
 from backend.app.schemas import (
-    PricePredictionRequest, PricePredictionResponse,
     MultiDayForecastRequest, MultiDayForecastResponse,
     SupplyShockResponse, ArbitrageResponse, AnalyticsTrendResponse
 )
@@ -22,9 +21,7 @@ from backend.app.services.scheduler_service import (
     get_scheduler_status,
     trigger_manual_sync,
     get_cached_forecast_7d,
-    set_cached_forecast_7d,
-    get_cached_price,
-    set_cached_price
+    set_cached_forecast_7d
 )
 from backend.app.services.pdf_generator import generate_procurement_pdf
 

@@ -122,15 +122,12 @@ def run_lstm_and_gru_benchmarks():
     
     # Split by Year (2019-2023 Train, 2024 Val, 2025 Test)
     train_mask = seq_dates.year <= 2023
-    val_mask = seq_dates.year == 2024
     test_mask = seq_dates.year == 2025
     
     X_train, y_train = torch.tensor(X_all[train_mask]), torch.tensor(y_all[train_mask])
-    X_val, y_val = torch.tensor(X_all[val_mask]), torch.tensor(y_all[val_mask])
     X_test, y_test = torch.tensor(X_all[test_mask]), torch.tensor(y_all[test_mask])
     
     train_loader = DataLoader(TensorDataset(X_train, y_train), batch_size=256, shuffle=True)
-    val_loader = DataLoader(TensorDataset(X_val, y_val), batch_size=512, shuffle=False)
     
     results = {}
     

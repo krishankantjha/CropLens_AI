@@ -80,7 +80,7 @@ def generate_procurement_pdf(
     elements = []
 
     # Header Title
-    elements.append(Paragraph(f"CropLens AI — Institutional Procurement Report", title_style))
+    elements.append(Paragraph("CropLens AI — Institutional Procurement Report", title_style))
     elements.append(Paragraph(f"Commodity: <b>{commodity}</b> | Mandi: <b>{market} APMC</b> | Forecast Reference Date: <b>{date_str}</b>", sub_style))
     elements.append(Spacer(1, 8))
     elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#046c4e'), spaceAfter=12))

@@ -4,7 +4,6 @@ Tests user registration, Bcrypt password hashing, JWT token issuing, OTP flow, a
 """
 
 import time
-import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
 

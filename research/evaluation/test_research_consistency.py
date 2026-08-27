@@ -11,7 +11,7 @@ Enforces 10 automated scientific integrity checks:
 7. Feature count == 47.
 8. Chernozhukov monotonic rearrangement enforces 0 post-rearrangement quantile crossings.
 9. All canonical result files exist and contain non-NaN metrics.
-10. RESEARCH_FREEZE.md and experiment manifest exist and match.
+10. The experiment manifest exists and matches the canonical dataset scope.
 """
 
 import os
@@ -27,7 +27,7 @@ except ImportError:
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DATA_PATH = os.path.join(BASE_DIR, "data", "processed", "features_master.parquet")
-RESULTS_DIR = os.path.join(BASE_DIR, "research", "artifacts", "research_results")
+RESULTS_DIR = os.path.join(BASE_DIR, "reports", "research_results")
 MODELS_DIR = os.path.join(BASE_DIR, "backend", "app", "models")
 
 
@@ -95,11 +95,6 @@ def test_5_cqr_calibration_split_isolation(master_df):
 
 def test_6_no_future_leakage_in_features(master_df):
     """Test 6: Verifies no target variable (modal_price, min_price, max_price) is in feature set."""
-    metadata_cols = [
-        'state', 'district', 'market', 'commodity', 'variety',
-        'market_id', 'harvest_season_type', 'festival_name', 'date',
-        'latitude', 'longitude', 'modal_price', 'min_price', 'max_price'
-    ]
     feature_cols = list(MODEL_FEATURE_COLUMNS)
     assert len(feature_cols) == 47
     assert not set(feature_cols).intersection({'modal_price', 'min_price', 'max_price', 'target_next_day_modal_price'})
@@ -107,11 +102,6 @@ def test_6_no_future_leakage_in_features(master_df):
 
 def test_7_feature_count_equals_47(master_df):
     """Test 7: Verifies exact feature count is 47."""
-    metadata_cols = [
-        'state', 'district', 'market', 'commodity', 'variety',
-        'market_id', 'harvest_season_type', 'festival_name', 'date',
-        'latitude', 'longitude', 'modal_price', 'min_price', 'max_price'
-    ]
     feature_cols = list(MODEL_FEATURE_COLUMNS)
     assert len(feature_cols) == 47, f"Expected 47 features, got {len(feature_cols)}"
     assert set(feature_cols).issubset(master_df.columns), 'Canonical feature contract contains unavailable columns.'
@@ -151,8 +141,7 @@ def test_9_canonical_result_files_exist_and_valid():
         os.path.join(RESULTS_DIR, "diagnostics", "ljung_box_results.csv"),
         os.path.join(RESULTS_DIR, "diagnostics", "per_commodity_ljung_box.csv"),
         os.path.join(RESULTS_DIR, "research_claims_matrix.csv"),
-        os.path.join(RESULTS_DIR, "experiment_manifest.json"),
-        os.path.join(RESULTS_DIR, "RESEARCH_FREEZE.md")
+        os.path.join(RESULTS_DIR, "experiment_manifest.json")
     ]
     for rf in required_files:
         assert os.path.exists(rf), f"Required research artifact missing: {rf}"

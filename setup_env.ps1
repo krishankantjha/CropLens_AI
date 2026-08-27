@@ -13,14 +13,5 @@ if (Test-Path "backend\.env.example") {
     }
 }
 
-# 2. Setup Frontend .env
-if (Test-Path "frontend\.env.example") {
-    if (-not (Test-Path "frontend\.env")) {
-        Copy-Item "frontend\.env.example" "frontend\.env"
-        Write-Host "[✓] Created frontend\.env" -ForegroundColor Green
-    } else {
-        Write-Host "[!] frontend\.env already exists. Skipping." -ForegroundColor Yellow
-    }
-}
 
-Write-Host "`nSetup Complete! Now open the .env files and paste your API keys." -ForegroundColor Cyan
+Write-Host "`nSetup Complete! Review backend\.env and add any required secrets." -ForegroundColor Cyan

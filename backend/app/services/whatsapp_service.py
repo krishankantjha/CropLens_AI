@@ -4,11 +4,10 @@ Handles formatting, daily morning dispatches, instant share-to-myself messages,
 and 1-click wa.me direct deep-link dispatches for Indian farmers.
 """
 
-import os
 import urllib.parse
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from backend.app.core.constants import CROP_NAMES_HI, MANDI_NAMES_HI
 
@@ -70,13 +69,6 @@ def send_whatsapp_message(mobile_number: str, message_text: str) -> Dict[str, An
     Prepares and logs a WhatsApp advisory dispatch using direct wa.me protocol.
     """
     clean_mobile = "".join(filter(str.isdigit, str(mobile_number)))
-    if len(clean_mobile) == 10:
-        formatted_number = f"+91{clean_mobile}"
-    elif clean_mobile.startswith("91") and len(clean_mobile) == 12:
-        formatted_number = f"+{clean_mobile}"
-    else:
-        formatted_number = f"+91{clean_mobile[-10:]}" if len(clean_mobile) >= 10 else mobile_number
-
     masked = mask_phone_number(clean_mobile)
     logger.info(f"[WhatsApp Dispatch] Destination: {masked} | Status: generated wa.me dispatch")
 

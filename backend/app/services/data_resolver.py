@@ -94,7 +94,6 @@ class DataResolver:
         Used primarily for multi-day recursive forecasting.
         """
         row = base_row.copy()
-        k = (target_dt - pd.to_datetime(base_row.get('date', target_dt))).days
         dow = target_dt.dayofweek
 
         if not history_prices:

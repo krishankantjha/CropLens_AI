@@ -6,7 +6,7 @@ and voice notes directly to farmers' phones with zero cost and zero paid subscri
 
 import os
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import requests
 from backend.app.core.constants import CROP_NAMES_HI
 

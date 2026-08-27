@@ -8,9 +8,7 @@ This guide provides step-by-step instructions for running CropLens AI locally vi
 
 ```mermaid
 graph TD
-    User([Farmer / Trader Browser]) -->|HTTP Port 5173 / 80| Frontend[Frontend Container: Nginx Alpine]
-    Frontend -->|Static Files: HTML, JS, CSS| User
-    Frontend -->|Reverse Proxy: /api/*| Backend[Backend Container: FastAPI Python 3.11]
+    User([Farmer / Trader or API Client]) -->|HTTP Port 8000| Backend[Backend Container: FastAPI Python 3.11]
     
     Backend --> DB[(SQLite Database: croplens.db)]
     Backend --> ML[Quantile ML Models: p10, p50, p90.pkl]
@@ -19,7 +17,6 @@ graph TD
 
 ### Components:
 * **Backend (`croplens_backend`):** Python 3.11-slim, Uvicorn, FastAPI, LightGBM, PyTorch, APScheduler.
-* **Frontend (`croplens_frontend`):** Multi-stage build (Node 20 Alpine builder $\to$ Nginx Alpine production runtime with SPA routing and Gzip compression).
 * **Database:** Embedded SQLite database (`croplens.db`) with Docker volume persistence.
 
 ---
@@ -38,7 +35,7 @@ docker compose up --build -d
 ```
 
 ### Access Points
-* **Farmer & Trader Web Dashboard:** [http://localhost:5173](http://localhost:5173)
+* **Fresh frontend:** Not currently included; it will be added after the backend API contract is finalized.
 * **FastAPI Backend Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
 * **Backend Health Check:** [http://localhost:8000/health](http://localhost:8000/health)
 
@@ -75,16 +72,14 @@ CropLens AI is completely self-contained with no paid cloud dependencies. You ca
    * Add Environment Variables:
      * `CORS_ORIGINS`: `https://your-frontend.onrender.com`
      * `PYTHONUNBUFFERED`: `1`
-2. **Frontend Service:**
-   * Create a **Static Site** or **Web Service** pointing to `frontend/Dockerfile`.
-   * Set `VITE_API_BASE_URL` to `https://your-backend.onrender.com`.
+2. **Frontend:** Not included in the current backend-only deployment. Add the fresh frontend as a separate static service after its API integration is finalized.
 
 ---
 
 ### Option B: Railway.app (Free Hobby Tier)
 1. Link your GitHub repo to a new Railway project.
-2. Railway will automatically detect `docker-compose.yml` and provision both the `backend` and `frontend` services.
-3. Expose the frontend service to generate a public domain (`*.up.railway.app`).
+2. Railway will detect `docker-compose.yml` and provision the backend service.
+3. Add the fresh frontend separately after it has been implemented and tested.
 
 ---
 
@@ -99,10 +94,7 @@ CropLens AI is completely self-contained with no paid cloud dependencies. You ca
    ```bash
    fly launch --dockerfile Dockerfile --port 8000
    ```
-2. Launch frontend:
-   ```bash
-   cd frontend && fly launch --dockerfile Dockerfile --port 80
-   ```
+2. The frontend is not included in this backend-only deployment. Deploy it separately after the fresh UI is implemented.
 
 ---
 
@@ -121,7 +113,8 @@ CropLens AI is completely self-contained with no paid cloud dependencies. You ca
 ## 5. Production Health Verification Checklist
 
 Before presenting or submitting your project:
-- [ ] Verify `docker compose ps` shows both `croplens_backend` and `croplens_frontend` with status `healthy`.
+- [ ] Verify `docker compose ps` shows `croplens_backend` with status `healthy`.
 - [ ] Query `http://localhost:8000/health` $\to$ returns `"status": "healthy"`.
-- [ ] Query `http://localhost:8000/api/v1/system/scheduler-status` $\to$ returns 4 active background jobs.
-- [ ] Open `http://localhost:5173` $\to$ verify Kisan Advisory Hub renders 7-day roll-forward bars and live peak-day recommendations.
+- [ ] Query `http://localhost:8000/api/v1/system/scheduler-status` $\to$ returns the expected background-job status.
+- [ ] Query the forecast endpoint and verify that the response contains live backend-derived values, not mock data.
+- [ ] Add frontend-specific checks only after the fresh frontend is implemented.

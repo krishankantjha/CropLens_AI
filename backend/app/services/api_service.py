@@ -140,7 +140,6 @@ def predict_7day_forecast_service(
 
     daily_forecasts: List[DailyForecastPoint] = []
     horizon = min(max(req.horizon_days, 1), 14)
-    rolling_row = base_row.to_dict()
 
     for k in range(1, horizon + 1):
         target_dt = start_dt + pd.Timedelta(days=k)
