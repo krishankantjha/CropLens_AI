@@ -527,7 +527,7 @@ def _compute_market_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def engineer_features() -> pd.DataFrame:
-    """Load clean datasets, merge, and compute all 42 engineered features."""
+    """Load clean datasets, merge, and compute all 47 engineered features."""
     start_time = time.time()
     logger.info("Loading clean datasets from Data Cleaner service")
 

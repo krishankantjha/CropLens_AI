@@ -5,12 +5,19 @@ import numpy as np
 from datetime import datetime
 import holidays
 
+if os.environ.get("CROPLENS_ALLOW_SYNTHETIC_DATA", "0") != "1":
+    raise RuntimeError(
+        "This legacy script generates synthetic demo datasets and is disabled by default. "
+        "Use provider-backed ingestion for research data, or set "
+        "CROPLENS_ALLOW_SYNTHETIC_DATA=1 only for an explicitly labelled demo run."
+    )
+
 # Configure target file paths for saving raw datasets
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RAW_DATA_DIR = os.path.join(BASE_DIR, "data", "raw")
 os.makedirs(RAW_DATA_DIR, exist_ok=True)
 
-print("Initializing CropLens AI Data Ingestion Pipeline...")
+print("Initializing CropLens AI Synthetic Demo Data Generator...")
 print(f"Target Directory: {RAW_DATA_DIR}")
 
 # Create a full daily date timeline from January 2019 through December 2025
@@ -211,4 +218,4 @@ calendar_path = os.path.join(RAW_DATA_DIR, "5_festivals_calendar.csv")
 df_calendar.to_csv(calendar_path, index=False)
 print(f"Saved {len(df_calendar):,} calendar records to {calendar_path}")
 
-print("SUCCESS All 5 Static Datasets 2019 to 2025 successfully generated in data/raw/")
+print("WARNING Synthetic demo datasets generated in data/raw/; do not use them as research evidence.")
