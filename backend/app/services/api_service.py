@@ -62,15 +62,18 @@ def predict_price_service(
     qconf_offset = float(calibration.get('cqr_offset_qconf_rs_qtl', 0.0) or 0.0)
     p10_val = max(0.0, p10_val - qconf_offset)
     p90_val = p90_val + qconf_offset
-    band_width = round(p90_val - p10_val, 2)
+    p10_display = round(p10_val, 2)
+    p50_display = round(p50_val, 2)
+    p90_display = round(p90_val, 2)
+    band_width = round(p90_display - p10_display, 2)
 
     return PricePredictionResponse(
         commodity=req.commodity,
         market=req.market,
         date=forecast_date,
-        p10_floor_price=round(p10_val, 2),
-        p50_median_price=round(p50_val, 2),
-        p90_ceiling_price=round(p90_val, 2),
+        p10_floor_price=p10_display,
+        p50_median_price=p50_display,
+        p90_ceiling_price=p90_display,
         band_width=band_width,
         band_terminology="P10-P90 Quantile Forecast Band",
         model_version="LightGBM Multi-Quantile v1.0"
