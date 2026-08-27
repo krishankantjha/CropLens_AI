@@ -4,7 +4,7 @@ Exposes price prediction, supply shock anomaly alerts, spatial mandi arbitrage, 
 """
 
 from typing import Optional
-from fastapi import APIRouter, Request, Query, status, Response, Depends
+from fastapi import APIRouter, Request, Query, status, Response, Depends, HTTPException
 
 from backend.app.schemas import (
     PricePredictionRequest, PricePredictionResponse,
@@ -35,6 +35,18 @@ api_router.include_router(auth_router)
 api_router.include_router(alerts_router)
 
 
+def _require_forecast_runtime(request: Request) -> None:
+    """Return a controlled service-unavailable response in degraded mode."""
+    models = getattr(request.app.state, "models", None)
+    metadata = getattr(request.app.state, "metadata", None)
+    dataset = getattr(request.app.state, "dataset", None)
+    if not models or not metadata or dataset is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Forecast service is unavailable because the production model bundle or serving dataset is not loaded.",
+        )
+
+
 @api_router.post(
     "/predict/price",
     response_model=PricePredictionResponse,
@@ -61,6 +73,7 @@ def predict_price(req: PricePredictionRequest, request: Request) -> PricePredict
     tags=["Price Forecasting"]
 )
 def predict_forecast_7d(req: MultiDayForecastRequest, request: Request) -> MultiDayForecastResponse:
+    _require_forecast_runtime(request)
     cached = get_cached_forecast_7d(req.commodity, req.market, req.start_date)
     if cached and cached.get("forecast_horizon_days") == req.horizon_days:
         return MultiDayForecastResponse(**cached)
@@ -84,6 +97,7 @@ def predict_forecast_7d(req: MultiDayForecastRequest, request: Request) -> Multi
     tags=["Price Forecasting"]
 )
 def predict_forecast(req: MultiDayForecastRequest, request: Request) -> MultiDayForecastResponse:
+    _require_forecast_runtime(request)
     # Handle single-day vs multi-day via horizon_days parameter
     cached = get_cached_forecast_7d(req.commodity, req.market, req.start_date)
     if cached and cached.get("forecast_horizon_days") == req.horizon_days:
@@ -114,6 +128,7 @@ def get_forecast(
     date: Optional[str] = Query(None, description="Starting reference date (YYYY-MM-DD)"),
     horizon: int = Query(7, ge=1, le=14, description="Forecast horizon in days")
 ) -> MultiDayForecastResponse:
+    _require_forecast_runtime(request)
     cached = get_cached_forecast_7d(commodity, market, date)
     if cached and cached.get("forecast_horizon_days") == horizon:
         return MultiDayForecastResponse(**cached)
