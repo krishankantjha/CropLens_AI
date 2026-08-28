@@ -8,7 +8,7 @@ from fastapi import APIRouter, Request, Query, status, Response, Depends, HTTPEx
 
 from backend.app.schemas import (
     PricePredictionRequest, PricePredictionResponse,
-    MultiDayForecastRequest, MultiDayForecastResponse,
+    MultiDayForecastRequest, MultiDayForecastResponse, SystemResourcesResponse,
     SupplyShockResponse, ArbitrageResponse, AnalyticsTrendResponse
 )
 from backend.app.services.api_service import (
@@ -146,12 +146,13 @@ def get_forecast(
 
 @api_router.get(
     "/system/resources",
+    response_model=SystemResourcesResponse,
     status_code=status.HTTP_200_OK,
     summary="Get Supported Commodities and Mandis",
     description="Returns the complete catalog of supported agricultural commodities and APMC mandi hubs dynamically.",
     tags=["System Operations"]
 )
-def get_system_resources() -> dict:
+def get_system_resources() -> SystemResourcesResponse:
     # Mapping icons and varieties for a professional UI experience
     RESOURCE_METADATA = {
         "Potato": {"label": "🥔 Potato", "variety": "Desi"},
