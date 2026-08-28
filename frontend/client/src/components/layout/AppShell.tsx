@@ -1,50 +1,37 @@
 // Earthline Intelligence: a calm, mobile-first shell that keeps the farmer's next action visible.
 import { useEffect, useState } from "react";
-import { Bell, ChartNoAxesCombined, Globe2, Home, Leaf, MapPin, ShieldAlert, UserRound } from "lucide-react";
+import { Bell, ChartNoAxesCombined, Globe2, Home, MapPin, ShieldAlert, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { getHealth } from "@/api/client";
 import { BrandLogo } from "@/components/ui/BrandLogo";
-
-const navItems = [
-  { label: "Home", href: "#home", icon: Home },
-  { label: "Forecast", href: "#forecast", icon: ChartNoAxesCombined },
-  { label: "Market Risk", href: "#risk", icon: ShieldAlert },
-  { label: "Best Mandi", href: "#mandi", icon: MapPin },
-  { label: "Alerts", href: "#alerts", icon: Bell },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type AppShellProps = { children: ReactNode };
 
 export function AppShell({ children }: AppShellProps) {
+  const { language, setLanguage, t } = useLanguage();
   const [serviceState, setServiceState] = useState<"checking" | "live" | "unavailable">("checking");
   useEffect(() => {
     let active = true;
-    getHealth().then((health) => {
-      if (active) setServiceState(health.status === "healthy" || health.status === "operational" || health.status === "live" ? "live" : "unavailable");
-    }).catch(() => { if (active) setServiceState("unavailable"); });
+    getHealth().then((health) => { if (active) setServiceState(health.status === "healthy" || health.status === "operational" || health.status === "live" ? "live" : "unavailable"); }).catch(() => { if (active) setServiceState("unavailable"); });
     return () => { active = false; };
   }, []);
-
+  const navItems = [
+    { label: t("home"), href: "#home", icon: Home }, { label: t("forecast"), href: "#forecast", icon: ChartNoAxesCombined }, { label: t("marketRisk"), href: "#risk", icon: ShieldAlert }, { label: t("bestMandi"), href: "#mandi", icon: MapPin }, { label: t("alerts"), href: "#alerts", icon: Bell },
+  ];
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#home" aria-label="CropLens AI home">
-          <span className="brand-mark"><BrandLogo size={36} /><span className="lens-dot" /></span>
-          <span><strong>CropLens AI</strong><small>Your market. Your decision.</small></span>
-        </a>
-        <nav className="desktop-nav" aria-label="Primary navigation">
-          {navItems.map(({ label, href, icon: Icon }) => <a key={href} href={href}><Icon size={17} />{label}</a>)}
-        </nav>
+        <a className="brand" href="#home" aria-label={`${t("home")} CropLens AI`}><span className="brand-mark"><BrandLogo size={36} /><span className="lens-dot" /></span><span><strong>CropLens AI</strong><small>Your market. Your decision.</small></span></a>
+        <nav className="desktop-nav" aria-label={t("home")}>{navItems.map(({ label, href, icon: Icon }) => <a key={href} href={href}><Icon size={17} />{label}</a>)}</nav>
         <div className="topbar-actions">
-          <button className="language-button" type="button" aria-label="Change language"><Globe2 size={17} /> <span>English / हिन्दी</span></button>
-          <span className={`service-pill service-pill--${serviceState}`}><span className="service-dot" />{serviceState === "checking" ? "Checking" : serviceState === "live" ? "Live" : "Unavailable"}</span>
-          <a className="account-button" href="/auth"><UserRound size={17} /><span>Account</span></a>
+          <button className="language-button" type="button" aria-label={t("changeLanguage")} onClick={() => setLanguage(language === "en" ? "hi" : "en")}><Globe2 size={17} /> <span>{language === "en" ? "English / हिन्दी" : "हिन्दी / English"}</span></button>
+          <span className={`service-pill service-pill--${serviceState}`}><span className="service-dot" />{serviceState === "checking" ? t("checking") : serviceState === "live" ? t("live") : t("unavailable")}</span>
+          <a className="account-button" href="/auth"><UserRound size={17} /><span>{t("account")}</span></a>
         </div>
       </header>
       <main>{children}</main>
-      <nav className="mobile-nav" aria-label="Mobile navigation">
-        {navItems.map(({ label, href, icon: Icon }) => <a key={href} href={href}><Icon size={20} /><span>{label === "Market Risk" ? "Risk" : label}</span></a>)}
-      </nav>
+      <nav className="mobile-nav" aria-label={t("home")}>{navItems.map(({ label, href, icon: Icon }) => <a key={href} href={href}><Icon size={20} /><span>{label === t("marketRisk") ? (language === "en" ? "Risk" : "जोखिम") : label}</span></a>)}</nav>
     </div>
   );
 }
