@@ -9,6 +9,18 @@ from pydantic import BaseModel, Field, field_validator
 from backend.app.core.constants import VALID_COMMODITIES, VALID_MARKETS
 
 
+class ResourceCommodity(BaseModel):
+    id: str
+    label: str
+    variety: str
+
+
+class SystemResourcesResponse(BaseModel):
+    status: str
+    commodities: List[ResourceCommodity]
+    mandis: List[str]
+
+
 # --- Price Prediction Schemas ---
 
 class PricePredictionRequest(BaseModel):
