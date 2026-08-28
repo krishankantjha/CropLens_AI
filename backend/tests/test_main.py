@@ -41,6 +41,19 @@ def test_health_check(client):
     assert data["startup_duration_ms"] >= 0
 
 
+def test_system_resources_contract(client):
+    """The resource catalog must expose the canonical variety field."""
+    response = client.get("/api/v1/system/resources")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["commodities"]
+    assert data["mandis"]
+    for commodity in data["commodities"]:
+        assert set(commodity) == {"id", "label", "variety"}
+        assert commodity["variety"]
+
+
 def test_openapi_documentation(client):
     """Tests Swagger OpenAPI schema generation"""
     response = client.get("/openapi.json")
