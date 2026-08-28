@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, KeyRound, LockKeyhole, Phone, UserRound } from "lucide-react";
 import { login, register, sendOtp, verifyOtp } from "@/api/client";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 import type { TokenResponse } from "@/types/auth";
 import { StatePanel } from "@/components/feedback/StatePanel";
 
@@ -47,7 +48,7 @@ export default function AuthPage() {
     <div className="auth-page">
       <a className="back-link" href="/"><ArrowLeft size={16} /> Back to market</a>
       <section className="auth-card" aria-labelledby="auth-title">
-        <div className="auth-brand"><span className="auth-mark"><img src="/manus-storage/croplens-leaf-lens-mark_4789cd4d.png" alt="" /></span><span><strong>CropLens AI</strong><small>Your market. Your decision.</small></span></div>
+        <div className="auth-brand"><span className="auth-mark"><BrandLogo size={28} /></span><span><strong>CropLens AI</strong><small>Your market. Your decision.</small></span></div>
         <p className="eyebrow"><LockKeyhole size={14} /> Farmer account</p>
         <h1 id="auth-title">Keep your market decisions close.</h1>
         <p className="auth-intro">Sign in to save your preferences and receive live market alerts.</p>

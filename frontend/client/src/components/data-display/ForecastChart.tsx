@@ -4,8 +4,19 @@ import type { ForecastPoint } from "@/types/api";
 type ForecastChartProps = { points: ForecastPoint[] };
 
 function value(point: ForecastPoint, key: "p10" | "p50" | "p90") {
-  const raw = point[key] ?? (key === "p50" ? point.expected_price : undefined);
-  return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+  if (key === "p10") {
+    const raw = point.p10_floor_price ?? point.p10;
+    return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+  }
+  if (key === "p50") {
+    const raw = point.p50_median_price ?? point.price ?? point.p50 ?? point.expected_price;
+    return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+  }
+  if (key === "p90") {
+    const raw = point.p90_ceiling_price ?? point.p90;
+    return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+  }
+  return null;
 }
 
 export function ForecastChart({ points }: ForecastChartProps) {
@@ -36,7 +47,7 @@ export function ForecastChart({ points }: ForecastChartProps) {
         {usable.map((entry, index) => <circle key={`${entry.index}-${index}`} cx={x(index)} cy={y(entry.mid as number)} r="5" className="chart-dot" />)}
       </svg>
       <div className="chart-labels" aria-hidden="true">
-        {usable.map((entry, index) => <span key={`${entry.index}-label`}>{entry.point.day ?? entry.point.date ?? `Day ${index + 1}`}</span>)}
+        {usable.map((entry, index) => <span key={`${entry.index}-label`}>{entry.point.day_name ?? entry.point.day ?? entry.point.date ?? `Day ${index + 1}`}</span>)}
       </div>
       <p className="sr-only">The line shows expected price. The shaded area shows the likely lower and upper range when returned by the live service.</p>
     </div>

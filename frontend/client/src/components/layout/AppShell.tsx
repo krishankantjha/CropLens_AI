@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Bell, ChartNoAxesCombined, Globe2, Home, Leaf, MapPin, ShieldAlert, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { getHealth } from "@/api/client";
+import { BrandLogo } from "@/components/ui/BrandLogo";
 
 const navItems = [
   { label: "Home", href: "#home", icon: Home },
@@ -19,7 +20,7 @@ export function AppShell({ children }: AppShellProps) {
   useEffect(() => {
     let active = true;
     getHealth().then((health) => {
-      if (active) setServiceState(health.status === "operational" || health.status === "live" ? "live" : "unavailable");
+      if (active) setServiceState(health.status === "healthy" || health.status === "operational" || health.status === "live" ? "live" : "unavailable");
     }).catch(() => { if (active) setServiceState("unavailable"); });
     return () => { active = false; };
   }, []);
@@ -28,7 +29,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className="app-shell">
       <header className="topbar">
         <a className="brand" href="#home" aria-label="CropLens AI home">
-          <span className="brand-mark"><img src="/manus-storage/croplens-leaf-lens-mark_4789cd4d.png" alt="" /><span className="lens-dot" /></span>
+          <span className="brand-mark"><BrandLogo size={36} /><span className="lens-dot" /></span>
           <span><strong>CropLens AI</strong><small>Your market. Your decision.</small></span>
         </a>
         <nav className="desktop-nav" aria-label="Primary navigation">
