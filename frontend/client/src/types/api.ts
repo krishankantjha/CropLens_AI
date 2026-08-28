@@ -8,12 +8,25 @@ export type ResourceOption = {
 export type ResourceEntry = ResourceOption | string;
 
 export type ResourcesResponse = {
+  status?: string;
   commodities: ResourceOption[];
   mandis: ResourceEntry[];
 };
 
-export type ForecastPoint = {
+export type DailyForecastPoint = {
+  day_index?: number;
   date?: string;
+  day_name?: string;
+  day_name_hi?: string;
+  price?: number;
+  p10_floor_price?: number;
+  p50_median_price?: number;
+  p90_ceiling_price?: number;
+  band_width?: number;
+  height?: string;
+  is_peak?: boolean;
+  type?: string;
+  // Aliases for compatibility
   day?: string;
   p10?: number;
   p50?: number;
@@ -21,24 +34,28 @@ export type ForecastPoint = {
   expected_price?: number;
 };
 
+export type ForecastPoint = DailyForecastPoint;
+
 export type ForecastResponse = {
   commodity?: string;
   market?: string;
+  forecast_horizon_days?: number;
   horizon?: number;
-  forecast?: ForecastPoint[];
-  forecasts?: ForecastPoint[];
-  daily_forecast?: ForecastPoint[];
-  p10_floor_price?: number;
-  p50_median_price?: number;
-  p90_ceiling_price?: number;
-  band_width?: number;
+  current_price?: number;
+  forecasts?: DailyForecastPoint[];
+  forecast?: DailyForecastPoint[];
+  daily_forecast?: DailyForecastPoint[];
+  peak_day?: DailyForecastPoint;
   decision?: string;
   decision_en?: string;
   decision_hi?: string;
   expected_gain?: number;
   confidence?: string;
   model_version?: string;
-  peak_day?: string;
+  p10_floor_price?: number;
+  p50_median_price?: number;
+  p90_ceiling_price?: number;
+  band_width?: number;
   message?: string;
 };
 
@@ -48,6 +65,7 @@ export type RiskRecord = {
   date?: string;
   anomaly_status?: string;
   status?: string;
+  is_anomaly?: boolean;
   anomaly_score?: number;
   arrival_ratio?: number;
   price_velocity_7d?: number;
@@ -55,6 +73,8 @@ export type RiskRecord = {
 };
 
 export type RiskResponse = {
+  total_records_analyzed?: number;
+  total_anomalies_detected?: number;
   records_analyzed?: number;
   anomalies_detected?: number;
   anomalies?: RiskRecord[];
@@ -63,20 +83,38 @@ export type RiskResponse = {
 };
 
 export type ProcurementOpportunity = {
+  commodity?: string;
   source_market?: string;
   destination_market?: string;
   source_price?: number;
   destination_price?: number;
   gross_price_difference?: number;
+  price_gradient_percentage?: number;
   percentage_difference?: number;
   recommendation?: string;
 };
 
 export type ProcurementResponse = {
+  commodity?: string;
+  base_market?: string;
+  date?: string;
   opportunities?: ProcurementOpportunity[];
   results?: ProcurementOpportunity[];
   disclaimer?: string;
   message?: string;
+};
+
+export type HealthResponse = {
+  status: string;
+  version?: string;
+  models_loaded?: boolean;
+  dataset_loaded?: boolean;
+  loaded_models?: string[];
+  dataset_rows?: number;
+  feature_count?: number;
+  startup_timestamp?: string;
+  startup_duration_ms?: number;
+  startup_error?: string | null;
 };
 
 export type ApiError = {
