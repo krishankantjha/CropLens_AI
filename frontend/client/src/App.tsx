@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { SessionProvider } from "./contexts/SessionContext";
 import { AppShell } from "./components/layout/AppShell";
 import HomePage from "./features/home/HomePage";
 import AuthPage from "./features/auth/AuthPage";
@@ -15,14 +16,16 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <LanguageProvider>
-          <TooltipProvider>
+          <SessionProvider>
+            <TooltipProvider>
           <Toaster />
           <Switch>
             <Route path="/auth"><AuthPage /></Route>
             <Route path="/profile"><ProfilePage /></Route>
             <Route><AppShell><HomePage /></AppShell></Route>
           </Switch>
-          </TooltipProvider>
+            </TooltipProvider>
+          </SessionProvider>
         </LanguageProvider>
       </ThemeProvider>
     </ErrorBoundary>
