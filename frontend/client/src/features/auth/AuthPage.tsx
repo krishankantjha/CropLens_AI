@@ -6,16 +6,17 @@ import { BrandLogo } from "@/components/ui/BrandLogo";
 import type { TokenResponse } from "@/types/auth";
 import { StatePanel } from "@/components/feedback/StatePanel";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSession } from "@/contexts/SessionContext";
 
 type Mode = "login" | "register" | "otp";
 
-function persistSession(response: TokenResponse) {
-  window.localStorage.setItem("croplens_access_token", response.access_token);
-  if (response.refresh_token) window.localStorage.setItem("croplens_refresh_token", response.refresh_token);
+function persistSession(response: TokenResponse, setSession: (accessToken: string, refreshToken?: string) => void) {
+  setSession(response.access_token, response.refresh_token);
 }
 
 export default function AuthPage() {
   const { language, setLanguage, t } = useLanguage();
+  const { setSession } = useSession();
   const [mode, setMode] = useState<Mode>("login");
   const [fullName, setFullName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -29,16 +30,16 @@ export default function AuthPage() {
     event.preventDefault(); setBusy(true); setError(""); setMessage("");
     try {
       if (mode === "login") {
-        persistSession(await login({ mobile_number: mobile, password }));
+        persistSession(await login({ mobile_number: mobile, password }), setSession);
         setMessage(t("signedInMessage"));
       } else if (mode === "register") {
-        persistSession(await register({ mobile_number: mobile, password, full_name: fullName, role: "farmer", language }));
+        persistSession(await register({ mobile_number: mobile, password, full_name: fullName, role: "farmer", language }), setSession);
         setMessage(t("accountReadyMessage"));
       } else if (!otp) {
         const response = await sendOtp({ mobile_number: mobile });
         setMessage(response.message ?? t("otpRequested"));
       } else {
-        persistSession(await verifyOtp({ mobile_number: mobile, otp_code: otp }));
+        persistSession(await verifyOtp({ mobile_number: mobile, otp_code: otp }), setSession);
         setMessage(t("otpSignedIn"));
       }
     } catch (requestError) {
