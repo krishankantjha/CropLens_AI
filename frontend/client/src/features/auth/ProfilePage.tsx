@@ -4,10 +4,12 @@ import { getCurrentUser, updatePreferences } from "@/api/client";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { StatePanel } from "@/components/feedback/StatePanel";
 import { useLanguage, type Language } from "@/contexts/LanguageContext";
+import { useSession } from "@/contexts/SessionContext";
 import type { UserProfile } from "@/types/auth";
 
 export default function ProfilePage() {
   const { language: appLanguage, setLanguage, t } = useLanguage();
+  const { clearSession } = useSession();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [homeMandi, setHomeMandi] = useState("");
   const [preferredCommodity, setPreferredCommodity] = useState("");
@@ -31,7 +33,7 @@ export default function ProfilePage() {
     finally { setBusy(false); }
   };
 
-  const logout = () => { window.localStorage.removeItem("croplens_access_token"); window.localStorage.removeItem("croplens_refresh_token"); window.location.assign("/"); };
+  const logout = () => { clearSession(); window.location.assign("/"); };
   if (busy && !user) return <div className="auth-page"><StatePanel kind="loading" title={t("loadingProfile")} message={t("profileLoadingMessage")} /></div>;
   if (!user) return <div className="auth-page"><div className="profile-error"><StatePanel kind="error" title={t("signInProfile")} message={error} /><a className="primary-button alert-link" href="/auth">{t("loginOrCreate")}</a><a className="back-link profile-back" href="/"><ArrowLeft size={16} /> {t("backToMarket")}</a></div></div>;
 
