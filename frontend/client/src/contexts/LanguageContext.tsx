@@ -1,0 +1,63 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+
+export type Language = "en" | "hi";
+
+type TranslationKey = keyof typeof translations.en;
+
+type LanguageContextValue = {
+  language: Language;
+  setLanguage: (language: Language) => void;
+  t: (key: TranslationKey) => string;
+};
+
+const translations = {
+  en: {
+    home: "Home", forecast: "Forecast", marketRisk: "Market Risk", bestMandi: "Best Mandi", alerts: "Alerts", account: "Account",
+    checking: "Checking", live: "Live", unavailable: "Unavailable", changeLanguage: "Change language", backToMarket: "Back to market", farmerAccount: "Farmer account", farmerProfile: "Farmer profile",
+    liveMandiIntelligence: "Live mandi intelligence", checkCropMarket: "Check your crop market.", chooseCropMandi: "Choose your crop and mandi to see a clear, live market decision.", crop: "Crop", mandi: "Mandi", forecastDays: "Forecast days", selectCrop: "Select crop", selectMandi: "Select mandi", checkTodaysMarket: "Check Today’s Market", checkingLiveMarket: "Checking live market…", loadingChoices: "Loading live crop and mandi choices…", retry: "Try again",
+    days: "days", liveServiceUnavailable: "Live service unavailable", couldNotLoadChoices: "Could not load market choices", liveChoicesUnavailable: "Live crop and mandi choices are temporarily unavailable. Please try again.", couldNotLoadChoicesMessage: "We could not load the live crop and mandi choices. Please try again.",
+    marketDecisionHere: "Your live market decision will appear here", selectCropMandiGuidance: "Select your crop and mandi to view real-time prices, forecasts, and market guidance.", checkForecast: "Checking the live forecast", riskMandiContinue: "Your risk and mandi checks continue independently.", liveResponse: "Live response", refreshForecast: "Refresh forecast", todaysDecision: "Today’s market decision", expectedMarketPrice: "Expected market price", quintal: "/ quintal", likelyRange: "Likely range", suggestedAction: "Suggested action", seeLiveGuidance: "See live guidance", nextDays: "Next", expectedPrice: "Expected price", likelyRangeLegend: "Likely range", forecastPointsMissing: "Forecast points were not returned", notEnoughPoints: "The live service did not provide enough points to draw the forecast.", marketWarning: "Market warning", noWarningRecords: "No warning records returned", noRiskWarnings: "No supply-risk warnings were returned for this selection.", checkingMarketRisk: "Checking market risk", reviewingMovement: "Reviewing recent supply and price movement.", returnedWarningRecords: "returned warning records", recordsAnalyzed: "Records analyzed", latestMovement: "Latest movement", checkingMandiPrices: "Checking mandi prices", comparingMarkets: "Comparing live destination-market information.", bestMandiLabel: "Best mandi", liveOpportunities: "live opportunities returned", noOpportunity: "No opportunity returned", noBetterOpportunity: "No better mandi opportunity was returned for this selection.", grossDifference: "gross difference", modelDisclaimer: "Model-supported guidance, not a guarantee. Costs such as transport and commission may not be included.",
+    stayInformed: "Stay informed", receiveDecision: "Receive your market decision", signInAlerts: "Sign in to save your crop and mandi preferences and receive alerts.", loginOrCreate: "Login or create account", chooseFirst: "Choose a crop and mandi first", alertConnected: "Your alert will be connected to the live market selection.", selectedMarket: "Selected market", channel: "Channel", deliveryTime: "Delivery time", language: "Language", saveAlert: "Save alert", removeAlert: "Remove alert subscription", alertActionFailed: "Alert action failed",
+    login: "Login", createAccount: "Create account", useOtp: "Use OTP", fullName: "Full name", mobileNumber: "Mobile number", password: "Password", otpCode: "OTP code", enterName: "Enter your name", enterMobile: "10-digit mobile number", enterPassword: "Enter your password", enterOtp: "Enter 6-digit OTP", pleaseWait: "Please wait…", createFarmerAccount: "Create farmer account", sendOtp: "Send OTP", verifyOtp: "Verify OTP", farmerAccountReady: "Your farmer account is ready. Return to the market view to continue.", signInToSave: "Sign in to save your preferences and receive live market alerts.", keepDecisionsClose: "Keep your market decisions close.", authenticationFailed: "Authentication could not be completed", accountAccess: "Account access",
+    preferences: "Your market preferences.", preferencesIntro: "These preferences are loaded from your account and used to personalize live market decisions.", homeMandi: "Home mandi", preferredCrop: "Preferred crop", savePreferences: "Save preferences", signInProfile: "Sign in to view your profile", loadingProfile: "Loading your profile", profileLoadingMessage: "Requesting your saved preferences from the live service.", couldNotSavePreferences: "Could not save your preferences.", signOut: "Sign out", saveSuccess: "Your preferences were saved.",
+    noLiveService: "The live service could not be reached.", connectionTryAgain: "Please check your connection and try again.", signedInMessage: "You are signed in. Return to the market view to continue.", accountReadyMessage: "Your farmer account is ready. Return to the market view to continue.", otpRequested: "OTP requested. Enter the code sent to your mobile.", otpSignedIn: "You are signed in with OTP. Return to the market view to continue.",
+  },
+  hi: {
+    home: "होम", forecast: "पूर्वानुमान", marketRisk: "बाज़ार जोखिम", bestMandi: "श्रेष्ठ मंडी", alerts: "अलर्ट", account: "खाता",
+    checking: "जाँच जारी", live: "लाइव", unavailable: "उपलब्ध नहीं", changeLanguage: "भाषा बदलें", backToMarket: "बाज़ार पर वापस जाएँ", farmerAccount: "किसान खाता", farmerProfile: "किसान प्रोफ़ाइल",
+    liveMandiIntelligence: "लाइव मंडी जानकारी", checkCropMarket: "अपनी फसल का बाज़ार देखें।", chooseCropMandi: "स्पष्ट और लाइव बाज़ार निर्णय के लिए अपनी फसल और मंडी चुनें।", crop: "फसल", mandi: "मंडी", forecastDays: "पूर्वानुमान के दिन", selectCrop: "फसल चुनें", selectMandi: "मंडी चुनें", checkTodaysMarket: "आज का बाज़ार देखें", checkingLiveMarket: "लाइव बाज़ार की जाँच हो रही है…", loadingChoices: "लाइव फसल और मंडी विकल्प लोड हो रहे हैं…", retry: "फिर कोशिश करें",
+    days: "दिन", liveServiceUnavailable: "लाइव सेवा उपलब्ध नहीं", couldNotLoadChoices: "बाज़ार विकल्प लोड नहीं हो सके", liveChoicesUnavailable: "लाइव फसल और मंडी विकल्प अस्थायी रूप से उपलब्ध नहीं हैं। कृपया फिर कोशिश करें।", couldNotLoadChoicesMessage: "लाइव फसल और मंडी विकल्प लोड नहीं हो सके। कृपया फिर कोशिश करें।",
+    marketDecisionHere: "आपका लाइव बाज़ार निर्णय यहाँ दिखाई देगा", selectCropMandiGuidance: "वास्तविक कीमत, पूर्वानुमान और बाज़ार सलाह देखने के लिए फसल और मंडी चुनें।", checkForecast: "लाइव पूर्वानुमान की जाँच हो रही है", riskMandiContinue: "जोखिम और मंडी की जाँच स्वतंत्र रूप से जारी है।", liveResponse: "लाइव परिणाम", refreshForecast: "पूर्वानुमान फिर लोड करें", todaysDecision: "आज का बाज़ार निर्णय", expectedMarketPrice: "अनुमानित बाज़ार कीमत", quintal: "/ क्विंटल", likelyRange: "संभावित सीमा", suggestedAction: "सुझाई गई कार्रवाई", seeLiveGuidance: "लाइव सलाह देखें", nextDays: "अगले", expectedPrice: "अनुमानित कीमत", likelyRangeLegend: "संभावित सीमा", forecastPointsMissing: "पूर्वानुमान बिंदु नहीं मिले", notEnoughPoints: "लाइव सेवा ने चार्ट बनाने के लिए पर्याप्त बिंदु नहीं दिए।", marketWarning: "बाज़ार चेतावनी", noWarningRecords: "कोई चेतावनी रिकॉर्ड नहीं मिला", noRiskWarnings: "इस चयन के लिए आपूर्ति जोखिम की कोई चेतावनी नहीं मिली।", checkingMarketRisk: "बाज़ार जोखिम की जाँच हो रही है", reviewingMovement: "हाल की आपूर्ति और कीमतों की गतिविधि की समीक्षा हो रही है।", returnedWarningRecords: "चेतावनी रिकॉर्ड मिले", recordsAnalyzed: "रिकॉर्ड का विश्लेषण", latestMovement: "नवीनतम बदलाव", checkingMandiPrices: "मंडी कीमतों की जाँच हो रही है", comparingMarkets: "लाइव गंतव्य मंडी की जानकारी की तुलना हो रही है।", bestMandiLabel: "श्रेष्ठ मंडी", liveOpportunities: "लाइव अवसर मिले", noOpportunity: "कोई अवसर नहीं मिला", noBetterOpportunity: "इस चयन के लिए बेहतर मंडी अवसर नहीं मिला।", grossDifference: "कुल अंतर", modelDisclaimer: "मॉडल आधारित सलाह, गारंटी नहीं। परिवहन और कमीशन की लागत शामिल नहीं हो सकती।",
+    stayInformed: "जानकारी रखें", receiveDecision: "अपना बाज़ार निर्णय पाएँ", signInAlerts: "अपनी फसल और मंडी प्राथमिकताएँ सहेजने और अलर्ट पाने के लिए साइन इन करें।", loginOrCreate: "लॉगिन या खाता बनाएँ", chooseFirst: "पहले फसल और मंडी चुनें", alertConnected: "आपका अलर्ट लाइव बाज़ार चयन से जुड़ा होगा।", selectedMarket: "चयनित बाज़ार", channel: "माध्यम", deliveryTime: "समय", language: "भाषा", saveAlert: "अलर्ट सहेजें", removeAlert: "अलर्ट सदस्यता हटाएँ", alertActionFailed: "अलर्ट कार्रवाई विफल",
+    login: "लॉगिन", createAccount: "खाता बनाएँ", useOtp: "OTP इस्तेमाल करें", fullName: "पूरा नाम", mobileNumber: "मोबाइल नंबर", password: "पासवर्ड", otpCode: "OTP कोड", enterName: "अपना नाम दर्ज करें", enterMobile: "10 अंकों का मोबाइल नंबर", enterPassword: "अपना पासवर्ड दर्ज करें", enterOtp: "6 अंकों का OTP दर्ज करें", pleaseWait: "कृपया प्रतीक्षा करें…", createFarmerAccount: "किसान खाता बनाएँ", sendOtp: "OTP भेजें", verifyOtp: "OTP सत्यापित करें", farmerAccountReady: "आपका किसान खाता तैयार है। आगे बढ़ने के लिए बाज़ार दृश्य पर लौटें।", signInToSave: "प्राथमिकताएँ सहेजने और लाइव बाज़ार अलर्ट पाने के लिए साइन इन करें।", keepDecisionsClose: "अपने बाज़ार निर्णय पास रखें।", authenticationFailed: "प्रमाणीकरण पूरा नहीं हो सका", accountAccess: "खाता पहुँच",
+    preferences: "आपकी बाज़ार प्राथमिकताएँ।", preferencesIntro: "ये प्राथमिकताएँ आपके खाते से ली गई हैं और लाइव बाज़ार निर्णय को आपके अनुसार बनाती हैं।", homeMandi: "मुख्य मंडी", preferredCrop: "पसंदीदा फसल", savePreferences: "प्राथमिकताएँ सहेजें", signInProfile: "प्रोफ़ाइल देखने के लिए साइन इन करें", loadingProfile: "प्रोफ़ाइल लोड हो रही है", profileLoadingMessage: "लाइव सेवा से आपकी सहेजी प्राथमिकताएँ ली जा रही हैं।", couldNotSavePreferences: "आपकी प्राथमिकताएँ सहेजी नहीं जा सकीं।", signOut: "साइन आउट", saveSuccess: "आपकी प्राथमिकताएँ सहेज दी गई हैं।",
+    noLiveService: "लाइव सेवा तक पहुँचा नहीं जा सका।", connectionTryAgain: "कृपया कनेक्शन जाँचकर फिर कोशिश करें।", signedInMessage: "आप साइन इन हैं। जारी रखने के लिए बाज़ार दृश्य पर लौटें।", accountReadyMessage: "आपका किसान खाता तैयार है। आगे बढ़ने के लिए बाज़ार दृश्य पर लौटें।", otpRequested: "OTP का अनुरोध किया गया। अपने मोबाइल पर भेजा गया कोड दर्ज करें।", otpSignedIn: "आप OTP से साइन इन हैं। जारी रखने के लिए बाज़ार दृश्य पर लौटें।",
+  },
+} as const;
+
+const LanguageContext = createContext<LanguageContextValue | null>(null);
+const STORAGE_KEY = "croplens_language";
+
+export function LanguageProvider({ children, initialLanguage }: { children: ReactNode; initialLanguage?: Language }) {
+  const [language, setLanguageState] = useState<Language>(() => {
+    if (initialLanguage) return initialLanguage;
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored === "hi" ? "hi" : "en";
+  });
+
+  const setLanguage = useCallback((next: Language) => {
+    setLanguageState(next);
+    window.localStorage.setItem(STORAGE_KEY, next);
+  }, []);
+
+  useEffect(() => { document.documentElement.lang = language; }, [language]);
+  const value = useMemo(() => ({ language, setLanguage, t: (key: TranslationKey) => translations[language][key] }), [language]);
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
+
+export function useLanguage() {
+  const context = useContext(LanguageContext);
+  if (!context) throw new Error("useLanguage must be used inside LanguageProvider");
+  return context;
+}
