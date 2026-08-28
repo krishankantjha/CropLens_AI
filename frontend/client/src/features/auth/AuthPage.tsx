@@ -5,6 +5,7 @@ import { login, register, sendOtp, verifyOtp } from "@/api/client";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import type { TokenResponse } from "@/types/auth";
 import { StatePanel } from "@/components/feedback/StatePanel";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Mode = "login" | "register" | "otp";
 
@@ -14,6 +15,7 @@ function persistSession(response: TokenResponse) {
 }
 
 export default function AuthPage() {
+  const { language, setLanguage, t } = useLanguage();
   const [mode, setMode] = useState<Mode>("login");
   const [fullName, setFullName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -28,43 +30,44 @@ export default function AuthPage() {
     try {
       if (mode === "login") {
         persistSession(await login({ mobile_number: mobile, password }));
-        setMessage("You are signed in. Return to the market view to continue.");
+        setMessage(t("signedInMessage"));
       } else if (mode === "register") {
-        persistSession(await register({ mobile_number: mobile, password, full_name: fullName, role: "farmer", language: "en" }));
-        setMessage("Your farmer account is ready. Return to the market view to continue.");
+        persistSession(await register({ mobile_number: mobile, password, full_name: fullName, role: "farmer", language }));
+        setMessage(t("accountReadyMessage"));
       } else if (!otp) {
         const response = await sendOtp({ mobile_number: mobile });
-        setMessage(response.message ?? "OTP requested. Enter the code sent to your mobile.");
+        setMessage(response.message ?? t("otpRequested"));
       } else {
         persistSession(await verifyOtp({ mobile_number: mobile, otp_code: otp }));
-        setMessage("You are signed in with OTP. Return to the market view to continue.");
+        setMessage(t("otpSignedIn"));
       }
     } catch (requestError) {
-      setError((requestError as { message?: string }).message ?? "The live authentication service could not complete this request.");
+      setError((requestError as { message?: string }).message ?? t("authenticationFailed"));
     } finally { setBusy(false); }
   };
 
   return (
     <div className="auth-page">
-      <a className="back-link" href="/"><ArrowLeft size={16} /> Back to market</a>
+      <a className="back-link" href="/"><ArrowLeft size={16} /> {t("backToMarket")}</a>
       <section className="auth-card" aria-labelledby="auth-title">
         <div className="auth-brand"><span className="auth-mark"><BrandLogo size={28} /></span><span><strong>CropLens AI</strong><small>Your market. Your decision.</small></span></div>
-        <p className="eyebrow"><LockKeyhole size={14} /> Farmer account</p>
-        <h1 id="auth-title">Keep your market decisions close.</h1>
-        <p className="auth-intro">Sign in to save your preferences and receive live market alerts.</p>
-        <div className="auth-tabs" role="tablist" aria-label="Account access">
-          <button className={mode === "login" ? "active" : ""} type="button" onClick={() => { setMode("login"); setMessage(""); setError(""); }}>Login</button>
-          <button className={mode === "register" ? "active" : ""} type="button" onClick={() => { setMode("register"); setMessage(""); setError(""); }}>Create account</button>
-          <button className={mode === "otp" ? "active" : ""} type="button" onClick={() => { setMode("otp"); setMessage(""); setError(""); }}>Use OTP</button>
+        <p className="eyebrow"><LockKeyhole size={14} /> {t("farmerAccount")}</p>
+        <h1 id="auth-title">{t("keepDecisionsClose")}</h1>
+        <p className="auth-intro">{t("signInToSave")}</p>
+        <div className="auth-tabs" role="tablist" aria-label={t("accountAccess")}>
+          <button className={mode === "login" ? "active" : ""} type="button" onClick={() => { setMode("login"); setMessage(""); setError(""); }}>{t("login")}</button>
+          <button className={mode === "register" ? "active" : ""} type="button" onClick={() => { setMode("register"); setMessage(""); setError(""); }}>{t("createAccount")}</button>
+          <button className={mode === "otp" ? "active" : ""} type="button" onClick={() => { setMode("otp"); setMessage(""); setError(""); }}>{t("useOtp")}</button>
         </div>
         <form className="auth-form" onSubmit={submit}>
-          {mode === "register" ? <label className="field"><span>Full name</span><span className="input-wrap"><UserRound size={17} /><input value={fullName} onChange={(event) => setFullName(event.target.value)} required placeholder="Enter your name" /></span></label> : null}
-          <label className="field"><span>Mobile number</span><span className="input-wrap"><Phone size={17} /><input value={mobile} onChange={(event) => setMobile(event.target.value)} required inputMode="tel" autoComplete="tel" placeholder="10-digit mobile number" /></span></label>
-          {mode !== "otp" ? <label className="field"><span>Password</span><span className="input-wrap"><KeyRound size={17} /><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} autoComplete={mode === "login" ? "current-password" : "new-password"} placeholder="Enter your password" /></span></label> : null}
-          {mode === "otp" && message ? <label className="field"><span>OTP code</span><span className="input-wrap"><KeyRound size={17} /><input value={otp} onChange={(event) => setOtp(event.target.value)} inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required placeholder="Enter 6-digit OTP" /></span></label> : null}
-          <button className="primary-button auth-submit" type="submit" disabled={busy}><span>{busy ? "Please wait…" : mode === "login" ? "Login" : mode === "register" ? "Create farmer account" : otp ? "Verify OTP" : "Send OTP"}</span><ArrowRight size={18} /></button>
+          {mode === "register" ? <label className="field"><span>{t("fullName")}</span><span className="input-wrap"><UserRound size={17} /><input value={fullName} onChange={(event) => setFullName(event.target.value)} required placeholder={t("enterName")} /></span></label> : null}
+          <label className="field"><span>{t("mobileNumber")}</span><span className="input-wrap"><Phone size={17} /><input value={mobile} onChange={(event) => setMobile(event.target.value)} required inputMode="tel" autoComplete="tel" placeholder={t("enterMobile")} /></span></label>
+          {mode !== "otp" ? <label className="field"><span>{t("password")}</span><span className="input-wrap"><KeyRound size={17} /><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} autoComplete={mode === "login" ? "current-password" : "new-password"} placeholder={t("enterPassword")} /></span></label> : null}
+          {mode === "otp" && message ? <label className="field"><span>{t("otpCode")}</span><span className="input-wrap"><KeyRound size={17} /><input value={otp} onChange={(event) => setOtp(event.target.value)} inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required placeholder={t("enterOtp")} /></span></label> : null}
+          {mode === "register" ? <label className="field"><span>{t("language")}</span><select value={language} onChange={(event) => setLanguage(event.target.value as "en" | "hi")}><option value="en">English</option><option value="hi">हिन्दी</option></select></label> : null}
+          <button className="primary-button auth-submit" type="submit" disabled={busy}><span>{busy ? t("pleaseWait") : mode === "login" ? t("login") : mode === "register" ? t("createFarmerAccount") : otp ? t("verifyOtp") : t("sendOtp")}</span><ArrowRight size={18} /></button>
         </form>
-        {error ? <StatePanel kind="error" title="Authentication could not be completed" message={error} /> : null}
+        {error ? <StatePanel kind="error" title={t("authenticationFailed")} message={error} /> : null}
         {message ? <div className="success-panel" role="status"><LockKeyhole size={17} /><span>{message}</span></div> : null}
       </section>
     </div>
