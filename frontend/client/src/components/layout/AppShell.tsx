@@ -24,7 +24,13 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#home" aria-label={`${t("home")} CropLens AI`}><span className="brand-mark"><BrandLogo size={36} /><span className="lens-dot" /></span><span><strong>CropLens AI</strong><small>Your market. Your decision.</small></span></a>
+        <a className="brand" href="#home" aria-label={`${t("home")} CropLens AI`}>
+          <img src="/logo-icon.png" alt="" className="brand-icon-img" />
+          <span className="brand-title-group">
+            <strong>CropLens AI</strong>
+            <small>Your market. Your decision.</small>
+          </span>
+        </a>
         <nav className="desktop-nav" aria-label={t("home")}>{navItems.map(({ label, href, icon: Icon }) => <a key={href} href={href}><Icon size={17} />{label}</a>)}</nav>
         <div className="topbar-actions">
           <button className="language-button" type="button" aria-label={t("changeLanguage")} onClick={() => setLanguage(language === "en" ? "hi" : "en")}><Globe2 size={17} /> <span>{language === "en" ? "English / हिन्दी" : "हिन्दी / English"}</span></button>
