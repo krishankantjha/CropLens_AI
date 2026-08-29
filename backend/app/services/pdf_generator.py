@@ -1,10 +1,11 @@
+import os
 import io
 import datetime
 from typing import Optional, List, Dict, Any
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image as RLImage
 
 
 def generate_procurement_pdf(
@@ -83,9 +84,26 @@ def generate_procurement_pdf(
 
     elements = []
 
-    # Header Title
-    elements.append(Paragraph("CropLens AI — Institutional Procurement Report", title_style))
-    elements.append(Paragraph(f"Commodity: <b>{commodity}</b> | Mandi: <b>{market} APMC</b> | Forecast Reference Date: <b>{date_str}</b>", sub_style))
+    # Header Title with Logo
+    logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../frontend/client/public/logo-primary.png"))
+    if os.path.exists(logo_path):
+        logo_img = RLImage(logo_path, width=1.35 * 72, height=1.08 * 72)
+        title_block = [
+            Paragraph("CropLens AI — Procurement Report", title_style),
+            Spacer(1, 4),
+            Paragraph(f"Commodity: <b>{commodity}</b> | Mandi: <b>{market} APMC</b> | Reference Date: <b>{date_str}</b>", sub_style)
+        ]
+        header_table = Table([[title_block, logo_img]], colWidths=[410, 130])
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+            ('PADDING', (0, 0), (-1, -1), 0),
+        ]))
+        elements.append(header_table)
+    else:
+        elements.append(Paragraph("CropLens AI — Institutional Procurement Report", title_style))
+        elements.append(Paragraph(f"Commodity: <b>{commodity}</b> | Mandi: <b>{market} APMC</b> | Forecast Reference Date: <b>{date_str}</b>", sub_style))
+
     elements.append(Spacer(1, 8))
     elements.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#046c4e'), spaceAfter=12))
 
