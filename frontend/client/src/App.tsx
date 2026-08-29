@@ -14,7 +14,7 @@ import ProfilePage from "./features/auth/ProfilePage";
 export default function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider defaultTheme="light">
+      <ThemeProvider defaultTheme="light" switchable>
         <LanguageProvider>
           <SessionProvider>
             <TooltipProvider>
