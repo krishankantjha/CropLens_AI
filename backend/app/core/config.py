@@ -36,6 +36,15 @@ if ENVIRONMENT == "production" and (not JWT_SECRET_KEY or JWT_SECRET_KEY == DEFA
 JWT_ALGORITHM: str = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
+AUTH_COOKIE_SECURE: bool = ENVIRONMENT == "production" or os.getenv("AUTH_COOKIE_SECURE", "false").lower() == "true"
+AUTH_COOKIE_SAMESITE: str = os.getenv("AUTH_COOKIE_SAMESITE", "lax").lower()
+if AUTH_COOKIE_SAMESITE not in {"lax", "strict", "none"}:
+    raise RuntimeError("AUTH_COOKIE_SAMESITE must be lax, strict, or none")
+if AUTH_COOKIE_SAMESITE == "none" and not AUTH_COOKIE_SECURE:
+    raise RuntimeError("AUTH_COOKIE_SECURE must be enabled when AUTH_COOKIE_SAMESITE is none")
+AUTH_ACCESS_COOKIE = "croplens_access"
+AUTH_REFRESH_COOKIE = "croplens_refresh"
+AUTH_CSRF_COOKIE = "croplens_csrf"
 
 # --- CORS ---
 CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "")
