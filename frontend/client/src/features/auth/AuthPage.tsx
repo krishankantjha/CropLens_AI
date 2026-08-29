@@ -51,7 +51,10 @@ export default function AuthPage() {
     <div className="auth-page">
       <a className="back-link" href="/"><ArrowLeft size={16} /> {t("backToMarket")}</a>
       <section className="auth-card" aria-labelledby="auth-title">
-        <div className="auth-brand"><span className="auth-mark"><BrandLogo size={28} /></span><span><strong>CropLens AI</strong><small>Your market. Your decision.</small></span></div>
+        <div className="auth-brand-full">
+          <span className="auth-logo-badge"><img src="/logo-icon.png" alt="CropLens AI" /></span>
+          <span className="auth-logo-text"><strong>CropLens AI</strong><small>Your market. Your decision.</small></span>
+        </div>
         <p className="eyebrow"><LockKeyhole size={14} /> {t("farmerAccount")}</p>
         <h1 id="auth-title">{t("keepDecisionsClose")}</h1>
         <p className="auth-intro">{t("signInToSave")}</p>
