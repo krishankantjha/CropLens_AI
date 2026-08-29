@@ -1,55 +1,71 @@
-// Earthline Intelligence: uncertainty is visible, honest, and derived only from the response.
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { ForecastPoint } from "@/types/api";
+import { Area, AreaChart, CartesianGrid, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 type ForecastChartProps = { points: ForecastPoint[] };
 
+type ChartPoint = ForecastPoint & { label: string; low: number | null; mid: number; high: number | null; peak: boolean };
+
 function value(point: ForecastPoint, key: "p10" | "p50" | "p90") {
-  if (key === "p10") {
-    const raw = point.p10_floor_price ?? point.p10;
-    return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
-  }
-  if (key === "p50") {
-    const raw = point.p50_median_price ?? point.price ?? point.p50 ?? point.expected_price;
-    return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
-  }
-  if (key === "p90") {
-    const raw = point.p90_ceiling_price ?? point.p90;
-    return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
-  }
-  return null;
+  const raw = key === "p10"
+    ? point.p10_floor_price ?? point.p10
+    : key === "p50"
+      ? point.p50_median_price ?? point.price ?? point.p50 ?? point.expected_price
+      : point.p90_ceiling_price ?? point.p90;
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+}
+
+function money(valueToFormat: number | null) {
+  return valueToFormat === null ? "—" : `₹${Math.round(valueToFormat).toLocaleString("en-IN")}`;
 }
 
 export function ForecastChart({ points }: ForecastChartProps) {
-  const usable = points
-    .map((point, index) => ({ point, index, low: value(point, "p10"), mid: value(point, "p50"), high: value(point, "p90") }))
-    .filter((entry) => entry.mid !== null);
+  const { language, t } = useLanguage();
+  const usable: ChartPoint[] = points
+    .map((point, index) => {
+      const mid = value(point, "p50");
+      return mid === null ? null : {
+        ...point,
+        label: language === "hi" ? point.day_name_hi ?? point.day_name ?? point.day ?? point.date ?? `${t("day")} ${index + 1}` : point.day_name ?? point.day ?? point.date ?? `${t("day")} ${index + 1}`,
+        low: value(point, "p10"),
+        mid,
+        high: value(point, "p90"),
+        peak: Boolean(point.is_peak),
+      };
+    })
+    .filter((point): point is ChartPoint => point !== null);
 
   if (usable.length < 2) return null;
-  const allValues = usable.flatMap((entry) => [entry.low, entry.mid, entry.high].filter((item): item is number => item !== null));
-  const min = Math.min(...allValues);
-  const max = Math.max(...allValues);
-  const range = Math.max(max - min, 1);
-  const width = 760;
-  const height = 260;
-  const x = (index: number) => (index / Math.max(usable.length - 1, 1)) * width;
-  const y = (price: number) => height - ((price - min) / range) * (height - 24) - 12;
-  const line = usable.map((entry, index) => `${x(index)},${y(entry.mid as number)}`).join(" ");
-  const upper = usable.filter((entry) => entry.high !== null).map((entry, index) => `${x(index)},${y(entry.high as number)}`);
-  const lower = usable.filter((entry) => entry.low !== null).map((entry, index) => `${x(index)},${y(entry.low as number)}`).reverse();
-  const band = upper.length > 1 && lower.length > 1 ? [...upper, ...lower].join(" ") : "";
+  const peak = usable.reduce((best, point) => point.mid > best.mid ? point : best, usable[0]);
 
   return (
     <div className="chart-wrap">
-      <svg className="forecast-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Live forecast trend with likely price range">
-        <line x1="0" y1={height - 12} x2={width} y2={height - 12} className="chart-axis" />
-        {band ? <polygon points={band} className="chart-band" /> : null}
-        <polyline points={line} className="chart-line" />
-        {usable.map((entry, index) => <circle key={`${entry.index}-${index}`} cx={x(index)} cy={y(entry.mid as number)} r="5" className="chart-dot" />)}
-      </svg>
-      <div className="chart-labels" aria-hidden="true">
-        {usable.map((entry, index) => <span key={`${entry.index}-label`}>{entry.point.day_name ?? entry.point.day ?? entry.point.date ?? `Day ${index + 1}`}</span>)}
-      </div>
-      <p className="sr-only">The line shows expected price. The shaded area shows the likely lower and upper range when returned by the live service.</p>
+      <ResponsiveContainer width="100%" height={280} minWidth={420}>
+        <AreaChart data={usable} margin={{ top: 12, right: 18, left: 4, bottom: 8 }}>
+          <defs>
+            <linearGradient id="forecast-band" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#1f5a3d" stopOpacity={0.22} />
+              <stop offset="100%" stopColor="#1f5a3d" stopOpacity={0.04} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid vertical={false} stroke="rgba(31,90,61,.12)" strokeDasharray="4 5" />
+          <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+          <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(valueToFormat) => `₹${Math.round(valueToFormat / 1000)}k`} width={42} />
+          <Tooltip
+            content={({ active, payload }) => {
+              const point = payload?.[0]?.payload as ChartPoint | undefined;
+              if (!active || !point) return null;
+              return <div className="chart-tooltip"><strong>{point.label}</strong><span>{t("p10Floor")}: {money(point.low)}</span><span>{t("p50Median")}: {money(point.mid)}</span><span>{t("p90Ceiling")}: {money(point.high)}</span></div>;
+            }}
+          />
+          <Area type="monotone" dataKey="high" stroke="transparent" fill="url(#forecast-band)" connectNulls name="high" />
+          <Area type="monotone" dataKey="low" stroke="transparent" fill="var(--paper)" fillOpacity={1} connectNulls name="low" />
+          <Area type="monotone" dataKey="mid" stroke="var(--green)" strokeWidth={3} fill="transparent" dot={{ r: 4, strokeWidth: 2, fill: "var(--paper)" }} activeDot={{ r: 6 }} connectNulls name="mid" />
+          <ReferenceDot x={peak.label} y={peak.mid} r={7} fill="#d99a2b" stroke="var(--paper)" strokeWidth={3} ifOverflow="extendDomain" label={{ value: "★", position: "top", fill: "#a96800", fontSize: 16 }} />
+        </AreaChart>
+      </ResponsiveContainer>
+      <p className="chart-caption">{t("chartExplanation")}</p>
+      <p className="sr-only">{t("peakDayIs")} {peak.label}. {t("chartExplanation")}</p>
     </div>
   );
 }
