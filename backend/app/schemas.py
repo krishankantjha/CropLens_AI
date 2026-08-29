@@ -256,4 +256,4 @@ class TokenResponse(BaseModel):
 
 
 class TokenRefreshRequest(BaseModel):
-    refresh_token: str = Field(..., description="Valid JWT refresh token")
+    refresh_token: Optional[str] = Field(None, description="Optional legacy refresh token; secure-cookie clients use the refresh cookie")
