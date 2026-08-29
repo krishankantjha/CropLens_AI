@@ -4,7 +4,9 @@ test_alerts.py — Integration test suite for Dual-Channel Alert Dispatcher (Wha
 
 import pytest
 import time
+from types import SimpleNamespace
 from fastapi.testclient import TestClient
+from backend.app.api.alerts_router import _get_dynamic_advisory_values
 from backend.app.main import app
 
 
@@ -26,6 +28,37 @@ def client():
         test_client.headers.update({"Authorization": f"Bearer {response.json()['access_token']}"})
         test_client.test_mobile = mobile
         yield test_client
+
+
+def test_dynamic_advisory_values_use_forecast_result(monkeypatch):
+    app_state = SimpleNamespace(
+        models_loaded=True,
+        dataset_loaded=True,
+        models={},
+        metadata={},
+        dataset=object(),
+    )
+    request = SimpleNamespace(app=SimpleNamespace(state=app_state))
+    forecast = SimpleNamespace(
+        current_price=2040.0,
+        peak_day=SimpleNamespace(price=2210.0),
+        expected_gain=170.0,
+        decision="SELL AFTER 3 DAYS",
+        decision_hi="3 दिन बाद बेचें",
+    )
+    monkeypatch.setattr(
+        "backend.app.api.alerts_router.predict_7day_forecast_service",
+        lambda *args: forecast,
+    )
+
+    advisory = _get_dynamic_advisory_values(request, "Tomato", "Agra", "en")
+
+    assert advisory == {
+        "decision": "SELL AFTER 3 DAYS",
+        "current_price": 2040.0,
+        "target_price": 2210.0,
+        "expected_gain": 170.0,
+    }
 
 
 def test_alert_routes_require_authentication():
@@ -65,6 +98,8 @@ def test_send_whatsapp_advisory(client: TestClient):
 
 def test_test_whatsapp_alert(client: TestClient):
     """Tests POST /api/v1/alerts/test-whatsapp endpoint."""
+    if not getattr(app.state, "models_loaded", False) or not getattr(app.state, "dataset_loaded", False):
+        pytest.skip("Production model bundle is required for dynamic advisory tests")
     payload = {
         "mobile_number": client.test_mobile,
         "crop": "Tomato",
@@ -111,6 +146,8 @@ def test_subscribe_alert_flow(client: TestClient):
 
 def test_telegram_test_alert(client: TestClient):
     """Tests POST /api/v1/alerts/telegram/test endpoint."""
+    if not getattr(app.state, "models_loaded", False) or not getattr(app.state, "dataset_loaded", False):
+        pytest.skip("Production model bundle is required for dynamic advisory tests")
     payload = {
         "chat_id": "123456789",
         "crop": "Wheat",
