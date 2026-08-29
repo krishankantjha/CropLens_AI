@@ -6,12 +6,14 @@ import { getHealth } from "@/api/client";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useSession } from "@/contexts/SessionContext";
 
 type AppShellProps = { children: ReactNode };
 
 export function AppShell({ children }: AppShellProps) {
   const { language, setLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
+  const { isAuthenticated } = useSession();
   const [serviceState, setServiceState] = useState<"checking" | "live" | "unavailable">("checking");
   useEffect(() => {
     let active = true;
@@ -36,7 +38,7 @@ export function AppShell({ children }: AppShellProps) {
           <button className="language-button" type="button" aria-label={t("changeLanguage")} onClick={() => setLanguage(language === "en" ? "hi" : "en")}><Globe2 size={17} /> <span>{language === "en" ? "English / हिन्दी" : "हिन्दी / English"}</span></button>
           <button className="theme-button" type="button" aria-label={theme === "dark" ? t("switchToLight") : t("switchToDark")} title={theme === "dark" ? t("switchToLight") : t("switchToDark")} onClick={toggleTheme}>{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</button>
           <span className={`service-pill service-pill--${serviceState}`}><span className="service-dot" />{serviceState === "checking" ? t("checking") : serviceState === "live" ? t("live") : t("unavailable")}</span>
-          <a className="account-button" href="/auth"><UserRound size={17} /><span>{t("account")}</span></a>
+          <a className="account-button" href={isAuthenticated ? "/profile" : "/auth"} aria-label={isAuthenticated ? t("farmerProfile") : t("account")}><UserRound size={17} /><span>{isAuthenticated ? t("farmerProfile") : t("account")}</span></a>
         </div>
       </header>
       <main>{children}</main>
