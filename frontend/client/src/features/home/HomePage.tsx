@@ -133,7 +133,8 @@ export default function HomePage() {
   const currentPrice = forecast?.current_price;
   const peakDay = forecast?.peak_day ?? points.find((point) => point.is_peak);
   const tone = decisionTone(forecast?.decision_en ?? forecast?.decision);
-  const advisoryText = forecast ? `${displayedCommodity?.label ?? forecast.commodity ?? commodity} ${displayedMarket?.label ?? forecast.market ?? market}. ${forecast.decision_en ?? forecast.decision ?? t("seeLiveGuidance")}. ${t("expectedMarketPrice")}: ${money(p50Price)} ${t("quintal")}. ${typeof forecast.expected_gain === "number" ? `${t("expectedGain")}: ${money(forecast.expected_gain)}.` : ""}` : "";
+  const advisoryDecision = language === "hi" ? forecast?.decision_hi ?? forecast?.decision : forecast?.decision_en ?? forecast?.decision;
+  const advisoryText = forecast ? `${displayedCommodity?.label ?? forecast.commodity ?? commodity} ${displayedMarket?.label ?? forecast.market ?? market}. ${advisoryDecision ?? t("seeLiveGuidance")}. ${t("expectedMarketPrice")}: ${money(p50Price)} ${t("quintal")}. ${typeof forecast.expected_gain === "number" ? `${t("expectedGain")}: ${money(forecast.expected_gain)}.` : ""}` : "";
   const speakAdvisory = () => { if (!("speechSynthesis" in window) || !advisoryText) return; window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(advisoryText); utterance.lang = language === "hi" ? "hi-IN" : "en-IN"; utterance.rate = 0.9; window.speechSynthesis.speak(utterance); };
   const shareAdvisory = () => { if (!advisoryText) return; window.open(`https://wa.me/?text=${encodeURIComponent(advisoryText)}`, "_blank", "noopener,noreferrer"); };
 
