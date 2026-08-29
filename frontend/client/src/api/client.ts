@@ -3,7 +3,10 @@ import type { ApiError, ForecastResponse, ProcurementResponse, ResourcesResponse
 import type { TokenResponse, UserProfile } from "@/types/auth";
 import type { SubscriptionsResponse } from "@/types/alerts";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+const API_BASE_URL = (configuredApiBaseUrl ?? (import.meta.env.DEV ? "http://127.0.0.1:8000" : "")).replace(/\/$/, "");
+
+export const SESSION_EXPIRED_EVENT = "croplens:session-expired";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -16,6 +19,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    }
     let message = `The live service returned ${response.status}.`;
     try {
       const payload = (await response.json()) as { detail?: string; message?: string };
