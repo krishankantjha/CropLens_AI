@@ -170,7 +170,39 @@ export default function HomePage() {
       </section>
 
       <section className="result-section" aria-live="polite" lang={language}>
-        {!hasRequested ? <StatePanel kind="empty" title={t("marketDecisionHere")} message={t("selectCropMandiGuidance")} /> : null}
+        {!hasRequested ? (
+          <div className="onboarding-guide">
+            <div className="guide-header">
+              <span className="guide-badge"><Sparkles size={15} /> {language === "en" ? "Live Mandi Intelligence" : "लाइव मंडी इंटेलिजेंस"}</span>
+              <h3>{language === "en" ? "Get the Best Price for Your Crop — in 3 Steps" : "3 आसान कदमों में अपनी फसल का सबसे अच्छा भाव पाएँ"}</h3>
+              <p>{language === "en" ? "Choose your crop and nearest market above. We'll tell you the best day and the best place to sell." : "ऊपर अपनी फसल और नज़दीकी मंडी चुनें — हम आपको बताएँगे कि कब और कहाँ बेचना सबसे फायदेमंद है।"}</p>
+            </div>
+            <div className="guide-steps">
+              <div className="guide-step">
+                <div className="guide-step-icon">1</div>
+                <div>
+                  <strong>{language === "en" ? "Choose Your Crop & Market" : "फसल और मंडी चुनें"}</strong>
+                  <p>{language === "en" ? "Select from crops like Potato, Onion, Tomato — then pick the nearest mandi to you." : "आलू, प्याज, टमाटर जैसी फसल चुनें — फिर अपनी नज़दीकी मंडी चुनें।"}</p>
+                </div>
+              </div>
+              <div className="guide-step">
+                <div className="guide-step-icon">2</div>
+                <div>
+                  <strong>{language === "en" ? "See Prices for the Next 7 Days" : "अगले 7 दिन के भाव देखें"}</strong>
+                  <p>{language === "en" ? "Find out which day prices will be highest — so you know the best time to sell." : "जानें किस दिन सबसे ज़्यादा भाव मिलेगा — ताकि आप सही समय पर बेच सकें।"}</p>
+                </div>
+              </div>
+              <div className="guide-step">
+                <div className="guide-step-icon">3</div>
+                <div>
+                  <strong>{language === "en" ? "Should You Sell Today or Wait?" : "आज बेचें या रुकें?"}</strong>
+                  <p>{language === "en" ? "Get a clear \"Sell Now\" or \"Wait\" advice, plus which nearby mandi gives you a better price." : "सीधी सलाह — अभी बेचें या रुकें, और कौन सी मंडी में ज़्यादा पैसा मिलेगा।"}</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        ) : null}
         {hasRequested && forecastState.error ? serviceErrorPanel("forecast", forecastState, retryForecast) : null}
         {hasRequested && forecastState.loading ? <LoadingSkeleton label={t("checkForecast")} /> : null}
         {hasRequested && (forecast || risk || procurement || riskState.loading || procurementState.loading || riskState.error || procurementState.error) ? <>
@@ -188,7 +220,11 @@ export default function HomePage() {
         </> : null}
       </section>
       <AlertsPanel commodity={commodity} market={market} />
-      <section className="trust-strip"><span><ShieldAlert size={18} /> {language === "en" ? "Honest uncertainty" : "ईमानदार अनिश्चितता"}</span><span><Leaf size={18} /> {language === "en" ? "Live backend data" : "लाइव बैकएंड डेटा"}</span><span><Info size={18} /> {language === "en" ? "Farmer-first guidance" : "किसान-प्रथम सलाह"}</span></section>
+      <section className="trust-strip">
+        <span><ShieldAlert size={18} /> {language === "en" ? "Transparent price ranges" : "पारदर्शी कीमत सीमा"}</span>
+        <span><Leaf size={18} /> {language === "en" ? "Live backend data" : "लाइव बैकएंड डेटा"}</span>
+        <span><Info size={18} /> {language === "en" ? "Farmer-first guidance" : "किसान-प्रथम सलाह"}</span>
+      </section>
       <section className="sr-only" id="risk-details" aria-label={t("marketRisk")}><h2>{t("marketRisk")}</h2></section>
       <section className="sr-only" id="mandi-details" aria-label={t("bestMandi")}><h2>{t("bestMandi")}</h2></section>
       <section className="sr-only" id="account" aria-label={t("account")}><h2>{t("account")}</h2></section>
