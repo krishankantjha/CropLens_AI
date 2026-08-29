@@ -1,4 +1,5 @@
 import pytest
+import requests
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -70,6 +71,28 @@ def test_agmarknet_sync_filters_and_upserts_supported_records(monkeypatch, db_se
     assert rows[0].modal_price == 2100.0
     assert rows[0].district == "Agra"
     assert rows[0].min_price == 1900.0
+
+
+def test_agmarknet_fetch_retries_transient_timeout(monkeypatch):
+    monkeypatch.setattr(agmarknet_sync, "AGMARKNET_API_KEY", "test-key")
+    monkeypatch.setattr(agmarknet_sync, "AGMARKNET_MAX_PAGES", 1)
+    monkeypatch.setattr(agmarknet_sync, "AGMARKNET_RETRY_ATTEMPTS", 2)
+    monkeypatch.setattr(agmarknet_sync.time, "sleep", lambda _seconds: None)
+    calls = 0
+
+    def flaky_get(url, params, timeout):
+        nonlocal calls
+        calls += 1
+        if calls < 3:
+            raise requests.Timeout("temporary upstream timeout")
+        return FakeResponse({"records": []})
+
+    monkeypatch.setattr(agmarknet_sync.requests, "get", flaky_get)
+    records, result = agmarknet_sync._fetch_live_records()
+
+    assert records == []
+    assert result["status"] == "success"
+    assert calls == len(agmarknet_sync.VALID_COMMODITIES) + 2
 
 
 def test_nasa_power_skips_provider_missing_value_rows(monkeypatch, db_session):
