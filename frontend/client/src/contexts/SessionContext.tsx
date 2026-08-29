@@ -8,6 +8,7 @@ const LEGACY_REFRESH_TOKEN_KEY = "croplens_refresh_token";
 type SessionContextValue = {
   accessToken: string | null;
   isAuthenticated: boolean;
+  isSessionReady: boolean;
   setSession: (accessToken: string, refreshToken?: string) => void;
   clearSession: () => void;
 };
@@ -16,6 +17,7 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [isSessionReady, setIsSessionReady] = useState(false);
 
   const setSession = useCallback((nextAccessToken: string) => {
     if (nextAccessToken) setAccessToken("cookie-session");
@@ -35,6 +37,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         if (active) setAccessToken(null);
+      })
+      .finally(() => {
+        if (active) setIsSessionReady(true);
       });
 
     const handleSessionExpired = () => {
@@ -48,7 +53,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, [clearSession]);
 
-  const value = useMemo(() => ({ accessToken, isAuthenticated: Boolean(accessToken), setSession, clearSession }), [accessToken, setSession, clearSession]);
+  const value = useMemo(() => ({ accessToken, isAuthenticated: Boolean(accessToken), isSessionReady, setSession, clearSession }), [accessToken, isSessionReady, setSession, clearSession]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
