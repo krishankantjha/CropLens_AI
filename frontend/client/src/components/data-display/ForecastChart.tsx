@@ -44,13 +44,13 @@ export function ForecastChart({ points }: ForecastChartProps) {
         <AreaChart data={usable} margin={{ top: 12, right: 18, left: 4, bottom: 8 }}>
           <defs>
             <linearGradient id="forecast-band" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#1f5a3d" stopOpacity={0.22} />
-              <stop offset="100%" stopColor="#1f5a3d" stopOpacity={0.04} />
+              <stop offset="0%" stopColor="var(--green)" stopOpacity={0.25} />
+              <stop offset="100%" stopColor="var(--green)" stopOpacity={0.03} />
             </linearGradient>
           </defs>
-          <CartesianGrid vertical={false} stroke="rgba(31,90,61,.12)" strokeDasharray="4 5" />
-          <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-          <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(valueToFormat) => `₹${Math.round(valueToFormat / 1000)}k`} width={42} />
+          <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="4 5" />
+          <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--ink-muted)" }} tickLine={false} axisLine={false} />
+          <YAxis tick={{ fontSize: 11, fill: "var(--ink-muted)" }} tickLine={false} axisLine={false} tickFormatter={(valueToFormat) => `₹${Math.round(valueToFormat / 1000)}k`} width={42} />
           <Tooltip
             content={({ active, payload }) => {
               const point = payload?.[0]?.payload as ChartPoint | undefined;
@@ -61,7 +61,7 @@ export function ForecastChart({ points }: ForecastChartProps) {
           <Area type="monotone" dataKey="high" stroke="transparent" fill="url(#forecast-band)" connectNulls name="high" />
           <Area type="monotone" dataKey="low" stroke="transparent" fill="var(--paper)" fillOpacity={1} connectNulls name="low" />
           <Area type="monotone" dataKey="mid" stroke="var(--green)" strokeWidth={3} fill="transparent" dot={{ r: 4, strokeWidth: 2, fill: "var(--paper)" }} activeDot={{ r: 6 }} connectNulls name="mid" />
-          <ReferenceDot x={peak.label} y={peak.mid} r={7} fill="#d99a2b" stroke="var(--paper)" strokeWidth={3} ifOverflow="extendDomain" label={{ value: "★", position: "top", fill: "#a96800", fontSize: 16 }} />
+          <ReferenceDot x={peak.label} y={peak.mid} r={7} fill="var(--amber)" stroke="var(--paper)" strokeWidth={3} ifOverflow="extendDomain" label={{ value: "★", position: "top", fill: "var(--amber)", fontSize: 16 }} />
         </AreaChart>
       </ResponsiveContainer>
       <p className="chart-caption">{t("chartExplanation")}</p>
