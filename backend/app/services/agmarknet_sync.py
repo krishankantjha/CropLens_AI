@@ -9,6 +9,7 @@ leaves the last known persisted data untouched.
 
 import datetime as dt
 import logging
+import time
 from typing import Any, Dict, Optional
 
 import pandas as pd
@@ -20,6 +21,7 @@ from backend.app.core.config import (
     AGMARKNET_API_PAGE_SIZE,
     AGMARKNET_MAX_PAGES,
     AGMARKNET_TIMEOUT_SECONDS,
+    AGMARKNET_RETRY_ATTEMPTS,
 )
 from backend.app.core.constants import VALID_COMMODITIES, VALID_MARKETS
 from backend.app.db.database import SessionLocal
@@ -66,6 +68,30 @@ def _to_iso_date(value: Any) -> Optional[str]:
     return None if pd.isna(parsed) else parsed.date().isoformat()
 
 
+def _request_page(params: Dict[str, Any]) -> requests.Response:
+    """Fetch one page with bounded retries for transient upstream failures."""
+    total_attempts = AGMARKNET_RETRY_ATTEMPTS + 1
+    for attempt in range(total_attempts):
+        try:
+            return requests.get(
+                AGMARKNET_API_URL,
+                params=params,
+                timeout=AGMARKNET_TIMEOUT_SECONDS,
+            )
+        except requests.RequestException:
+            if attempt >= total_attempts - 1:
+                raise
+            delay_seconds = min(2 ** attempt, 5)
+            logger.warning(
+                "Agmarknet request failed on attempt %s/%s; retrying in %ss",
+                attempt + 1,
+                total_attempts,
+                delay_seconds,
+            )
+            time.sleep(delay_seconds)
+    raise RuntimeError("Agmarknet request exhausted its retry attempts.")
+
+
 def _fetch_live_records() -> tuple[list[Dict[str, Any]], Dict[str, Any]]:
     """Fetch current records with bounded pagination from the official OGD API."""
     api_key = AGMARKNET_API_KEY
@@ -81,16 +107,14 @@ def _fetch_live_records() -> tuple[list[Dict[str, Any]], Dict[str, Any]]:
         # a mandi that happens to sort later in the national result set.
         for commodity in VALID_COMMODITIES:
             for page in range(AGMARKNET_MAX_PAGES):
-                response = requests.get(
-                    AGMARKNET_API_URL,
-                    params={
+                response = _request_page(
+                    {
                         "api-key": api_key,
                         "format": "json",
                         "filters[commodity]": commodity,
                         "offset": page * AGMARKNET_API_PAGE_SIZE,
                         "limit": AGMARKNET_API_PAGE_SIZE,
-                    },
-                    timeout=AGMARKNET_TIMEOUT_SECONDS,
+                    }
                 )
                 if response.status_code != 200:
                     return [], {
