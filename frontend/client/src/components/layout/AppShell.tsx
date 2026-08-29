@@ -21,7 +21,7 @@ export function AppShell({ children }: AppShellProps) {
     return () => { active = false; };
   }, []);
   const navItems = [
-    { label: t("home"), href: "#home", icon: Home }, { label: t("forecast"), href: "#forecast", icon: ChartNoAxesCombined }, { label: t("marketRisk"), href: "#risk", icon: ShieldAlert }, { label: t("bestMandi"), href: "#mandi", icon: MapPin }, { label: t("alerts"), href: "#alerts", icon: Bell },
+    { label: t("home"), href: "#home", icon: Home }, { label: t("forecast"), href: "#forecast", icon: ChartNoAxesCombined }, { label: t("marketRisk"), href: "#risk", icon: ShieldAlert }, { label: t("bestMandi"), href: "#mandi", icon: MapPin }, { label: t("alerts"), href: "#alerts", icon: Bell }, { label: t("farmerProfile"), href: "/profile", icon: UserRound },
   ];
   return (
     <div className="app-shell">
