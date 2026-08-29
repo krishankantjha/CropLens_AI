@@ -17,6 +17,56 @@ from backend.app.services.telegram_service import (
     format_telegram_advisory_message,
     get_telegram_bot_status
 )
+from backend.app.schemas import MultiDayForecastRequest
+from backend.app.services.api_service import predict_7day_forecast_service
+
+def _get_dynamic_advisory_values(
+    request: Request,
+    crop: str,
+    mandi: str,
+    lang: str,
+) -> Dict[str, Any]:
+    """Generate advisory values from the loaded forecast service without fallbacks."""
+    app_state = request.app.state
+    if not getattr(app_state, "models_loaded", False) or not getattr(app_state, "dataset_loaded", False):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Forecast data is currently unavailable for this crop and mandi.",
+        )
+
+    try:
+        forecast_request = MultiDayForecastRequest(
+            commodity=crop,
+            market=mandi,
+            horizon_days=7,
+        )
+        forecast = predict_7day_forecast_service(
+            forecast_request,
+            app_state.models,
+            app_state.metadata,
+            app_state.dataset,
+        )
+        peak_day = forecast.peak_day
+        current_price = forecast.current_price
+        target_price = peak_day.price if peak_day else None
+        expected_gain = forecast.expected_gain
+        decision = forecast.decision_hi if lang == "hi" else forecast.decision
+        if any(value is None for value in (current_price, target_price, expected_gain, decision)):
+            raise ValueError("Forecast response is incomplete")
+        return {
+            "decision": decision,
+            "current_price": current_price,
+            "target_price": target_price,
+            "expected_gain": expected_gain,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="A dynamic advisory could not be generated because forecast data is unavailable for this crop and mandi.",
+        ) from exc
+
 
 alerts_router = APIRouter(
     prefix="/alerts",
@@ -96,23 +146,25 @@ def send_whatsapp_advisory_endpoint(
 @alerts_router.post("/test-whatsapp", status_code=status.HTTP_200_OK)
 def test_whatsapp_endpoint(
     req: TestWhatsappRequest,
+    request: Request,
     current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """
-    Instant Test Trigger Endpoint ([⚡ Send Test WhatsApp Alert Now]).
-    Immediately returns formatted test advisory and direct wa.me URL within 2 seconds.
+    Forecast-backed test trigger endpoint for WhatsApp delivery.
+    Generates the advisory from the selected crop and mandi before returning the direct wa.me URL.
     """
     requested_mobile = "".join(filter(str.isdigit, req.mobile_number))[-10:]
     if requested_mobile != current_user.mobile_number:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You may only send alerts to your verified mobile number.")
 
+    advisory = _get_dynamic_advisory_values(request, req.crop, req.mandi, req.lang)
     formatted_msg = format_advisory_message(
         crop=req.crop,
         mandi=req.mandi,
-        decision="HOLD FOR 5 DAYS",
-        current_price=1650.0,
-        target_price=1780.0,
-        expected_gain=130.0,
+        decision=advisory["decision"],
+        current_price=advisory["current_price"],
+        target_price=advisory["target_price"],
+        expected_gain=advisory["expected_gain"],
         lang=req.lang
     )
 
@@ -229,17 +281,21 @@ def delete_subscription_endpoint(
 
 
 @alerts_router.post("/telegram/test", status_code=status.HTTP_200_OK)
-def test_telegram_endpoint(req: TestTelegramRequest) -> Dict[str, Any]:
+def test_telegram_endpoint(
+    req: TestTelegramRequest,
+    request: Request,
+) -> Dict[str, Any]:
     """
     Pushes an instant test alert to farmer's Telegram Chat ID with zero cost.
     """
+    advisory = _get_dynamic_advisory_values(request, req.crop, req.mandi, req.lang)
     msg = format_telegram_advisory_message(
         crop=req.crop,
         mandi=req.mandi,
-        decision="HOLD FOR 5 DAYS",
-        current_price=1650.0,
-        target_price=1780.0,
-        expected_gain=130.0,
+        decision=advisory["decision"],
+        current_price=advisory["current_price"],
+        target_price=advisory["target_price"],
+        expected_gain=advisory["expected_gain"],
         lang=req.lang
     )
     result = send_telegram_message(req.chat_id, msg)
