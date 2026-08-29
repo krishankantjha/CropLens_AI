@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { ArrowRight, CalendarDays, ChevronDown, Info, Leaf, MapPin, RefreshCw, ShieldAlert, Sparkles } from "lucide-react";
 import { getForecast, getProcurement, getResources, getRisk } from "@/api/client";
 import { ForecastChart } from "@/components/data-display/ForecastChart";
+import { MandiCombobox } from "./MandiCombobox";
 import { StatePanel } from "@/components/feedback/StatePanel";
 import { AlertsPanel } from "@/features/home/AlertsPanel";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -13,6 +14,15 @@ import { asApiError, isUnavailable, isValidSelection, toFarmerMessage, type Sele
 function forecastPoints(data: ForecastResponse | null): ForecastPoint[] { return data?.forecast ?? data?.forecasts ?? data?.daily_forecast ?? []; }
 function money(value: number | undefined) { return typeof value === "number" && Number.isFinite(value) ? `₹${Math.round(value).toLocaleString("en-IN")}` : "—"; }
 function formatMetric(value: number | undefined, suffix = "") { return typeof value === "number" && Number.isFinite(value) ? `${value > 0 ? "+" : ""}${value.toFixed(1)}${suffix}` : "—"; }
+function decisionTone(decision: string | undefined) { const text = (decision ?? "").toLowerCase(); return text.includes("sell") || text.includes("बेच") ? "sell" : text.includes("profit") || text.includes("लाभ") ? "profit" : "hold"; }
+function percentage(value: number, min: number, max: number) { return Math.max(0, Math.min(100, ((value - min) / Math.max(max - min, 1)) * 100)); }
+
+function PriceCorridor({ current, low, median, high, label }: { current?: number; low?: number; median?: number; high?: number; label: string }) {
+  const values = [current, low, median, high].filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  if (values.length < 3 || current === undefined || low === undefined || high === undefined) return null;
+  const min = Math.min(...values); const max = Math.max(...values);
+  return <div className="corridor" aria-label={label}><div className="corridor-head"><span>{label}</span><strong>₹{Math.round(current).toLocaleString("en-IN")}</strong></div><div className="corridor-track"><span className="corridor-band" /><span className="corridor-marker" style={{ left: `${percentage(current, min, max)}%` }} /></div><div className="corridor-labels"><span>₹{Math.round(low).toLocaleString("en-IN")}</span><span>{median !== undefined ? `₹${Math.round(median).toLocaleString("en-IN")}` : "—"}</span><span>₹{Math.round(high).toLocaleString("en-IN")}</span></div></div>;
+}
 
 type ServiceState<T> = {
   data: T | null;
@@ -38,6 +48,7 @@ export default function HomePage() {
   const forecastRequestId = useRef(0);
   const riskRequestId = useRef(0);
   const procurementRequestId = useRef(0);
+  const popularCrops = ["Potato", "Onion", "Tomato", "Wheat"];
 
   const loadResources = async () => {
     setResourceLoading(true); setResourceError(null);
@@ -117,6 +128,10 @@ export default function HomePage() {
   const p50Price = forecast?.p50_median_price ?? primaryForecast?.p50_median_price ?? primaryForecast?.price ?? forecast?.current_price;
   const p10Price = forecast?.p10_floor_price ?? primaryForecast?.p10_floor_price;
   const p90Price = forecast?.p90_ceiling_price ?? primaryForecast?.p90_ceiling_price;
+  const currentPrice = forecast?.current_price;
+  const peakDay = forecast?.peak_day ?? points.find((point) => point.is_peak);
+  const tone = decisionTone(forecast?.decision_en ?? forecast?.decision);
+
   const recordsAnalyzed = risk?.total_records_analyzed ?? risk?.records_analyzed;
   const anomaliesCount = risk?.total_anomalies_detected ?? risk?.anomalies_detected ?? riskRecords.length;
   const resourceUnavailable = isUnavailable(resourceError);
@@ -131,11 +146,18 @@ export default function HomePage() {
     <div className="page-content" id="home">
       <section className="hero-section" aria-labelledby="hero-title">
         <div className="hero-copy"><p className="eyebrow"><Sparkles size={15} /> {t("liveMandiIntelligence")}</p><h1 id="hero-title">{t("checkCropMarket")}</h1><p>{t("chooseCropMandi")}</p></div>
+        <div className="crop-chips" aria-label={t("popularCrops")}>
+          <span className="chip-label">{t("popularCrops")}</span>
+          {popularCrops.map((cropId) => {
+            const crop = commodities.find((item) => item.id === cropId);
+            return crop ? <button className={`crop-chip${commodity === crop.id ? " crop-chip--active" : ""}`} key={crop.id} type="button" onClick={() => { setCommodity(crop.id); window.setTimeout(() => document.querySelector<HTMLButtonElement>("[data-mandi-combobox] .combobox-trigger")?.click(), 120); }} disabled={resourceLoading || !!resourceError}>{crop.label}</button> : null;
+          })}
+        </div>
         <form className="market-form" onSubmit={submitForecast}>
-          <label className="field"><span>{t("crop")}</span><span className="select-wrap"><Leaf size={18} /><select value={commodity} onChange={(event) => setCommodity(event.target.value)} disabled={resourceLoading || !!resourceError} aria-label="Crop"><option value="">{t("selectCrop")}</option>{commodities.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select><ChevronDown size={17} /></span></label>
-          <label className="field"><span>{t("mandi")}</span><span className="select-wrap"><MapPin size={18} /><select value={market} onChange={(event) => setMarket(event.target.value)} disabled={resourceLoading || !!resourceError} aria-label="Mandi"><option value="">{t("selectMandi")}</option>{markets.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select><ChevronDown size={17} /></span></label>
-          <label className="field"><span>{t("forecastDays")}</span><span className="select-wrap"><CalendarDays size={18} /><select value={horizon} onChange={(event) => setHorizon(Number(event.target.value))} aria-label="Forecast days">{[1, 3, 7, 14].map((days) => <option key={days} value={days}>{days} days</option>)}</select><ChevronDown size={17} /></span></label>
-          <button className="primary-button" type="submit" disabled={!hasSelection || resourceLoading || forecastState.loading}><span>{forecastState.loading ? t("checkingLiveMarket") : t("checkTodaysMarket")}</span><ArrowRight size={18} /></button>
+          <label className="field"><span>{t("crop")}</span><span className="select-wrap"><Leaf size={18} /><select value={commodity} onChange={(event) => setCommodity(event.target.value)} disabled={resourceLoading || !!resourceError} aria-label={t("crop")}><option value="">{t("selectCrop")}</option>{commodities.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select><ChevronDown size={17} /></span></label>
+          <label className="field"><span>{t("mandi")}</span><MandiCombobox items={markets} value={market} onChange={setMarket} disabled={resourceLoading || !!resourceError} /></label>
+          <label className="field"><span>{t("forecastDays")}</span><span className="select-wrap"><CalendarDays size={18} /><select value={horizon} onChange={(event) => setHorizon(Number(event.target.value))} aria-label={t("forecastDays")}>{[1, 3, 7, 14].map((days) => <option key={days} value={days}>{days} {t("days")}</option>)}</select><ChevronDown size={17} /></span></label>
+          <button className={`primary-button${hasSelection && validSelection ? " primary-button--ready" : ""}`} type="submit" disabled={!hasSelection || resourceLoading || forecastState.loading}><span>{forecastState.loading ? t("checkingLiveMarket") : t("checkTodaysMarket")}</span><ArrowRight size={18} /></button>
         </form>
         {resourceLoading ? <p className="form-note">{t("loadingChoices")}</p> : null}
         {resourceError ? <StatePanel kind="error" title={resourceUnavailable ? t("liveServiceUnavailable") : t("couldNotLoadChoices")} message={resourceUnavailable ? t("liveChoicesUnavailable") : t("couldNotLoadChoicesMessage")} actionLabel={t("retry")} onAction={() => void loadResources()} /> : null}
@@ -148,14 +170,14 @@ export default function HomePage() {
         {hasRequested && (forecast || risk || procurement || riskState.loading || procurementState.loading || riskState.error || procurementState.error) ? <>
           {forecast ? <div className="result-intro"><div><p className="eyebrow"><span className="eyebrow-dot" /> {t("liveResponse")}</p><h2>{displayedCommodity?.label ?? forecast.commodity ?? t("selectCrop")}<span className="result-context">{displayedMarket?.label ?? forecast.market ?? t("selectMandi")}</span></h2></div><button className="quiet-button" type="button" onClick={retryForecast}><RefreshCw size={16} /> {t("refreshForecast")}</button></div> : null}
           <div className="result-grid">
-            {forecast ? <article className="decision-card"><div className="card-kicker">{t("todaysDecision")}</div><div className="decision-main"><div><span className="muted-label">{t("expectedMarketPrice")}</span><strong className="price-value">{money(p50Price)} <small>{t("quintal")}</small></strong><span className="muted-label">{t("likelyRange")}</span><strong className="range-value">{p10Price !== undefined && p90Price !== undefined ? `${money(p10Price)} – ${money(p90Price)}` : money(forecast.current_price)}</strong></div><div className="action-block"><span className="muted-label">{t("suggestedAction")}</span><strong>{forecast.decision_en ?? forecast.decision ?? t("seeLiveGuidance")}</strong>{forecast.decision_hi ? <p lang="hi">{forecast.decision_hi}</p> : null}{forecast.confidence ? <span className="muted-label">{forecast.confidence}</span> : null}</div></div><div className="card-footnote"><Info size={15} /> {t("modelDisclaimer")}</div></article> : null}
+            {forecast ? <article className={`decision-card decision-card--${tone}`}><div className="card-kicker">{t("todaysDecision")}</div><div className="decision-main"><div><span className="muted-label">{t("expectedMarketPrice")}</span><strong className="price-value">{money(p50Price)} <small>{t("quintal")}</small></strong><span className="muted-label">{t("likelyRange")}</span><strong className="range-value">{p10Price !== undefined && p90Price !== undefined ? `${money(p10Price)} – ${money(p90Price)}` : money(forecast.current_price)}</strong>{typeof forecast.expected_gain === "number" ? <span className="gain-badge">{forecast.expected_gain >= 0 ? "+" : ""}{money(forecast.expected_gain)} {t("expectedGain")}</span> : null}</div><div className="action-block"><span className="muted-label">{t("suggestedAction")}</span><strong>{forecast.decision_en ?? forecast.decision ?? t("seeLiveGuidance")}</strong>{forecast.decision_hi ? <p lang="hi">{forecast.decision_hi}</p> : null}{forecast.confidence ? <span className="muted-label">{forecast.confidence}</span> : null}{tone === "sell" ? <p className="decision-hint">{t("sellUrgency")}</p> : null}</div></div><PriceCorridor current={currentPrice} low={p10Price} median={p50Price} high={p90Price} label={t("priceCorridor")} /><div className="card-footnote"><Info size={15} /> {t("modelDisclaimer")}</div></article> : null}
             {forecast ? <article className="forecast-card" id="forecast"><div className="card-kicker">{t("nextDays")} {forecast.forecast_horizon_days ?? forecast.horizon ?? horizon} {t("days")}</div><div className="chart-legend"><span className="legend-line" /> {t("expectedPrice")} <span className="legend-band" /> {t("likelyRangeLegend")}</div>{points.length >= 2 ? <ForecastChart points={points} /> : <StatePanel kind="empty" title={t("forecastPointsMissing")} message={t("notEnoughPoints")} actionLabel={t("retry")} onAction={retryForecast} />}</article> : null}
             {riskState.loading ? <article className="support-card" id="risk"><div className="support-icon support-icon--amber"><ShieldAlert size={20} /></div><StatePanel kind="loading" title={t("checkingMarketRisk")} message={t("reviewingMovement")} /></article> : null}
             {riskState.error ? <article className="support-card" id="risk"><div className="support-icon support-icon--amber"><ShieldAlert size={20} /></div><div>{serviceErrorPanel("risk", riskState, retryRisk)}</div></article> : null}
             {risk ? <article className="support-card" id="risk"><div className="support-icon support-icon--amber"><ShieldAlert size={20} /></div><div><span className="card-kicker">{t("marketWarning")}</span>{riskRecords.length ? <><h3>{anomaliesCount} {t("returnedWarningRecords")}</h3><p>{risk.message ?? t("noRiskWarnings")}</p><div className="mini-metrics"><span>{t("recordsAnalyzed")} <strong>{recordsAnalyzed ?? "—"}</strong></span><span>{t("latestMovement")} <strong>{riskRecords[0] ? formatMetric(riskRecords[0].price_velocity_7d, "%") : "—"}</strong></span></div></> : <><h3>{t("noWarningRecords")}</h3><p>{risk.message ?? t("noRiskWarnings")}</p></>}</div></article> : null}
             {procurementState.loading ? <article className="support-card" id="mandi"><div className="support-icon"><MapPin size={20} /></div><StatePanel kind="loading" title={t("checkingMandiPrices")} message={t("comparingMarkets")} /></article> : null}
             {procurementState.error ? <article className="support-card" id="mandi"><div className="support-icon"><MapPin size={20} /></div><div>{serviceErrorPanel("procurement", procurementState, retryProcurement)}</div></article> : null}
-            {procurement ? <article className="support-card" id="mandi"><div className="support-icon"><MapPin size={20} /></div><div><div className="card-kicker">{t("bestMandiLabel")}</div>{opportunities.length ? <><h3>{opportunities.length} {t("liveOpportunities")}</h3><p>{opportunities[0].source_market ?? t("mandi")} → {opportunities[0].destination_market ?? t("mandi")}<br /><strong>{money(opportunities[0].gross_price_difference)} {t("grossDifference")}</strong></p></> : <><h3>{t("noOpportunity")}</h3><p>{procurement.message ?? t("noBetterOpportunity")}</p></>}<small className="disclaimer">{procurement.disclaimer ?? t("modelDisclaimer")}</small></div></article> : null}
+            {procurement ? <article className="support-card" id="mandi"><div className="support-icon"><MapPin size={20} /></div><div className="opportunity-content"><div className="card-kicker">{t("bestMandiLabel")}</div>{opportunities.length ? <><h3>{opportunities.length} {t("liveOpportunities")}</h3><div className="opportunity-list">{opportunities.slice(0, 3).map((opportunity, index) => <div className="opportunity-row" key={`${opportunity.destination_market ?? "mandi"}-${index}`}><span className="rank-badge">{index + 1}</span><div><strong>{opportunity.destination_market ?? t("mandi")}</strong><small>{opportunity.recommendation ?? t("farmerMandiGuidance")}</small></div><strong className="opportunity-gain">{money(opportunity.gross_price_difference)}<small> {t("grossDifference")}</small></strong></div>)}</div></> : <><h3>{t("noOpportunity")}</h3><p>{procurement.message ?? t("noBetterOpportunity")}</p></>}<small className="disclaimer">{procurement.disclaimer ?? t("modelDisclaimer")}</small></div></article> : null}
           </div>
         </> : null}
       </section>
