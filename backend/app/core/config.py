@@ -64,6 +64,10 @@ AGMARKNET_TIMEOUT_SECONDS: int = max(
     int(os.getenv("AGMARKNET_TIMEOUT_SECONDS", "40")),
     5,
 )
+AGMARKNET_RETRY_ATTEMPTS: int = min(
+    max(int(os.getenv("AGMARKNET_RETRY_ATTEMPTS", "2")), 0),
+    3,
+)
 NASA_POWER_TIMEOUT_SECONDS: int = max(
     int(os.getenv("NASA_POWER_TIMEOUT_SECONDS", "20")),
     5,
