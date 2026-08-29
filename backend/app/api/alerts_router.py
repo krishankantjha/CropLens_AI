@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.db.database import get_db
 from backend.app.db.models import AlertSubscription, AlertLog, User
-from backend.app.api.auth_router import get_current_user
+from backend.app.api.auth_router import get_current_user, verify_csrf
 from backend.app.services.whatsapp_service import (
     send_whatsapp_message,
     format_advisory_message,
@@ -178,6 +178,7 @@ def test_whatsapp_endpoint(
 def subscribe_alert_endpoint(
     req: SubscribeAlertRequest,
     current_user: User = Depends(get_current_user),
+    _: None = Depends(verify_csrf),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     """
@@ -261,6 +262,7 @@ def delete_subscription_endpoint(
     subscription_id: int,
     mobile_number: Optional[str] = None,
     current_user: User = Depends(get_current_user),
+    _: None = Depends(verify_csrf),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """Deactivates/deletes an alert subscription with optional ownership verification."""
