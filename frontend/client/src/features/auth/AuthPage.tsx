@@ -1,5 +1,5 @@
 // Earthline Intelligence: account access is simple, explicit, and connected to the real authentication API.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, KeyRound, LockKeyhole, Phone, UserRound } from "lucide-react";
 import { login, register, sendOtp, verifyOtp } from "@/api/client";
 import { BrandLogo } from "@/components/ui/BrandLogo";
@@ -25,6 +25,13 @@ export default function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("session") === "expired") {
+      setMessage(language === "hi" ? "आपका सत्र समाप्त हो गया है। कृपया फिर से लॉगिन करें।" : "Your session expired. Please log in again.");
+      window.history.replaceState({}, document.title, "/auth");
+    }
+  }, [language]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault(); setBusy(true); setError(""); setMessage("");
