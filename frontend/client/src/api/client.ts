@@ -5,21 +5,32 @@ import type { SubscriptionsResponse } from "@/types/alerts";
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 const API_BASE_URL = (configuredApiBaseUrl ?? (import.meta.env.DEV ? "http://127.0.0.1:8000" : "")).replace(/\/$/, "");
+const CSRF_COOKIE_NAME = "croplens_csrf";
+
+function csrfToken() {
+  if (typeof document === "undefined") return "";
+  return document.cookie.split("; ").find((item) => item.startsWith(`${CSRF_COOKIE_NAME}=`))?.split("=").slice(1).join("=") ?? "";
+}
 
 export const SESSION_EXPIRED_EVENT = "croplens:session-expired";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+type RequestOptions = RequestInit & { notifyUnauthorized?: boolean };
+
+async function request<T>(path: string, init?: RequestOptions): Promise<T> {
+  const { notifyUnauthorized = true, ...fetchInit } = init ?? {};
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
+    ...fetchInit,
+    credentials: "include",
     headers: {
       Accept: "application/json",
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      ...(["POST", "PUT", "PATCH", "DELETE"].includes(fetchInit.method?.toUpperCase() ?? "") && csrfToken() ? { "X-CSRF-Token": csrfToken() } : {}),
       ...init?.headers,
     },
   });
 
   if (!response.ok) {
-    if (response.status === 401 && typeof window !== "undefined") {
+    if (response.status === 401 && notifyUnauthorized && typeof window !== "undefined") {
       window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
     }
     let message = `The live service returned ${response.status}.`;
@@ -36,9 +47,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-function authRequest<T>(path: string, init?: RequestInit) {
-  const token = window.localStorage.getItem("croplens_access_token");
-  return request<T>(path, { ...init, headers: { ...(init?.headers ?? {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) } });
+function authRequest<T>(path: string, init?: RequestOptions) {
+  return request<T>(path, init);
 }
 
 export function login(payload: { mobile_number: string; password: string }) {
@@ -57,8 +67,12 @@ export function verifyOtp(payload: { mobile_number: string; otp_code: string }) 
   return request<TokenResponse>("/api/v1/auth/otp/verify", { method: "POST", body: JSON.stringify(payload) });
 }
 
-export function getCurrentUser() {
-  return authRequest<UserProfile>("/api/v1/auth/me");
+export function getCurrentUser(options?: { notifyUnauthorized?: boolean }) {
+  return authRequest<UserProfile>("/api/v1/auth/me", options);
+}
+
+export function logout() {
+  return authRequest<{ message?: string }>("/api/v1/auth/logout", { method: "POST" });
 }
 
 export function updatePreferences(payload: { home_mandi?: string; preferred_commodity?: string; language?: string }) {
