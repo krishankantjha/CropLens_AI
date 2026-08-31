@@ -1,5 +1,5 @@
 // Earthline Intelligence: the farmer sees the decision path first; business values render only after live responses.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { ArrowRight, CalendarDays, ChevronDown, Info, Leaf, MapPin, MessageCircle, RefreshCw, ShieldAlert, Sparkles, Volume2 } from "lucide-react";
 import { getForecast, getProcurement, getResources, getRisk } from "@/api/client";
@@ -19,12 +19,12 @@ function percentage(value: number, min: number, max: number) { return Math.max(0
 
 function LoadingSkeleton({ label }: { label: string }) { return <div className="loading-skeleton" role="status" aria-label={label}><span className="skeleton-line skeleton-line--wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line--short" /></div>; }
 
-function PriceCorridor({ current, low, median, high, label }: { current?: number; low?: number; median?: number; high?: number; label: string }) {
+const PriceCorridor = memo(function PriceCorridor({ current, low, median, high, label }: { current?: number; low?: number; median?: number; high?: number; label: string }) {
   const values = [current, low, median, high].filter((value): value is number => typeof value === "number" && Number.isFinite(value));
   if (values.length < 3 || current === undefined || low === undefined || high === undefined) return null;
   const min = Math.min(...values); const max = Math.max(...values);
   return <div className="corridor" aria-label={label}><div className="corridor-head"><span>{label}</span><strong>₹{Math.round(current).toLocaleString("en-IN")}</strong></div><div className="corridor-track"><span className="corridor-band" /><span className="corridor-marker" style={{ left: `${percentage(current, min, max)}%` }} /></div><div className="corridor-labels"><span>₹{Math.round(low).toLocaleString("en-IN")}</span><span>{median !== undefined ? `₹${Math.round(median).toLocaleString("en-IN")}` : "—"}</span><span>₹{Math.round(high).toLocaleString("en-IN")}</span></div></div>;
-}
+});
 
 type ServiceState<T> = {
   data: T | null;
@@ -47,6 +47,8 @@ export default function HomePage() {
   const [riskState, setRiskState] = useState<ServiceState<RiskResponse>>(emptyState);
   const [procurementState, setProcurementState] = useState<ServiceState<ProcurementResponse>>(emptyState);
   const [hasRequested, setHasRequested] = useState(false);
+  const [voiceError, setVoiceError] = useState("");
+  const [mandiFocusRequest, setMandiFocusRequest] = useState(0);
   const forecastRequestId = useRef(0);
   const riskRequestId = useRef(0);
   const procurementRequestId = useRef(0);
@@ -135,7 +137,20 @@ export default function HomePage() {
   const tone = decisionTone(forecast?.decision_en ?? forecast?.decision);
   const advisoryDecision = language === "hi" ? forecast?.decision_hi ?? forecast?.decision : forecast?.decision_en ?? forecast?.decision;
   const advisoryText = forecast ? `${displayedCommodity?.label ?? forecast.commodity ?? commodity} ${displayedMarket?.label ?? forecast.market ?? market}. ${advisoryDecision ?? t("seeLiveGuidance")}. ${t("expectedMarketPrice")}: ${money(p50Price)} ${t("quintal")}. ${typeof forecast.expected_gain === "number" ? `${t("expectedGain")}: ${money(forecast.expected_gain)}.` : ""}` : "";
-  const speakAdvisory = () => { if (!("speechSynthesis" in window) || !advisoryText) return; window.speechSynthesis.cancel(); const utterance = new SpeechSynthesisUtterance(advisoryText); utterance.lang = language === "hi" ? "hi-IN" : "en-IN"; utterance.rate = 0.9; window.speechSynthesis.speak(utterance); };
+  const voiceSupported = typeof window !== "undefined" && "speechSynthesis" in window;
+  const speakAdvisory = () => {
+    setVoiceError("");
+    if (!voiceSupported) { setVoiceError(t("voiceUnavailable")); return; }
+    if (!advisoryText) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(advisoryText);
+      utterance.lang = language === "hi" ? "hi-IN" : "en-IN";
+      utterance.rate = 0.9;
+      utterance.onerror = () => setVoiceError(t("voiceFailed"));
+      window.speechSynthesis.speak(utterance);
+    } catch { setVoiceError(t("voiceFailed")); }
+  };
   const shareAdvisory = () => { if (!advisoryText) return; window.open(`https://wa.me/?text=${encodeURIComponent(advisoryText)}`, "_blank", "noopener,noreferrer"); };
 
   const recordsAnalyzed = risk?.total_records_analyzed ?? risk?.records_analyzed;
@@ -145,7 +160,7 @@ export default function HomePage() {
   const serviceErrorPanel = (service: "forecast" | "risk" | "procurement", state: ServiceState<unknown>, retry: () => void) => {
     if (!state.error) return null;
     const unavailable = isUnavailable(state.error);
-    return <StatePanel kind="error" title={unavailable ? `${service === "risk" ? "Market risk" : service === "procurement" ? "Mandi comparison" : "Forecast"} temporarily unavailable` : `We could not load ${service === "risk" ? "market risk" : service === "procurement" ? "mandi comparison" : "this forecast"}`} message={toFarmerMessage(state.error, service)} actionLabel={t("retry")} onAction={retry} />;
+    return <StatePanel kind="error" title={unavailable ? t("serviceUnavailableTitle") : t("serviceCouldNotLoadTitle")} message={toFarmerMessage(state.error, service, { invalidSelection: t("invalidSelection"), unavailable: t("serviceUnavailable"), serviceTrouble: t("serviceTrouble"), couldNotLoad: t("serviceCouldNotLoad") })} actionLabel={t("retry")} onAction={retry} />;
   };
 
   return (
@@ -156,12 +171,12 @@ export default function HomePage() {
           <span className="chip-label">{t("popularCrops")}</span>
           {popularCrops.map((cropId) => {
             const crop = commodities.find((item) => item.id === cropId);
-            return crop ? <button className={`crop-chip${commodity === crop.id ? " crop-chip--active" : ""}`} key={crop.id} type="button" onClick={() => { setCommodity(crop.id); window.setTimeout(() => document.querySelector<HTMLButtonElement>("[data-mandi-combobox] .combobox-trigger")?.click(), 120); }} disabled={resourceLoading || !!resourceError}>{crop.label}</button> : null;
+            return crop ? <button className={`crop-chip${commodity === crop.id ? " crop-chip--active" : ""}`} key={crop.id} type="button" onClick={() => { setCommodity(crop.id); setMandiFocusRequest((request) => request + 1); }} disabled={resourceLoading || !!resourceError}>{crop.label}</button> : null;
           })}
         </div>
         <form className="market-form" onSubmit={submitForecast}>
           <label className="field"><span>{t("crop")}</span><span className="select-wrap"><Leaf size={18} /><select value={commodity} onChange={(event) => setCommodity(event.target.value)} disabled={resourceLoading || !!resourceError} aria-label={t("crop")}><option value="">{t("selectCrop")}</option>{commodities.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select><ChevronDown size={17} /></span></label>
-          <label className="field"><span>{t("mandi")}</span><MandiCombobox items={markets} value={market} onChange={setMarket} disabled={resourceLoading || !!resourceError} /></label>
+          <label className="field"><span>{t("mandi")}</span><MandiCombobox items={markets} value={market} onChange={setMarket} disabled={resourceLoading || !!resourceError} focusRequest={mandiFocusRequest} /></label>
           <label className="field"><span>{t("forecastDays")}</span><span className="select-wrap"><CalendarDays size={18} /><select value={horizon} onChange={(event) => setHorizon(Number(event.target.value))} aria-label={t("forecastDays")}>{[1, 3, 7, 14].map((days) => <option key={days} value={days}>{days} {t("days")}</option>)}</select><ChevronDown size={17} /></span></label>
           <button className={`primary-button${hasSelection && validSelection ? " primary-button--ready" : ""}`} type="submit" disabled={!hasSelection || resourceLoading || forecastState.loading}><span>{forecastState.loading ? t("checkingLiveMarket") : t("checkTodaysMarket")}</span><ArrowRight size={18} /></button>
         </form>
@@ -211,7 +226,7 @@ export default function HomePage() {
           <span id="risk" className="section-anchor" aria-hidden="true" />
           <span id="mandi" className="section-anchor" aria-hidden="true" />
           <div className="result-grid" aria-live="polite">
-            {forecast ? <article className={`decision-card decision-card--${tone}`}><div className="decision-heading"><div className="card-kicker">{t("todaysDecision")}</div><div className="decision-actions"><button className="icon-button" type="button" onClick={speakAdvisory} aria-label={t("voiceAdvisory")} title={t("voiceAdvisory")}><Volume2 size={17} /></button><button className="icon-button" type="button" onClick={shareAdvisory} aria-label={t("shareWhatsapp")} title={t("shareWhatsapp")}><MessageCircle size={17} /></button></div></div><div className="decision-main"><div><span className="muted-label">{t("expectedMarketPrice")}</span><strong className="price-value">{money(p50Price)} <small>{t("quintal")}</small></strong><span className="muted-label">{t("likelyRange")}</span><strong className="range-value">{p10Price !== undefined && p90Price !== undefined ? `${money(p10Price)} – ${money(p90Price)}` : money(forecast.current_price)}</strong>{typeof forecast.expected_gain === "number" ? <span className="gain-badge">{forecast.expected_gain >= 0 ? "+" : ""}{money(forecast.expected_gain)} {t("expectedGain")}</span> : null}</div><div className="action-block"><span className="muted-label">{t("suggestedAction")}</span><strong>{forecast.decision_en ?? forecast.decision ?? t("seeLiveGuidance")}</strong>{forecast.decision_hi ? <p lang="hi">{forecast.decision_hi}</p> : null}{forecast.confidence ? <span className="muted-label">{forecast.confidence}</span> : null}{tone === "sell" ? <p className="decision-hint">{t("sellUrgency")}</p> : null}</div></div><PriceCorridor current={currentPrice} low={p10Price} median={p50Price} high={p90Price} label={t("priceCorridor")} /><div className="card-footnote"><Info size={15} /> {t("modelDisclaimer")}</div></article> : null}
+            {forecast ? <article className={`decision-card decision-card--${tone}`}><div className="decision-heading"><div className="card-kicker">{t("todaysDecision")}</div><div className="decision-actions"><button className="icon-button" type="button" onClick={speakAdvisory} aria-label={voiceSupported ? t("voiceAdvisory") : t("voiceUnavailable")} title={voiceSupported ? t("voiceAdvisory") : t("voiceUnavailable")} disabled={!voiceSupported || !advisoryText}><Volume2 size={17} /></button><button className="icon-button" type="button" onClick={shareAdvisory} aria-label={t("shareWhatsapp")} title={t("shareWhatsapp")}><MessageCircle size={17} /></button></div></div><div className="decision-main"><div><span className="muted-label">{t("expectedMarketPrice")}</span><strong className="price-value">{money(p50Price)} <small>{t("quintal")}</small></strong><span className="muted-label">{t("likelyRange")}</span><strong className="range-value">{p10Price !== undefined && p90Price !== undefined ? `${money(p10Price)} – ${money(p90Price)}` : money(forecast.current_price)}</strong>{typeof forecast.expected_gain === "number" ? <span className="gain-badge">{forecast.expected_gain >= 0 ? "+" : ""}{money(forecast.expected_gain)} {t("expectedGain")}</span> : null}</div><div className="action-block"><span className="muted-label">{t("suggestedAction")}</span><strong>{forecast.decision_en ?? forecast.decision ?? t("seeLiveGuidance")}</strong>{forecast.decision_hi ? <p lang="hi">{forecast.decision_hi}</p> : null}{forecast.confidence ? <span className="muted-label">{forecast.confidence}</span> : null}{tone === "sell" ? <p className="decision-hint">{t("sellUrgency")}</p> : null}</div></div><PriceCorridor current={currentPrice} low={p10Price} median={p50Price} high={p90Price} label={t("priceCorridor")} />{voiceError ? <p className="form-note" role="alert">{voiceError}</p> : null}<div className="card-footnote"><Info size={15} /> {t("modelDisclaimer")}</div></article> : null}
             {forecast ? <article className="forecast-card"><div className="card-kicker">{t("nextDays")} {forecast.forecast_horizon_days ?? forecast.horizon ?? horizon} {t("days")}</div><div className="chart-legend"><span className="legend-line" /> {t("expectedPrice")} <span className="legend-band" /> {t("likelyRangeLegend")}</div>{points.length >= 2 ? <ForecastChart points={points} /> : <StatePanel kind="empty" title={t("forecastPointsMissing")} message={t("notEnoughPoints")} actionLabel={t("retry")} onAction={retryForecast} />}</article> : null}
             {riskState.loading ? <article className="support-card"><div className="support-icon support-icon--amber"><ShieldAlert size={20} /></div><div><span className="card-kicker">{t("checkingMarketRisk")}</span><LoadingSkeleton label={t("reviewingMovement")} /></div></article> : null}
             {riskState.error ? <article className="support-card"><div className="support-icon support-icon--amber"><ShieldAlert size={20} /></div><div>{serviceErrorPanel("risk", riskState, retryRisk)}</div></article> : null}
@@ -224,9 +239,9 @@ export default function HomePage() {
       </section>
       <AlertsPanel commodity={commodity} market={market} />
       <section className="trust-strip">
-        <span><ShieldAlert size={18} /> {language === "en" ? "Transparent price ranges" : "पारदर्शी कीमत सीमा"}</span>
-        <span><Leaf size={18} /> {language === "en" ? "Live backend data" : "लाइव बैकएंड डेटा"}</span>
-        <span><Info size={18} /> {language === "en" ? "Farmer-first guidance" : "किसान-प्रथम सलाह"}</span>
+        <span><ShieldAlert size={18} /> {t("trustTransparent")}</span>
+        <span><Leaf size={18} /> {t("trustLiveBackend")}</span>
+        <span><Info size={18} /> {t("trustFarmerFirst")}</span>
       </section>
       <section className="sr-only" id="risk-details" aria-label={t("marketRisk")}><h2>{t("marketRisk")}</h2></section>
       <section className="sr-only" id="mandi-details" aria-label={t("bestMandi")}><h2>{t("bestMandi")}</h2></section>
