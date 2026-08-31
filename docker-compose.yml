@@ -22,7 +22,8 @@ services:
       - MODEL_REGISTRY_PATH=/app/backend/app/models/registry.json
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./data:/app/data:ro
+      - ./data/raw:/app/data/raw:ro
+      - ./data/processed:/app/data/processed:ro
       - croplens_db:/app/data/db
       # Provision the complete versioned model bundle outside Git.
       - ${MODEL_BUNDLE_PATH:?Set MODEL_BUNDLE_PATH to the complete model bundle directory}:/app/backend/app/models:ro
