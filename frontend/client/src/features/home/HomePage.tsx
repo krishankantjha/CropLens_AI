@@ -11,7 +11,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import type { ApiError, ForecastPoint, ForecastResponse, ProcurementResponse, ResourceEntry, ResourceOption, ResourcesResponse, RiskResponse } from "@/types/api";
 import { asApiError, isUnavailable, isValidSelection, toFarmerMessage, type Selection } from "./serviceState";
 
-function forecastPoints(data: ForecastResponse | null): ForecastPoint[] { return data?.forecast ?? data?.forecasts ?? data?.daily_forecast ?? []; }
+function forecastPoints(data: ForecastResponse | null): ForecastPoint[] { return data?.forecasts ?? []; }
 function money(value: number | undefined) { return typeof value === "number" && Number.isFinite(value) ? `₹${Math.round(value).toLocaleString("en-IN")}` : "—"; }
 function formatMetric(value: number | undefined, suffix = "") { return typeof value === "number" && Number.isFinite(value) ? `${value > 0 ? "+" : ""}${value.toFixed(1)}${suffix}` : "—"; }
 function decisionTone(decision: string | undefined) { const text = (decision ?? "").toLowerCase(); return text.includes("sell") || text.includes("बेच") ? "sell" : text.includes("profit") || text.includes("लाभ") ? "profit" : "hold"; }
@@ -153,8 +153,8 @@ export default function HomePage() {
   };
   const shareAdvisory = () => { if (!advisoryText) return; window.open(`https://wa.me/?text=${encodeURIComponent(advisoryText)}`, "_blank", "noopener,noreferrer"); };
 
-  const recordsAnalyzed = risk?.total_records_analyzed ?? risk?.records_analyzed;
-  const anomaliesCount = risk?.total_anomalies_detected ?? risk?.anomalies_detected ?? riskRecords.length;
+  const recordsAnalyzed = risk?.total_records_analyzed;
+  const anomaliesCount = risk?.total_anomalies_detected ?? riskRecords.length;
   const resourceUnavailable = isUnavailable(resourceError);
 
   const serviceErrorPanel = (service: "forecast" | "risk" | "procurement", state: ServiceState<unknown>, retry: () => void) => {

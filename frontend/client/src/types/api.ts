@@ -43,8 +43,6 @@ export type ForecastResponse = {
   horizon?: number;
   current_price?: number;
   forecasts?: DailyForecastPoint[];
-  forecast?: DailyForecastPoint[];
-  daily_forecast?: DailyForecastPoint[];
   peak_day?: DailyForecastPoint;
   decision?: string;
   decision_en?: string;
@@ -75,8 +73,6 @@ export type RiskRecord = {
 export type RiskResponse = {
   total_records_analyzed?: number;
   total_anomalies_detected?: number;
-  records_analyzed?: number;
-  anomalies_detected?: number;
   anomalies?: RiskRecord[];
   records?: RiskRecord[];
   message?: string;
