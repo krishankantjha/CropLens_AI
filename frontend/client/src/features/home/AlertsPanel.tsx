@@ -21,41 +21,48 @@ export function AlertsPanel({ commodity, market }: AlertsPanelProps) {
   const [time, setTime] = useState("");
   const [language, setLocalLanguage] = useState<Language>(appLanguage);
   const [busy, setBusy] = useState(false);
+  const [subscriptionsLoading, setSubscriptionsLoading] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   const load = async () => {
-    const user = await getCurrentUser();
-    setMobile(user.mobile_number ?? "");
-    const nextLanguage: Language = user.language === "hi" ? "hi" : "en";
-    setLocalLanguage(nextLanguage);
-    setLanguage(nextLanguage);
-    if (!user.mobile_number) throw new Error("Add a mobile number to your profile before saving an alert.");
-    const result = await listAlerts(user.mobile_number);
-    setSubscriptions(result.subscriptions ?? []);
+    setSubscriptionsLoading(true);
+    setSubscriptionError("");
+    try {
+      const user = await getCurrentUser();
+      setMobile(user.mobile_number ?? "");
+      const nextLanguage: Language = user.language === "hi" ? "hi" : "en";
+      setLocalLanguage(nextLanguage);
+      if (!user.mobile_number) throw new Error(t("addMobileAlert"));
+      const result = await listAlerts(user.mobile_number);
+      setSubscriptions(result.subscriptions ?? []);
+    } finally {
+      setSubscriptionsLoading(false);
+    }
   };
 
   useEffect(() => {
     if (isAuthenticated) {
-      void load().catch((requestError: RequestError) => setError(requestError.message ?? "Could not load your alert subscriptions."));
+      void load().catch((requestError: RequestError) => setSubscriptionError(requestError.message ?? t("alertsLoadFailed")));
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, t]);
 
   const save = async () => {
     if (!commodity || !market) {
-      setError("Choose a crop and mandi before saving an alert.");
+      setError(t("chooseCropMandiAlert"));
       return;
     }
     if (!mobile) {
-      setError("Add a mobile number to your profile before saving an alert.");
+      setError(t("addMobileAlert"));
       return;
     }
     if (!time) {
-      setError("Choose a delivery time before saving an alert.");
+      setError(t("chooseDeliveryTime"));
       return;
     }
     if ((channel === "telegram" || channel === "both") && !telegramChatId.trim()) {
-      setError("Enter your Telegram chat ID to enable Telegram alerts.");
+      setError(t("enterTelegramChatId"));
       return;
     }
     setBusy(true);
@@ -63,10 +70,10 @@ export function AlertsPanel({ commodity, market }: AlertsPanelProps) {
     setMessage("");
     try {
       const result = await createAlert({ mobile_number: mobile, channel, crop: commodity, mandi: market, delivery_time: time, language, telegram_chat_id: telegramChatId.trim() || undefined });
-      setMessage(result.message ?? "Your alert subscription was saved.");
+      setMessage(result.message ?? t("alertSaved"));
       await load();
     } catch (requestError) {
-      setError((requestError as RequestError).message ?? "Could not save the alert subscription.");
+      setError((requestError as RequestError).message ?? t("alertSaveFailed"));
     } finally {
       setBusy(false);
     }
@@ -78,9 +85,9 @@ export function AlertsPanel({ commodity, market }: AlertsPanelProps) {
     try {
       await deleteAlert(id, mobile);
       await load();
-      setMessage("The alert subscription was removed.");
+      setMessage(t("alertRemoved"));
     } catch (requestError) {
-      setError((requestError as RequestError).message ?? "Could not remove the subscription.");
+      setError((requestError as RequestError).message ?? t("alertRemoveFailed"));
     } finally {
       setBusy(false);
     }
@@ -89,5 +96,5 @@ export function AlertsPanel({ commodity, market }: AlertsPanelProps) {
   if (!isAuthenticated) return <div className="alert-panel" id="alerts"><div className="alert-panel__heading"><span className="support-icon support-icon--amber"><Bell size={20} /></span><div><div className="card-kicker">{t("stayInformed")}</div><h2>{t("receiveDecision")}</h2><p>{t("signInAlerts")}</p></div></div><a className="primary-button alert-link" href="/auth">{t("loginOrCreate")}</a></div>;
   if (!commodity || !market) return <div className="alert-panel" id="alerts"><StatePanel kind="empty" title={t("chooseFirst")} message={t("alertConnected")} /></div>;
 
-  return <div className="alert-panel" id="alerts"><div className="alert-panel__heading"><span className="support-icon support-icon--amber"><Bell size={20} /></span><div><div className="card-kicker">{t("stayInformed")}</div><h2>{t("receiveDecision")}</h2><p>{t("selectedMarket")}: {commodity} · {market}</p></div></div><div className="alert-form"><label className="field"><span>{t("channel")}</span><select value={channel} onChange={(event) => setChannel(event.target.value)}><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="both">WhatsApp and Telegram</option></select></label>{channel === "telegram" || channel === "both" ? <label className="field"><span>Telegram chat ID</span><input value={telegramChatId} onChange={(event) => setTelegramChatId(event.target.value)} inputMode="numeric" placeholder="e.g. 123456789" required /></label> : null}<label className="field"><span>{t("deliveryTime")}</span><input value={time} onChange={(event) => setTime(event.target.value)} type="time" required /></label><label className="field"><span>{t("language")}</span><select value={language} onChange={(event) => { const next = event.target.value as Language; setLocalLanguage(next); setLanguage(next); }}><option value="en">English</option><option value="hi">हिन्दी</option></select></label><button className="primary-button" type="button" disabled={busy} onClick={() => void save()}><Check size={17} /> {t("saveAlert")}</button></div>{error ? <StatePanel kind="error" title={t("alertActionFailed")} message={error} /> : null}{message ? <div className="success-panel" role="status"><Check size={16} /> {message}</div> : null}<div className="subscription-list">{subscriptions.map((subscription) => <div className="subscription-row" key={subscription.id}><span><strong>{subscription.crop ?? "Selected crop"}</strong><small>{subscription.mandi ?? "Selected mandi"} · {subscription.channel ?? "Alert"} · {subscription.delivery_time ?? "Scheduled"}</small></span><button type="button" className="icon-button" disabled={busy} aria-label={t("removeAlert")} onClick={() => void remove(subscription.id)}><Trash2 size={16} /></button></div>)}</div></div>;
+  return <div className="alert-panel" id="alerts"><div className="alert-panel__heading"><span className="support-icon support-icon--amber"><Bell size={20} /></span><div><div className="card-kicker">{t("stayInformed")}</div><h2>{t("receiveDecision")}</h2><p>{t("selectedMarket")}: {commodity} · {market}</p></div></div><div className="alert-form"><label className="field"><span>{t("channel")}</span><select value={channel} onChange={(event) => setChannel(event.target.value)}><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="both">WhatsApp and Telegram</option></select></label>{channel === "telegram" || channel === "both" ? <label className="field"><span>Telegram chat ID</span><input value={telegramChatId} onChange={(event) => setTelegramChatId(event.target.value)} inputMode="numeric" placeholder="e.g. 123456789" required /></label> : null}<label className="field"><span>{t("deliveryTime")}</span><input value={time} onChange={(event) => setTime(event.target.value)} type="time" required /></label><label className="field"><span>{t("language")}</span><select value={language} onChange={(event) => { const next = event.target.value as Language; setLocalLanguage(next); setLanguage(next); }}><option value="en">English</option><option value="hi">हिन्दी</option></select></label><button className="primary-button" type="button" disabled={busy} onClick={() => void save()}><Check size={17} /> {t("saveAlert")}</button></div>{error ? <StatePanel kind="error" title={t("alertActionFailed")} message={error} /> : null}{message ? <div className="success-panel" role="status"><Check size={16} /> {message}</div> : null}{subscriptionsLoading ? <div className="form-note" role="status">{t("alertsLoading")}</div> : null}{subscriptionError ? <StatePanel kind="error" title={t("alertActionFailed")} message={subscriptionError} actionLabel={t("retryAlerts")} onAction={() => void load().catch((requestError: RequestError) => setSubscriptionError(requestError.message ?? t("alertsLoadFailed")))} /> : null}<div className="subscription-list">{subscriptions.map((subscription) => <div className="subscription-row" key={subscription.id}><span><strong>{subscription.crop ?? "Selected crop"}</strong><small>{subscription.mandi ?? "Selected mandi"} · {subscription.channel ?? "Alert"} · {subscription.delivery_time ?? "Scheduled"}</small></span><button type="button" className="icon-button" disabled={busy} aria-label={t("removeAlert")} onClick={() => void remove(subscription.id)}><Trash2 size={16} /></button></div>)}</div></div>;
 }
