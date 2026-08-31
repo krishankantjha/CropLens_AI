@@ -11,12 +11,14 @@ type MandiComboboxProps = {
   onChange: (value: string) => void;
   disabled?: boolean;
   inputRef?: RefObject<HTMLInputElement | null>;
+  focusRequest?: number;
 };
 
-export function MandiCombobox({ items, value, onChange, disabled = false, inputRef }: MandiComboboxProps) {
+export function MandiCombobox({ items, value, onChange, disabled = false, inputRef, focusRequest = 0 }: MandiComboboxProps) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const localInputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = items.find((item) => item.id === value);
 
   useEffect(() => {
@@ -25,8 +27,19 @@ export function MandiCombobox({ items, value, onChange, disabled = false, inputR
       const target = event.target as HTMLElement;
       if (!target.closest("[data-mandi-combobox]")) setOpen(false);
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
     document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [open]);
 
   const focusInput = () => {
@@ -34,12 +47,18 @@ export function MandiCombobox({ items, value, onChange, disabled = false, inputR
     window.setTimeout(() => (inputRef?.current ?? localInputRef.current)?.focus(), 0);
   };
 
+  useEffect(() => {
+    if (focusRequest > 0) focusInput();
+  }, [focusRequest]);
+
   return (
     <div className="mandi-combobox" data-mandi-combobox>
       <button
+        ref={triggerRef}
         className="combobox-trigger"
         type="button"
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
+        aria-controls="mandi-options"
         aria-expanded={open}
         disabled={disabled}
         onClick={() => (open ? setOpen(false) : focusInput())}
@@ -49,14 +68,16 @@ export function MandiCombobox({ items, value, onChange, disabled = false, inputR
         <ChevronDown size={17} />
       </button>
       {open ? (
-        <div className="combobox-popover">
+        <div className="combobox-popover" id="mandi-options" role="dialog" aria-modal="false" aria-label={t("searchMandi")}>
           <Command label={t("searchMandi")} className="mandi-command">
             <div className="command-search"><Search size={16} /><Command.Input ref={inputRef ?? localInputRef} placeholder={t("searchMandiPlaceholder")} /></div>
-            <Command.List>
+            <Command.List role="listbox" aria-label={t("searchMandi")}>
               <Command.Empty>{t("noMandiMatches")}</Command.Empty>
               {items.map((item) => (
-                <Command.Item
-                  key={item.id}
+                  <Command.Item
+                    key={item.id}
+                    role="option"
+                    aria-selected={item.id === value}
                   value={`${item.label} ${item.id}`}
                   onSelect={() => { onChange(item.id); setOpen(false); }}
                 >
