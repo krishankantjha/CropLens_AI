@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { ForecastPoint } from "@/types/api";
 import { Area, AreaChart, CartesianGrid, ReferenceDot, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -19,7 +20,7 @@ function money(valueToFormat: number | null) {
   return valueToFormat === null ? "—" : `₹${Math.round(valueToFormat).toLocaleString("en-IN")}`;
 }
 
-export function ForecastChart({ points }: ForecastChartProps) {
+export const ForecastChart = memo(function ForecastChart({ points }: ForecastChartProps) {
   const { language, t } = useLanguage();
   const usable: ChartPoint[] = points
     .map((point, index) => {
@@ -40,7 +41,7 @@ export function ForecastChart({ points }: ForecastChartProps) {
 
   return (
     <div className="chart-wrap">
-      <ResponsiveContainer width="100%" height={280} minWidth={420}>
+      <ResponsiveContainer width="100%" height={280}>
         <AreaChart data={usable} margin={{ top: 12, right: 18, left: 4, bottom: 8 }}>
           <defs>
             <linearGradient id="forecast-band" x1="0" y1="0" x2="0" y2="1">
@@ -68,4 +69,4 @@ export function ForecastChart({ points }: ForecastChartProps) {
       <p className="sr-only">{t("peakDayIs")} {peak.label}. {t("chartExplanation")}</p>
     </div>
   );
-}
+});
