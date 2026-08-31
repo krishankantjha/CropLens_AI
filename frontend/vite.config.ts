@@ -222,7 +222,13 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    strictPort: true, // Keep the browser origin aligned with backend CORS configuration
+    strictPort: true,
+    proxy: {
+      "/api": {
+        target: process.env.BACKEND_URL || "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+    }, // Keep the browser origin aligned with backend CORS configuration
     host: true,
     allowedHosts: [
       ".manuspre.computer",
