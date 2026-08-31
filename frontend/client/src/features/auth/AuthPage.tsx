@@ -66,11 +66,11 @@ export default function AuthPage() {
         <h1 id="auth-title">{t("keepDecisionsClose")}</h1>
         <p className="auth-intro">{t("signInToSave")}</p>
         <div className="auth-tabs" role="tablist" aria-label={t("accountAccess")}>
-          <button className={mode === "login" ? "active" : ""} type="button" onClick={() => { setMode("login"); setMessage(""); setError(""); }}>{t("login")}</button>
-          <button className={mode === "register" ? "active" : ""} type="button" onClick={() => { setMode("register"); setMessage(""); setError(""); }}>{t("createAccount")}</button>
-          <button className={mode === "otp" ? "active" : ""} type="button" onClick={() => { setMode("otp"); setMessage(""); setError(""); }}>{t("useOtp")}</button>
+          <button id="login-tab" role="tab" aria-selected={mode === "login"} aria-controls="login-panel" tabIndex={mode === "login" ? 0 : -1} className={mode === "login" ? "active" : ""} type="button" onClick={() => { setMode("login"); setMessage(""); setError(""); }}>{t("login")}</button>
+          <button id="register-tab" role="tab" aria-selected={mode === "register"} aria-controls="login-panel" tabIndex={mode === "register" ? 0 : -1} className={mode === "register" ? "active" : ""} type="button" onClick={() => { setMode("register"); setMessage(""); setError(""); }}>{t("createAccount")}</button>
+          <button id="otp-tab" role="tab" aria-selected={mode === "otp"} aria-controls="login-panel" tabIndex={mode === "otp" ? 0 : -1} className={mode === "otp" ? "active" : ""} type="button" onClick={() => { setMode("otp"); setMessage(""); setError(""); }}>{t("useOtp")}</button>
         </div>
-        <form className="auth-form" onSubmit={submit}>
+        <form id="login-panel" role="tabpanel" aria-labelledby={`${mode}-tab`} className="auth-form" onSubmit={submit}>
           {mode === "register" ? <label className="field"><span>{t("fullName")}</span><span className="input-wrap"><UserRound size={17} /><input value={fullName} onChange={(event) => setFullName(event.target.value)} required placeholder={t("enterName")} /></span></label> : null}
           <label className="field"><span>{t("mobileNumber")}</span><span className="input-wrap"><Phone size={17} /><input value={mobile} onChange={(event) => setMobile(event.target.value)} required inputMode="tel" autoComplete="tel" placeholder={t("enterMobile")} /></span></label>
           {mode !== "otp" ? <label className="field"><span>{t("password")}</span><span className="input-wrap"><KeyRound size={17} /><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={6} autoComplete={mode === "login" ? "current-password" : "new-password"} placeholder={t("enterPassword")} /></span></label> : null}
