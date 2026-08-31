@@ -30,13 +30,19 @@ function serviceLabel(service: ServiceName): string {
   return "mandi comparison";
 }
 
-export function toFarmerMessage(error: unknown, service: ServiceName): string {
+export type FarmerErrorMessages = {
+  invalidSelection: string;
+  unavailable: string;
+  serviceTrouble: string;
+  couldNotLoad: string;
+};
+
+export function toFarmerMessage(error: unknown, service: ServiceName, messages: FarmerErrorMessages): string {
   const { status } = asApiError(error);
-  const label = serviceLabel(service);
-  if (status === 422) return "Please choose a valid crop and mandi, then try again.";
-  if (isUnavailable(error)) return `Live ${label} is temporarily unavailable. Please try again shortly.`;
-  if (status >= 500) return `The live ${label} service is having trouble. Please try again later.`;
-  return `We could not load ${label} for this selection. Please try again.`;
+  if (status === 422) return messages.invalidSelection;
+  if (isUnavailable(error)) return messages.unavailable;
+  if (status >= 500) return messages.serviceTrouble;
+  return messages.couldNotLoad;
 }
 
 export function isValidSelection(selection: Selection, validCommodities: string[], validMarkets: string[]): boolean {
