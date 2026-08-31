@@ -1,15 +1,22 @@
 // Earthline Intelligence: the only boundary for backend requests. Failed requests never become substitute data.
 import type { ApiError, ForecastResponse, ProcurementResponse, ResourcesResponse, RiskResponse } from "@/types/api";
-import type { TokenResponse, UserProfile } from "@/types/auth";
+import type { AuthSessionResponse, UserProfile } from "@/types/auth";
 import type { SubscriptionsResponse } from "@/types/alerts";
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+if (import.meta.env.PROD && !configuredApiBaseUrl) {
+  throw new Error("VITE_API_BASE_URL must be configured for production builds.");
+}
 const API_BASE_URL = (configuredApiBaseUrl ?? "").replace(/\/$/, "");
-const CSRF_COOKIE_NAME = "croplens_csrf";
 
-function csrfToken() {
-  if (typeof document === "undefined") return "";
-  return document.cookie.split("; ").find((item) => item.startsWith(`${CSRF_COOKIE_NAME}=`))?.split("=").slice(1).join("=") ?? "";
+let csrfToken = "";
+
+export function setCsrfToken(nextToken: string) {
+  csrfToken = nextToken;
+}
+
+export function clearCsrfToken() {
+  csrfToken = "";
 }
 
 export const SESSION_EXPIRED_EVENT = "croplens:session-expired";
@@ -24,7 +31,7 @@ async function request<T>(path: string, init?: RequestOptions): Promise<T> {
     headers: {
       Accept: "application/json",
       ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...(["POST", "PUT", "PATCH", "DELETE"].includes(fetchInit.method?.toUpperCase() ?? "") && csrfToken() ? { "X-CSRF-Token": csrfToken() } : {}),
+      ...(["POST", "PUT", "PATCH", "DELETE"].includes(fetchInit.method?.toUpperCase() ?? "") && csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
       ...init?.headers,
     },
   });
@@ -52,11 +59,11 @@ function authRequest<T>(path: string, init?: RequestOptions) {
 }
 
 export function login(payload: { mobile_number: string; password: string }) {
-  return request<TokenResponse>("/api/v1/auth/login", { method: "POST", body: JSON.stringify(payload) });
+  return request<AuthSessionResponse>("/api/v1/auth/login", { method: "POST", body: JSON.stringify(payload) });
 }
 
 export function register(payload: { mobile_number: string; password: string; full_name: string; role: string; home_mandi?: string; preferred_commodity?: string; language?: string }) {
-  return request<TokenResponse>("/api/v1/auth/register", { method: "POST", body: JSON.stringify(payload) });
+  return request<AuthSessionResponse>("/api/v1/auth/register", { method: "POST", body: JSON.stringify(payload) });
 }
 
 export function sendOtp(payload: { mobile_number: string }) {
@@ -64,11 +71,15 @@ export function sendOtp(payload: { mobile_number: string }) {
 }
 
 export function verifyOtp(payload: { mobile_number: string; otp_code: string }) {
-  return request<TokenResponse>("/api/v1/auth/otp/verify", { method: "POST", body: JSON.stringify(payload) });
+  return request<AuthSessionResponse>("/api/v1/auth/otp/verify", { method: "POST", body: JSON.stringify(payload) });
 }
 
 export function getCurrentUser(options?: { notifyUnauthorized?: boolean }) {
   return authRequest<UserProfile>("/api/v1/auth/me", options);
+}
+
+export function getCsrfToken(options?: { notifyUnauthorized?: boolean }) {
+  return authRequest<{ csrf_token: string }>("/api/v1/auth/csrf", options);
 }
 
 export function logout() {

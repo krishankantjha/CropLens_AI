@@ -10,9 +10,7 @@ export type UserProfile = {
   created_at?: string;
 };
 
-export type TokenResponse = {
-  access_token: string;
-  refresh_token?: string;
-  token_type: string;
+export type AuthSessionResponse = {
+  csrf_token: string;
   user: UserProfile;
 };
