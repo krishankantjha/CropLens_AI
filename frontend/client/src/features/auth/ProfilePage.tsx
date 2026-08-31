@@ -22,7 +22,7 @@ export default function ProfilePage() {
     getCurrentUser({ notifyUnauthorized: false }).then((profile) => {
       setUser(profile); setHomeMandi(profile.home_mandi); setPreferredCommodity(profile.preferred_commodity);
       const nextLanguage: Language = profile.language === "hi" ? "hi" : "en";
-      setLocalLanguage(nextLanguage); setLanguage(nextLanguage);
+      setLocalLanguage(nextLanguage);
     }).catch(() => setError(t("signInProfile"))).finally(() => setBusy(false));
   }, [setLanguage, t]);
 
