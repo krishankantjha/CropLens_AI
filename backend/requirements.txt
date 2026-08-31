@@ -11,6 +11,7 @@ pyjwt==2.10.1
 # Scientific Computing & Data Processing
 numpy==2.4.6
 pandas==2.3.3
+pyarrow==18.1.0
 scipy==1.17.1
 statsmodels==0.14.6
 joblib==1.5.3
@@ -21,10 +22,11 @@ lightgbm==4.7.0
 # shap moved to research-requirements.txt
 
 # Utilities & Reporting
-reportlab==4.3.1
+reportlab==4.4.3
+chardet==5.2.0
 requests==2.32.3
-urllib3>=2.0.0
-charset-normalizer>=3.3.2
+urllib3==2.2.3
+charset-normalizer==3.4.0
 pytest==8.3.4
 seaborn==0.13.2
 
