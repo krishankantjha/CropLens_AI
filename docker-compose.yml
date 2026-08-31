@@ -7,22 +7,25 @@ services:
     restart: unless-stopped
     ports:
       - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
     environment:
       - PORT=8000
       - ENVIRONMENT=${ENVIRONMENT:-production}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:?Set JWT_SECRET_KEY before starting the production backend}
       - CORS_ORIGINS=${CORS_ORIGINS:?Set CORS_ORIGINS to the deployed frontend origin}
-      - REDIS_URL=${REDIS_URL:?Set REDIS_URL to a production Redis instance}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE:-true}
       - AUTH_COOKIE_SAMESITE=${AUTH_COOKIE_SAMESITE:-lax}
-      - DATABASE_URL=sqlite:////app/backend/app/croplens.db
+      - DATABASE_URL=sqlite:////app/data/db/croplens.db
       - MODEL_REGISTRY_PATH=/app/backend/app/models/registry.json
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./data:/app/data
-      - ./backend/app/croplens.db:/app/backend/app/croplens.db
-      # Provision backend/app/models on the host; model binaries stay outside Git.
-      - ./backend/app/models:/app/backend/app/models:ro
+      - ./data:/app/data:ro
+      - croplens_db:/app/data/db
+      # Provision the complete versioned model bundle outside Git.
+      - ${MODEL_BUNDLE_PATH:?Set MODEL_BUNDLE_PATH to the complete model bundle directory}:/app/backend/app/models:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -31,6 +34,25 @@ services:
       start_period: 15s
     networks:
       - croplens_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: croplens_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - croplens_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - croplens_network
+
+volumes:
+  croplens_db:
+  croplens_redis:
 
 networks:
   croplens_network:
