@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, Check, Leaf, LogOut, Save, UserRound } from "lucide-react";
 import { getCurrentUser, logout, updatePreferences } from "@/api/client";
 import { BrandLogo } from "@/components/ui/BrandLogo";
@@ -18,13 +18,23 @@ export default function ProfilePage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    getCurrentUser({ notifyUnauthorized: false }).then((profile) => {
+  const loadProfile = useCallback(async () => {
+    setBusy(true);
+    setError("");
+    try {
+      const profile = await getCurrentUser({ notifyUnauthorized: false });
       setUser(profile); setHomeMandi(profile.home_mandi); setPreferredCommodity(profile.preferred_commodity);
       const nextLanguage: Language = profile.language === "hi" ? "hi" : "en";
       setLocalLanguage(nextLanguage);
-    }).catch(() => setError(t("signInProfile"))).finally(() => setBusy(false));
-  }, [setLanguage, t]);
+    } catch {
+      setError(t("signInProfile"));
+    } finally {
+      setBusy(false);
+    }
+  }, [t]);
+  useEffect(() => {
+    if (isSessionReady) void loadProfile();
+  }, [isSessionReady, loadProfile]);
 
   const save = async () => {
     setBusy(true); setError(""); setMessage("");
@@ -37,7 +47,7 @@ export default function ProfilePage() {
     try { await logout(); } finally { clearSession(); window.location.assign("/"); }
   };
   if ((!isSessionReady || busy) && !user) return <div className="auth-page"><StatePanel kind="loading" title={t("loadingProfile")} message={t("profileLoadingMessage")} /></div>;
-  if (!user) return <div className="auth-page"><div className="profile-error"><StatePanel kind="error" title={t("signInProfile")} message={error} /><a className="primary-button alert-link" href="/auth">{t("loginOrCreate")}</a><a className="back-link profile-back" href="/"><ArrowLeft size={16} /> {t("backToMarket")}</a></div></div>;
+  if (!user) return <div className="auth-page"><div className="profile-error"><StatePanel kind="error" title={t("signInProfile")} message={error} actionLabel={t("profileRetry")} onAction={() => void loadProfile()} /><a className="primary-button alert-link" href="/auth">{t("loginOrCreate")}</a><a className="back-link profile-back" href="/"><ArrowLeft size={16} /> {t("backToMarket")}</a></div></div>;
 
   return <div className="auth-page"><a className="back-link" href="/"><ArrowLeft size={16} /> {t("backToMarket")}</a><section className="profile-card" aria-labelledby="profile-title"><div className="auth-brand-full"><span className="auth-logo-badge"><img src="/logo-icon.png" alt="CropLens AI" /></span><span className="auth-logo-text"><strong>CropLens AI</strong><small>Your market. Your decision.</small></span></div><p className="eyebrow"><UserRound size={14} /> {t("farmerProfile")}</p><h1 id="profile-title">{t("preferences")}</h1><p className="auth-intro">{t("preferencesIntro")}</p><div className="profile-identity"><span className="profile-avatar"><Leaf size={21} /></span><span><strong>{user.full_name}</strong><small>{user.mobile_number}</small></span></div><div className="auth-form"><label className="field"><span>{t("homeMandi")}</span><input value={homeMandi} onChange={(event) => setHomeMandi(event.target.value)} /></label><label className="field"><span>{t("preferredCrop")}</span><input value={preferredCommodity} onChange={(event) => setPreferredCommodity(event.target.value)} /></label><label className="field"><span>{t("language")}</span><select value={language} onChange={(event) => { const next = event.target.value as Language; setLocalLanguage(next); setLanguage(next); }}><option value="en">English</option><option value="hi">हिन्दी</option></select></label><button className="primary-button auth-submit" type="button" onClick={() => void save()} disabled={busy}><Save size={16} /> {t("savePreferences")}</button></div>{message ? <div className="success-panel"><Check size={16} /> {message}</div> : null}{error ? <StatePanel kind="error" title={t("couldNotSavePreferences")} message={error} /> : null}<button className="logout-button" type="button" onClick={() => void signOut()}><LogOut size={16} /> {t("signOut")}</button></section></div>;
 }
