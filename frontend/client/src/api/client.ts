@@ -3,7 +3,8 @@ import type { ApiError, ForecastResponse, ProcurementResponse, ResourcesResponse
 import type { TokenResponse, UserProfile } from "@/types/auth";
 import type { SubscriptionsResponse } from "@/types/alerts";
 
-const DEVELOPMENT_API_BASE_URL = "http://localhost:8000";
+const developmentHost = typeof window !== "undefined" ? window.location.hostname : "localhost";
+const DEVELOPMENT_API_BASE_URL = `http://${developmentHost}:8000`;
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 const API_BASE_URL = (configuredApiBaseUrl ?? (import.meta.env.DEV ? DEVELOPMENT_API_BASE_URL : "")).replace(/\/$/, "");
