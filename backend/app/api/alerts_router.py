@@ -1,11 +1,12 @@
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Request, status, Depends
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from backend.app.db.database import get_db
 from backend.app.db.models import AlertSubscription, AlertLog, User
-from backend.app.api.auth_router import get_current_user, verify_csrf
+from backend.app.api.auth_router import get_current_user, require_system_operator, verify_csrf
 from backend.app.services.whatsapp_service import (
     send_whatsapp_message,
     format_advisory_message,
@@ -102,6 +103,22 @@ class SubscribeAlertRequest(BaseModel):
     delivery_time: str = Field(default="07:00 AM", json_schema_extra={"example": "07:00 AM"})
     language: str = Field(default="hi", json_schema_extra={"example": "hi"})
 
+    @field_validator("channel")
+    @classmethod
+    def validate_channel(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"whatsapp", "telegram", "both"}:
+            raise ValueError("channel must be whatsapp, telegram, or both")
+        return normalized
+
+    @field_validator("language")
+    @classmethod
+    def validate_language(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized not in {"en", "hi"}:
+            raise ValueError("language must be en or hi")
+        return normalized
+
 
 class TestTelegramRequest(BaseModel):
     chat_id: str = Field(..., json_schema_extra={"example": "123456789"})
@@ -187,6 +204,9 @@ def subscribe_alert_endpoint(
     clean_mobile = "".join(filter(str.isdigit, req.mobile_number))[-10:]
     if clean_mobile != current_user.mobile_number:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You may only manage subscriptions for your verified mobile number.")
+    telegram_chat_id = req.telegram_chat_id.strip() if req.telegram_chat_id else None
+    if req.channel in {"telegram", "both"} and not telegram_chat_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Telegram chat ID is required for Telegram alerts.")
     # Check if active subscription already exists for this mobile number
     existing = db.query(AlertSubscription).filter(
         AlertSubscription.mobile_number == clean_mobile,
@@ -195,7 +215,8 @@ def subscribe_alert_endpoint(
     ).first()
 
     if existing:
-        existing.telegram_chat_id = req.telegram_chat_id or existing.telegram_chat_id
+        existing.user_id = current_user.id
+        existing.telegram_chat_id = telegram_chat_id
         existing.channel = req.channel
         existing.delivery_time = req.delivery_time
         existing.language = req.language
@@ -210,8 +231,9 @@ def subscribe_alert_endpoint(
         }
 
     new_sub = AlertSubscription(
+        user_id=current_user.id,
         mobile_number=clean_mobile,
-        telegram_chat_id=req.telegram_chat_id,
+        telegram_chat_id=telegram_chat_id,
         channel=req.channel,
         crop=req.crop,
         mandi=req.mandi,
@@ -311,7 +333,7 @@ def telegram_status_endpoint() -> Dict[str, Any]:
 
 
 @alerts_router.post("/dispatch-now", status_code=status.HTTP_200_OK)
-def dispatch_now_endpoint(request: Request) -> Dict[str, Any]:
+def dispatch_now_endpoint(request: Request, _: User = Depends(require_system_operator), __: None = Depends(verify_csrf)) -> Dict[str, Any]:
     """
     On-demand manual trigger to execute morning market alert dispatches across all active subscriptions.
     """
@@ -325,7 +347,15 @@ def get_alert_logs_endpoint(
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
     """Returns recent alert dispatch history logs."""
-    logs = db.query(AlertLog).order_by(AlertLog.dispatched_at.desc()).limit(limit).all()
+    query = db.query(AlertLog).outerjoin(AlertSubscription)
+    if current_user.role not in {"admin", "operator"}:
+        query = query.filter(
+            or_(
+                AlertLog.recipient == current_user.mobile_number,
+                AlertSubscription.mobile_number == current_user.mobile_number,
+            )
+        )
+    logs = query.order_by(AlertLog.dispatched_at.desc()).limit(min(max(limit, 1), 200)).all()
     return {
         "status": "success",
         "total_logs": len(logs),

@@ -7,6 +7,8 @@ import time
 from types import SimpleNamespace
 from fastapi.testclient import TestClient
 from backend.app.api.alerts_router import _get_dynamic_advisory_values
+from backend.app.db.database import SessionLocal
+from backend.app.db.models import AlertLog
 from backend.app.main import app
 
 
@@ -25,7 +27,7 @@ def client():
             "language": "en",
         })
         assert response.status_code == 201
-        test_client.headers.update({"Authorization": f"Bearer {response.json()['access_token']}"})
+        test_client.headers.update({"X-CSRF-Token": response.json()["csrf_token"]})
         test_client.test_mobile = mobile
         yield test_client
 
@@ -74,6 +76,18 @@ def test_alert_mobile_ownership_is_enforced(client: TestClient):
         "mandi": "Agra",
     })
     assert response.status_code == 403
+
+
+def test_telegram_subscription_requires_chat_id(client: TestClient):
+    response = client.post("/api/v1/alerts/subscribe", json={
+        "mobile_number": client.test_mobile,
+        "channel": "telegram",
+        "crop": "Potato",
+        "mandi": "Agra",
+        "delivery_time": "07:00 AM",
+        "language": "en",
+    })
+    assert response.status_code == 400
 
 
 def test_send_whatsapp_advisory(client: TestClient):
@@ -172,6 +186,7 @@ def test_telegram_bot_status(client: TestClient):
 
 def test_dispatch_now_and_logs(client: TestClient):
     """Tests POST /api/v1/alerts/dispatch-now and GET /api/v1/alerts/logs."""
+    assert client.post("/api/v1/alerts/dispatch-now").status_code == 403
     if not getattr(app.state, "models_loaded", False):
         pytest.skip("Production model bundle is required for forecast-backed alert dispatch")
     # Subscribe temporary user
@@ -185,14 +200,28 @@ def test_dispatch_now_and_logs(client: TestClient):
         "language": "hi"
     })
 
-    # Trigger morning dispatch
-    res_dispatch = client.post("/api/v1/alerts/dispatch-now")
-    assert res_dispatch.status_code == 200
-    assert res_dispatch.json()["status"] == "success"
-
     # Fetch logs
     res_logs = client.get("/api/v1/alerts/logs?limit=10")
     assert res_logs.status_code == 200
     data = res_logs.json()
     assert "logs" in data
-    assert data["total_logs"] >= 1
+
+
+def test_alert_logs_are_limited_to_current_farmer(client: TestClient):
+    db = SessionLocal()
+    try:
+        db.add(AlertLog(
+            recipient="0000000000",
+            channel="whatsapp",
+            crop="Potato",
+            mandi="Agra",
+            message_text="private alert",
+            status="success",
+        ))
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get("/api/v1/alerts/logs?limit=50")
+    assert response.status_code == 200
+    assert all(log["recipient"] == client.test_mobile for log in response.json()["logs"])

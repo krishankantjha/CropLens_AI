@@ -4,6 +4,8 @@ test_scheduler.py — Test suite for APScheduler background worker and forecast 
 
 import pytest
 from fastapi.testclient import TestClient
+from backend.app.db.database import SessionLocal
+from backend.app.db.models import User
 from backend.app.main import app
 
 
@@ -17,29 +19,38 @@ def client():
 
 
 @pytest.fixture(scope="module")
-def auth_headers(client: TestClient):
-    """Create or authenticate a stable test user for protected scheduler endpoints."""
+def operator_headers(client: TestClient):
+    """Create or authenticate a stable operator for protected scheduler endpoints."""
     credentials = {
         "mobile_number": "9000000001",
         "password": "SchedulerTest123!",
         "full_name": "Scheduler Test User",
     }
     registration = client.post("/api/v1/auth/register", json=credentials)
-    if registration.status_code == 200:
-        token = registration.json()["access_token"]
+    if registration.status_code == 201:
+        csrf_token = registration.json()["csrf_token"]
     else:
         login = client.post(
             "/api/v1/auth/login",
             json={"mobile_number": credentials["mobile_number"], "password": credentials["password"]},
         )
         assert login.status_code == 200, login.text
-        token = login.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
+        csrf_token = login.json()["csrf_token"]
+
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.mobile_number == credentials["mobile_number"]).one()
+        user.role = "operator"
+        db.commit()
+    finally:
+        db.close()
+
+    return {"X-CSRF-Token": csrf_token}
 
 
-def test_scheduler_status(client: TestClient, auth_headers):
+def test_scheduler_status(client: TestClient, operator_headers):
     """Tests GET /api/v1/system/scheduler-status returns active cron jobs and telemetry."""
-    response = client.get("/api/v1/system/scheduler-status", headers=auth_headers)
+    response = client.get("/api/v1/system/scheduler-status")
     assert response.status_code == 200
     data = response.json()
     assert "scheduler_running" in data
@@ -55,9 +66,9 @@ def test_scheduler_status(client: TestClient, auth_headers):
     assert "daily_cache_warming" in job_ids
 
 
-def test_manual_sync_trigger(client: TestClient, auth_headers):
+def test_manual_sync_trigger(client: TestClient, operator_headers):
     """Tests POST /api/v1/system/trigger-sync executes on-demand sync and cache warming."""
-    response = client.post("/api/v1/system/trigger-sync", headers=auth_headers)
+    response = client.post("/api/v1/system/trigger-sync", headers=operator_headers)
     assert response.status_code == 200
     data = response.json()
     assert data["status"] in {"success", "partial", "error"}
@@ -67,10 +78,10 @@ def test_manual_sync_trigger(client: TestClient, auth_headers):
     assert data["cache_warming"]["status"] == "success"
 
 
-def test_prediction_caching_performance(client: TestClient, auth_headers):
+def test_prediction_caching_performance(client: TestClient, operator_headers):
     """Tests that repeating prediction requests hit the cache and increment hit counters."""
     # Fetch initial status
-    status_before = client.get("/api/v1/system/scheduler-status", headers=auth_headers).json()
+    status_before = client.get("/api/v1/system/scheduler-status").json()
     hits_before = status_before["cache_metrics"]["cache_hits"]
 
     # Request forecast
@@ -84,6 +95,6 @@ def test_prediction_caching_performance(client: TestClient, auth_headers):
     assert res1.json()["current_price"] == res2.json()["current_price"]
 
     # Verify hit counter incremented
-    status_after = client.get("/api/v1/system/scheduler-status", headers=auth_headers).json()
+    status_after = client.get("/api/v1/system/scheduler-status").json()
     hits_after = status_after["cache_metrics"]["cache_hits"]
     assert hits_after >= hits_before + 1

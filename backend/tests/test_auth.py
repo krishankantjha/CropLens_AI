@@ -1,17 +1,22 @@
 """
 Pytest Integration Suite for CropLens AI Authentication & User Management.
-Tests user registration, Bcrypt password hashing, JWT token issuing, OTP flow, and preferences.
+Tests user registration, Bcrypt password hashing, secure-cookie sessions, OTP flow, and preferences.
 """
 
 import time
+import pytest
 from fastapi.testclient import TestClient
 from backend.app.main import app
 
-client = TestClient(app)
+
+@pytest.fixture()
+def client():
+    with TestClient(app) as test_client:
+        yield test_client
 
 
-def test_user_registration_and_login():
-    """Test user registration, duplicate prevention, and login with JWT token."""
+def test_user_registration_and_login(client: TestClient):
+    """Test user registration, duplicate prevention, and secure-cookie login."""
     test_mobile = f"99{str(time.time_ns())[-8:]}"
     
     # 1. Register new user
@@ -27,24 +32,21 @@ def test_user_registration_and_login():
     response = client.post("/api/v1/auth/register", json=reg_payload)
     assert response.status_code == 201
     data = response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
+    assert "access_token" not in data
+    assert "refresh_token" not in data
+    assert "csrf_token" in data
     assert data["user"]["mobile_number"] == test_mobile
     assert data["user"]["role"] == "farmer"
     assert data["user"]["language"] == "hi"
 
-    token = data["access_token"]
-    refresh_token = data["refresh_token"]
+    csrf_headers = {"X-CSRF-Token": data["csrf_token"]}
 
-    # Protected routes must accept access tokens only.
-    assert client.get(
-        "/api/v1/auth/me",
-        headers={"Authorization": f"Bearer {refresh_token}"},
-    ).status_code == 401
-    assert client.get(
-        "/api/v1/auth/me",
-        headers={"Authorization": "Bearer "},
-    ).status_code == 401
+    # Authorization headers are no longer accepted as a compatibility bypass.
+    with TestClient(app) as raw_client:
+        assert raw_client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": "Bearer not-a-cookie-session"},
+        ).status_code == 401
 
     # 2. Attempt duplicate registration (should fail with 400)
     dup_response = client.post("/api/v1/auth/register", json=reg_payload)
@@ -58,7 +60,8 @@ def test_user_registration_and_login():
     login_response = client.post("/api/v1/auth/login", json=login_payload)
     assert login_response.status_code == 200
     login_data = login_response.json()
-    assert "access_token" in login_data
+    assert "csrf_token" in login_data
+    csrf_headers = {"X-CSRF-Token": login_data["csrf_token"]}
 
     # 4. Test login with wrong password (should fail with 401)
     wrong_response = client.post("/api/v1/auth/login", json={
@@ -67,15 +70,14 @@ def test_user_registration_and_login():
     })
     assert wrong_response.status_code == 401
 
-    # 5. Fetch user profile with JWT Bearer header
-    headers = {"Authorization": f"Bearer {token}"}
-    me_response = client.get("/api/v1/auth/me", headers=headers)
+    # 5. Fetch user profile through the secure session cookie
+    me_response = client.get("/api/v1/auth/me")
     assert me_response.status_code == 200
     me_data = me_response.json()
     assert me_data["mobile_number"] == test_mobile
 
     # 6. Update user preferences
-    pref_response = client.put("/api/v1/auth/preferences", headers=headers, json={
+    pref_response = client.put("/api/v1/auth/preferences", headers=csrf_headers, json={
         "home_mandi": "Lasalgaon",
         "preferred_commodity": "Onion",
         "language": "mr"
@@ -86,8 +88,12 @@ def test_user_registration_and_login():
     assert pref_data["preferred_commodity"] == "Onion"
     assert pref_data["language"] == "mr"
 
+    logout_response = client.post("/api/v1/auth/logout", headers=csrf_headers)
+    assert logout_response.status_code == 200
+    assert client.get("/api/v1/auth/me").status_code == 401
 
-def test_otp_flow():
+
+def test_otp_flow(client: TestClient):
     """Test OTP code sending and passwordless verification."""
     test_mobile = f"98{str(time.time_ns())[-8:]}"
 
@@ -103,5 +109,5 @@ def test_otp_flow():
     })
     assert verify_res.status_code == 200
     verify_data = verify_res.json()
-    assert "access_token" in verify_data
+    assert "csrf_token" in verify_data
     assert verify_data["user"]["mobile_number"] == test_mobile

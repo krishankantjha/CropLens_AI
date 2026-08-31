@@ -3,15 +3,15 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, KeyRound, LockKeyhole, Phone, UserRound } from "lucide-react";
 import { login, register, sendOtp, verifyOtp } from "@/api/client";
 import { BrandLogo } from "@/components/ui/BrandLogo";
-import type { TokenResponse } from "@/types/auth";
+import type { AuthSessionResponse } from "@/types/auth";
 import { StatePanel } from "@/components/feedback/StatePanel";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSession } from "@/contexts/SessionContext";
 
 type Mode = "login" | "register" | "otp";
 
-function persistSession(response: TokenResponse, setSession: (accessToken: string, refreshToken?: string) => void) {
-  setSession(response.access_token, response.refresh_token);
+function persistSession(response: AuthSessionResponse, setSession: (csrfToken: string) => void) {
+  setSession(response.csrf_token);
 }
 
 export default function AuthPage() {

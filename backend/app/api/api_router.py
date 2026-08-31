@@ -26,7 +26,7 @@ from backend.app.services.scheduler_service import (
 )
 from backend.app.services.pdf_generator import generate_procurement_pdf
 
-from backend.app.api.auth_router import auth_router, get_current_user
+from backend.app.api.auth_router import auth_router, get_current_user, require_system_operator, verify_csrf
 from backend.app.api.alerts_router import alerts_router
 from backend.app.core.constants import VALID_COMMODITIES, VALID_MARKETS
 
@@ -185,7 +185,7 @@ def get_system_resources() -> SystemResourcesResponse:
     summary="APScheduler Background Jobs & Cache Status",
     description="Returns telemetry on active recurring cron jobs, last/next execution times, and cache hit metrics.",
     tags=["System Operations"],
-    dependencies=[Depends(get_current_user)]
+    dependencies=[Depends(require_system_operator)]
 )
 def get_system_scheduler_status() -> dict:
     return get_scheduler_status()
@@ -197,7 +197,7 @@ def get_system_scheduler_status() -> dict:
     summary="Trigger On-Demand Mandi Sync & Cache Warming",
     description="Manually triggers live Agmarknet mandi sync, NASA weather sync, and prediction cache warming.",
     tags=["System Operations"],
-    dependencies=[Depends(get_current_user)]
+    dependencies=[Depends(require_system_operator), Depends(verify_csrf)]
 )
 def trigger_system_sync(request: Request) -> dict:
     return trigger_manual_sync(request.app)

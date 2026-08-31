@@ -248,12 +248,10 @@ class UserResponse(BaseModel):
     created_at: Optional[str] = None
 
 
-class TokenResponse(BaseModel):
-    access_token: str
-    refresh_token: Optional[str] = None
-    token_type: str = "bearer"
+class AuthSessionResponse(BaseModel):
+    csrf_token: str
     user: UserResponse
 
 
-class TokenRefreshRequest(BaseModel):
-    refresh_token: Optional[str] = Field(None, description="Optional legacy refresh token; secure-cookie clients use the refresh cookie")
+class CsrfResponse(BaseModel):
+    csrf_token: str

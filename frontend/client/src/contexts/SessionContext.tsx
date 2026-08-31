@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { getCurrentUser, SESSION_EXPIRED_EVENT } from "@/api/client";
+import { clearCsrfToken, getCsrfToken, getCurrentUser, SESSION_EXPIRED_EVENT, setCsrfToken } from "@/api/client";
 
 const LEGACY_ACCESS_TOKEN_KEY = "croplens_access_token";
 const LEGACY_REFRESH_TOKEN_KEY = "croplens_refresh_token";
@@ -9,7 +9,7 @@ type SessionContextValue = {
   accessToken: string | null;
   isAuthenticated: boolean;
   isSessionReady: boolean;
-  setSession: (accessToken: string, refreshToken?: string) => void;
+  setSession: (csrfToken: string) => void;
   clearSession: () => void;
 };
 
@@ -19,21 +19,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isSessionReady, setIsSessionReady] = useState(false);
 
-  const setSession = useCallback((nextAccessToken: string) => {
-    if (nextAccessToken) setAccessToken("cookie-session");
+  const setSession = useCallback((nextCsrfToken: string) => {
+    if (nextCsrfToken) {
+      setCsrfToken(nextCsrfToken);
+      setAccessToken("cookie-session");
+    }
   }, []);
 
   const clearSession = useCallback(() => {
     window.localStorage.removeItem(LEGACY_ACCESS_TOKEN_KEY);
     window.localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
+    clearCsrfToken();
     setAccessToken(null);
   }, []);
 
   useEffect(() => {
     let active = true;
     void getCurrentUser({ notifyUnauthorized: false })
-      .then(() => {
-        if (active) setAccessToken("cookie-session");
+      .then(async () => {
+        const { csrf_token } = await getCsrfToken({ notifyUnauthorized: false });
+        if (active) {
+          setCsrfToken(csrf_token);
+          setAccessToken("cookie-session");
+        }
       })
       .catch(() => {
         if (active) setAccessToken(null);

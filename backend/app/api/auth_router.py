@@ -4,7 +4,7 @@ Provides endpoints for mobile registration, password/OTP login, JWT issuing, and
 Backed by Redis (with robust in-memory fallback) for OTP storage and distributed rate limiting.
 """
 
-from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Request, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 import secrets
 from typing import Optional
@@ -30,17 +30,19 @@ from backend.app.schemas import (
     UserOTPVerifyRequest,
     UserPreferencesRequest,
     UserResponse,
-    TokenResponse,
-    TokenRefreshRequest,
+    AuthSessionResponse,
+    CsrfResponse,
 )
 
 auth_router = APIRouter(prefix="/auth", tags=["Authentication & User Profile"])
 
 
-def set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> str:
+    csrf_token = secrets.token_urlsafe(32)
     response.set_cookie(AUTH_ACCESS_COOKIE, access_token, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60, httponly=True, secure=AUTH_COOKIE_SECURE, samesite=AUTH_COOKIE_SAMESITE, path="/")
     response.set_cookie(AUTH_REFRESH_COOKIE, refresh_token, max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, httponly=True, secure=AUTH_COOKIE_SECURE, samesite=AUTH_COOKIE_SAMESITE, path="/api/v1/auth")
-    response.set_cookie(AUTH_CSRF_COOKIE, secrets.token_urlsafe(32), max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, httponly=False, secure=AUTH_COOKIE_SECURE, samesite=AUTH_COOKIE_SAMESITE, path="/")
+    response.set_cookie(AUTH_CSRF_COOKIE, csrf_token, max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, httponly=False, secure=AUTH_COOKIE_SECURE, samesite=AUTH_COOKIE_SAMESITE, path="/")
+    return csrf_token
 
 
 def clear_auth_cookies(response: Response) -> None:
@@ -50,8 +52,6 @@ def clear_auth_cookies(response: Response) -> None:
 
 
 def verify_csrf(request: Request, csrf_cookie: Optional[str] = Cookie(None, alias=AUTH_CSRF_COOKIE)) -> None:
-    if request.headers.get("Authorization", "").startswith("Bearer "):
-        return
     csrf_header = request.headers.get("X-CSRF-Token")
     if not csrf_cookie or not csrf_header or not secrets.compare_digest(csrf_cookie, csrf_header):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="CSRF validation failed")
@@ -75,11 +75,9 @@ def check_rate_limit(key: str) -> None:
         )
 
 
-def get_current_user(authorization: Optional[str] = Header(None), access_cookie: Optional[str] = Cookie(None, alias=AUTH_ACCESS_COOKIE), db: Session = Depends(get_db)) -> User:
-    """Dependency helper to extract and validate the active user from a secure cookie or temporary Bearer header."""
+def get_current_user(access_cookie: Optional[str] = Cookie(None, alias=AUTH_ACCESS_COOKIE), db: Session = Depends(get_db)) -> User:
+    """Dependency helper to extract and validate the active user from a secure cookie."""
     token = access_cookie
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.removeprefix("Bearer ").strip()
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -103,7 +101,16 @@ def get_current_user(authorization: Optional[str] = Header(None), access_cookie:
     return user
 
 
-@auth_router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def require_system_operator(current_user: User = Depends(get_current_user)) -> User:
+    if current_user.role not in {"admin", "operator"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator access is required for this operation.",
+        )
+    return current_user
+
+
+@auth_router.post("/register", response_model=AuthSessionResponse, status_code=status.HTTP_201_CREATED)
 def register_user(payload: UserRegisterRequest, response: Response, db: Session = Depends(get_db)):
     """Registers a new user account in SQLite and returns JWT access token."""
     clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
@@ -132,17 +139,15 @@ def register_user(payload: UserRegisterRequest, response: Response, db: Session 
     token_data = {"sub": new_user.mobile_number, "role": new_user.role}
     access_token = create_access_token(data=token_data)
     refresh_token = create_refresh_token(data=token_data)
-    set_auth_cookies(response, access_token, refresh_token)
+    csrf_token = set_auth_cookies(response, access_token, refresh_token)
     
     return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
+        "csrf_token": csrf_token,
         "user": new_user.to_dict()
     }
 
 
-@auth_router.post("/login", response_model=TokenResponse)
+@auth_router.post("/login", response_model=AuthSessionResponse)
 def login_user(payload: UserLoginRequest, response: Response, db: Session = Depends(get_db)):
     """Authenticates mobile number & password, issuing JWT access token."""
     clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
@@ -157,12 +162,10 @@ def login_user(payload: UserLoginRequest, response: Response, db: Session = Depe
     token_data = {"sub": user.mobile_number, "role": user.role}
     access_token = create_access_token(data=token_data)
     refresh_token = create_refresh_token(data=token_data)
-    set_auth_cookies(response, access_token, refresh_token)
+    csrf_token = set_auth_cookies(response, access_token, refresh_token)
     
     return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
+        "csrf_token": csrf_token,
         "user": user.to_dict()
     }
 
@@ -192,7 +195,7 @@ def send_otp(payload: UserOTPRequest):
     }
 
 
-@auth_router.post("/otp/verify", response_model=TokenResponse)
+@auth_router.post("/otp/verify", response_model=AuthSessionResponse)
 def verify_otp(payload: UserOTPVerifyRequest, response: Response, db: Session = Depends(get_db)):
     """Verifies OTP code with expiration check, consumes OTP once, and logs in user."""
     clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
@@ -233,20 +236,18 @@ def verify_otp(payload: UserOTPVerifyRequest, response: Response, db: Session = 
     token_data = {"sub": user.mobile_number, "role": user.role}
     access_token = create_access_token(data=token_data)
     refresh_token = create_refresh_token(data=token_data)
-    set_auth_cookies(response, access_token, refresh_token)
+    csrf_token = set_auth_cookies(response, access_token, refresh_token)
     
     return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
+        "csrf_token": csrf_token,
         "user": user.to_dict()
     }
 
 
-@auth_router.post("/refresh", response_model=TokenResponse)
-def refresh_token(payload: TokenRefreshRequest, response: Response, refresh_cookie: Optional[str] = Cookie(None, alias=AUTH_REFRESH_COOKIE), db: Session = Depends(get_db)):
+@auth_router.post("/refresh", response_model=AuthSessionResponse)
+def refresh_token(response: Response, refresh_cookie: Optional[str] = Cookie(None, alias=AUTH_REFRESH_COOKIE), db: Session = Depends(get_db)):
     """Issues new access token using a valid refresh token."""
-    refresh_value = refresh_cookie or payload.refresh_token
+    refresh_value = refresh_cookie
     decoded = decode_access_token(refresh_value) if refresh_value else None
     if not decoded or decoded.get("type") != "refresh":
         raise HTTPException(
@@ -264,20 +265,25 @@ def refresh_token(payload: TokenRefreshRequest, response: Response, refresh_cook
         
     token_data = {"sub": user.mobile_number, "role": user.role}
     new_access_token = create_access_token(data=token_data)
-    set_auth_cookies(response, new_access_token, refresh_value)
+    csrf_token = set_auth_cookies(response, new_access_token, refresh_value)
     
     return {
-        "access_token": new_access_token,
-        "refresh_token": None,
-        "token_type": "bearer",
+        "csrf_token": csrf_token,
         "user": user.to_dict()
     }
 
 
 @auth_router.post("/logout")
-def logout(response: Response):
+def logout(response: Response, _: None = Depends(verify_csrf)):
     clear_auth_cookies(response)
     return {"message": "Signed out successfully."}
+
+
+@auth_router.get("/csrf", response_model=CsrfResponse)
+def get_csrf_token(csrf_cookie: Optional[str] = Cookie(None, alias=AUTH_CSRF_COOKIE), current_user: User = Depends(get_current_user)):
+    if not csrf_cookie:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="CSRF token is unavailable for this session")
+    return {"csrf_token": csrf_cookie}
 
 
 @auth_router.get("/me", response_model=UserResponse)

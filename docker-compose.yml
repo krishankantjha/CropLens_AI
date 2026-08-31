@@ -6,12 +6,17 @@ services:
     container_name: croplens_backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
       - PORT=8000
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?Set JWT_SECRET_KEY before starting the production backend}
+      - CORS_ORIGINS=${CORS_ORIGINS:?Set CORS_ORIGINS to the deployed frontend origin}
+      - REDIS_URL=${REDIS_URL:?Set REDIS_URL to a production Redis instance}
+      - AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE:-true}
+      - AUTH_COOKIE_SAMESITE=${AUTH_COOKIE_SAMESITE:-lax}
       - DATABASE_URL=sqlite:////app/backend/app/croplens.db
       - MODEL_REGISTRY_PATH=/app/backend/app/models/registry.json
-      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173
       - PYTHONUNBUFFERED=1
     volumes:
       - ./data:/app/data
