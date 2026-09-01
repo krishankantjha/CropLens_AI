@@ -104,7 +104,7 @@ def dispatch_scheduled_advisories_service(app: Any = None) -> Dict[str, Any]:
     from backend.app.db.database import SessionLocal
     from backend.app.db.models import AlertSubscription, AlertLog
     from backend.app.services.telegram_service import send_telegram_message, format_telegram_advisory_message
-    from backend.app.services.scheduler_service import get_cached_forecast_7d
+    from backend.app.services.scheduler_service import get_cached_forecast_7d, dataset_watermark
     from backend.app.schemas import MultiDayForecastRequest
     from backend.app.services.api_service import predict_7day_forecast_service
 
@@ -119,7 +119,14 @@ def dispatch_scheduled_advisories_service(app: Any = None) -> Dict[str, Any]:
 
         for sub in active_subs:
             # 1. Fetch latest forecast data from cache or model
-            cached_data = get_cached_forecast_7d(sub.crop, sub.mandi, today_str)
+            cached_data = get_cached_forecast_7d(
+                sub.crop,
+                sub.mandi,
+                today_str,
+                horizon_days=7,
+                model_version=getattr(getattr(app, "state", None), "model_version", "unknown"),
+                data_watermark=dataset_watermark(getattr(getattr(app, "state", None), "dataset", None)),
+            )
             try:
                 if cached_data:
                     peak_day = cached_data.get("peak_day") or {}
