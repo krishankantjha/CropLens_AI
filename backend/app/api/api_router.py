@@ -29,6 +29,7 @@ from backend.app.services.pdf_generator import generate_procurement_pdf
 from backend.app.api.auth_router import auth_router, get_current_user, require_system_operator, verify_csrf
 from backend.app.api.alerts_router import alerts_router
 from backend.app.core.constants import VALID_COMMODITIES, VALID_MARKETS
+from backend.app.core.redis_client import redis_store
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_router)
@@ -59,6 +60,18 @@ def _require_forecast_runtime(request: Request) -> None:
     _require_dataset_runtime(request)
 
 
+def _require_expensive_rate_limit(request: Request) -> None:
+    """Limit expensive prediction and report generation per client address."""
+    client_host = request.client.host if request.client else "unknown"
+    key = f"expensive:{request.url.path}:{client_host}"
+    if not redis_store.check_rate_limit(key, window_seconds=60, max_requests=30):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many expensive requests. Please retry after 60 seconds.",
+            headers={"Retry-After": "60"},
+        )
+
+
 @api_router.post(
     "/predict/price",
     response_model=PricePredictionResponse,
@@ -66,7 +79,11 @@ def _require_forecast_runtime(request: Request) -> None:
     summary="Single-Day Price Prediction",
     description="Generates a single-day P10/P50/P90 price forecast with optional feature overrides.",
     tags=["Price Forecasting"],
-    dependencies=[Depends(_require_forecast_runtime)]
+    dependencies=[
+        Depends(get_current_user),
+        Depends(_require_forecast_runtime),
+        Depends(_require_expensive_rate_limit),
+    ]
 )
 def predict_price(req: PricePredictionRequest, request: Request) -> PricePredictionResponse:
     return predict_price_service(
@@ -223,7 +240,11 @@ def trigger_system_sync(request: Request) -> dict:
     summary="Detect potential supply shock anomalies",
     description="Uses Isolation Forest anomaly detection model to flag potential supply shocks or price crash risks across recent mandi arrival and price volatility records.",
     tags=["Supply Shock Detection"],
-    dependencies=[Depends(_require_forecast_runtime)]
+    dependencies=[
+        Depends(get_current_user),
+        Depends(_require_forecast_runtime),
+        Depends(_require_expensive_rate_limit),
+    ]
 )
 def detect_supply_shocks(
     request: Request,
@@ -247,7 +268,11 @@ def detect_supply_shocks(
     summary="Calculate spatial mandi price arbitrage opportunities",
     description="Calculates spatial wholesale modal price differences across APMC mandis to identify higher-margin selling market opportunities for farmers and procurement officers.",
     tags=["Procurement Arbitrage"],
-    dependencies=[Depends(_require_dataset_runtime)]
+    dependencies=[
+        Depends(get_current_user),
+        Depends(_require_dataset_runtime),
+        Depends(_require_expensive_rate_limit),
+    ]
 )
 def calculate_arbitrage(
     request: Request,
@@ -270,7 +295,11 @@ def calculate_arbitrage(
     summary="Get 30-day historical price trends and market analytics",
     description="Returns historical wholesale modal prices, mandi arrivals, 30-day rolling volatility, and trend direction for a given commodity and market.",
     tags=["Market Analytics"],
-    dependencies=[Depends(_require_dataset_runtime)]
+    dependencies=[
+        Depends(get_current_user),
+        Depends(_require_dataset_runtime),
+        Depends(_require_expensive_rate_limit),
+    ]
 )
 def get_analytics_trends(
     request: Request,
@@ -292,7 +321,11 @@ def get_analytics_trends(
     summary="Download Institutional Procurement PDF Advisory Brief",
     description="Generates a downloadable PDF report summarizing forecast risk bands, spatial arbitrage gradients, and supply shock alerts.",
     tags=["PDF Reports"],
-    dependencies=[Depends(_require_forecast_runtime)]
+    dependencies=[
+        Depends(get_current_user),
+        Depends(_require_forecast_runtime),
+        Depends(_require_expensive_rate_limit),
+    ]
 )
 def download_procurement_pdf(
     request: Request,
