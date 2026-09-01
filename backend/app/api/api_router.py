@@ -22,7 +22,8 @@ from backend.app.services.scheduler_service import (
     get_scheduler_status,
     trigger_manual_sync,
     get_cached_forecast_7d,
-    set_cached_forecast_7d
+    set_cached_forecast_7d,
+    dataset_watermark,
 )
 from backend.app.services.pdf_generator import generate_procurement_pdf
 
@@ -104,7 +105,16 @@ def predict_price(req: PricePredictionRequest, request: Request) -> PricePredict
 )
 def predict_forecast_7d(req: MultiDayForecastRequest, request: Request) -> MultiDayForecastResponse:
     _require_forecast_runtime(request)
-    cached = get_cached_forecast_7d(req.commodity, req.market, req.start_date)
+    model_version = getattr(request.app.state, "model_version", "unknown")
+    data_watermark = dataset_watermark(request.app.state.dataset)
+    cached = get_cached_forecast_7d(
+        req.commodity,
+        req.market,
+        req.start_date,
+        horizon_days=req.horizon_days,
+        model_version=model_version,
+        data_watermark=data_watermark,
+    )
     if cached and cached.get("forecast_horizon_days") == req.horizon_days:
         return MultiDayForecastResponse(**cached)
 
@@ -114,7 +124,15 @@ def predict_forecast_7d(req: MultiDayForecastRequest, request: Request) -> Multi
         metadata=request.app.state.metadata,
         dataset=request.app.state.dataset
     )
-    set_cached_forecast_7d(req.commodity, req.market, res.model_dump(), req.start_date)
+    set_cached_forecast_7d(
+        req.commodity,
+        req.market,
+        res.model_dump(),
+        req.start_date,
+        horizon_days=req.horizon_days,
+        model_version=model_version,
+        data_watermark=data_watermark,
+    )
     return res
 
 
@@ -129,7 +147,16 @@ def predict_forecast_7d(req: MultiDayForecastRequest, request: Request) -> Multi
 def predict_forecast(req: MultiDayForecastRequest, request: Request) -> MultiDayForecastResponse:
     _require_forecast_runtime(request)
     # Handle single-day vs multi-day via horizon_days parameter
-    cached = get_cached_forecast_7d(req.commodity, req.market, req.start_date)
+    model_version = getattr(request.app.state, "model_version", "unknown")
+    data_watermark = dataset_watermark(request.app.state.dataset)
+    cached = get_cached_forecast_7d(
+        req.commodity,
+        req.market,
+        req.start_date,
+        horizon_days=req.horizon_days,
+        model_version=model_version,
+        data_watermark=data_watermark,
+    )
     if cached and cached.get("forecast_horizon_days") == req.horizon_days:
         return MultiDayForecastResponse(**cached)
 
@@ -139,7 +166,15 @@ def predict_forecast(req: MultiDayForecastRequest, request: Request) -> MultiDay
         metadata=request.app.state.metadata,
         dataset=request.app.state.dataset
     )
-    set_cached_forecast_7d(req.commodity, req.market, res.model_dump(), req.start_date)
+    set_cached_forecast_7d(
+        req.commodity,
+        req.market,
+        res.model_dump(),
+        req.start_date,
+        horizon_days=req.horizon_days,
+        model_version=model_version,
+        data_watermark=data_watermark,
+    )
     return res
 
 
@@ -159,7 +194,16 @@ def get_forecast(
     horizon: int = Query(7, ge=1, le=14, description="Forecast horizon in days")
 ) -> MultiDayForecastResponse:
     _require_forecast_runtime(request)
-    cached = get_cached_forecast_7d(commodity, market, date)
+    model_version = getattr(request.app.state, "model_version", "unknown")
+    data_watermark = dataset_watermark(request.app.state.dataset)
+    cached = get_cached_forecast_7d(
+        commodity,
+        market,
+        date,
+        horizon_days=horizon,
+        model_version=model_version,
+        data_watermark=data_watermark,
+    )
     if cached and cached.get("forecast_horizon_days") == horizon:
         return MultiDayForecastResponse(**cached)
 
@@ -170,7 +214,15 @@ def get_forecast(
         metadata=request.app.state.metadata,
         dataset=request.app.state.dataset
     )
-    set_cached_forecast_7d(commodity, market, res.model_dump(), date)
+    set_cached_forecast_7d(
+        commodity,
+        market,
+        res.model_dump(),
+        date,
+        horizon_days=horizon,
+        model_version=model_version,
+        data_watermark=data_watermark,
+    )
     return res
 
 
