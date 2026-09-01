@@ -10,9 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy backend requirements and install dependencies
-COPY backend/requirements.txt ./backend/requirements.txt
-RUN pip install --no-cache-dir -r ./backend/requirements.txt
+# Copy the resolved backend dependency lock and install reproducibly.
+COPY backend/requirements.lock ./backend/requirements.lock
+RUN pip install --no-cache-dir -r ./backend/requirements.lock
 
 # Copy backend application codebase and processed dataset
 COPY backend ./backend
