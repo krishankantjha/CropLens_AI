@@ -52,11 +52,37 @@ CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "")
 # --- Google OAuth ---
 GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
 
-# --- Twilio Verify SMS OTP ---
-SMS_PROVIDER: str = os.getenv("SMS_PROVIDER", "local").strip().lower()
-TWILIO_API_KEY_SID: str = os.getenv("TWILIO_API_KEY_SID", "").strip()
-TWILIO_API_KEY_SECRET: str = os.getenv("TWILIO_API_KEY_SECRET", "").strip()
-TWILIO_VERIFY_SERVICE_SID: str = os.getenv("TWILIO_VERIFY_SERVICE_SID", "").strip()
+# --- Twilio SMS & Verify OTP ---
+TWILIO_API_KEY_SID: str = (
+    os.getenv("TWILIO_API_KEY_SID")
+    or os.getenv("TWILIO_ACCOUNT_SID")
+    or ""
+).strip()
+TWILIO_API_KEY_SECRET: str = (
+    os.getenv("TWILIO_API_KEY_SECRET")
+    or os.getenv("TWILIO_AUTH_TOKEN")
+    or ""
+).strip()
+TWILIO_VERIFY_SERVICE_SID: str = (
+    os.getenv("TWILIO_VERIFY_SERVICE_SID")
+    or os.getenv("TWILIO_SERVICE_SID")
+    or os.getenv("TWILIO_VERIFY_SID")
+    or ""
+).strip()
+TWILIO_PHONE_NUMBER: str = (
+    os.getenv("TWILIO_PHONE_NUMBER")
+    or os.getenv("TWILIO_FROM_NUMBER")
+    or os.getenv("TWILIO_NUMBER")
+    or ""
+).strip()
+
+_raw_sms_provider = os.getenv("SMS_PROVIDER", "").strip().lower()
+if _raw_sms_provider:
+    SMS_PROVIDER: str = _raw_sms_provider
+elif TWILIO_API_KEY_SID and TWILIO_API_KEY_SECRET and (TWILIO_VERIFY_SERVICE_SID or TWILIO_PHONE_NUMBER):
+    SMS_PROVIDER = "twilio"
+else:
+    SMS_PROVIDER = "local"
 
 # --- Database ---
 BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
