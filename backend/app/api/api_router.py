@@ -35,16 +35,28 @@ api_router.include_router(auth_router)
 api_router.include_router(alerts_router)
 
 
-def _require_forecast_runtime(request: Request) -> None:
-    """Return a controlled service-unavailable response in degraded mode."""
-    models = getattr(request.app.state, "models", None)
-    metadata = getattr(request.app.state, "metadata", None)
-    dataset = getattr(request.app.state, "dataset", None)
-    if not models or not metadata or dataset is None:
+def _require_model_runtime(request: Request) -> None:
+    """Require validated model artifacts before serving model-backed routes."""
+    if not getattr(request.app.state, "models_loaded", False):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Forecast service is unavailable because the production model bundle or serving dataset is not loaded.",
+            detail="Model service is unavailable because the production model bundle is not loaded.",
         )
+
+
+def _require_dataset_runtime(request: Request) -> None:
+    """Require a validated serving dataset before serving data-backed routes."""
+    if not getattr(request.app.state, "dataset_loaded", False):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Data service is unavailable because the serving dataset is not loaded.",
+        )
+
+
+def _require_forecast_runtime(request: Request) -> None:
+    """Require both validated models and serving data in degraded mode."""
+    _require_model_runtime(request)
+    _require_dataset_runtime(request)
 
 
 @api_router.post(
@@ -53,7 +65,8 @@ def _require_forecast_runtime(request: Request) -> None:
     status_code=status.HTTP_200_OK,
     summary="Single-Day Price Prediction",
     description="Generates a single-day P10/P50/P90 price forecast with optional feature overrides.",
-    tags=["Price Forecasting"]
+    tags=["Price Forecasting"],
+    dependencies=[Depends(_require_forecast_runtime)]
 )
 def predict_price(req: PricePredictionRequest, request: Request) -> PricePredictionResponse:
     return predict_price_service(
@@ -209,7 +222,8 @@ def trigger_system_sync(request: Request) -> dict:
     status_code=status.HTTP_200_OK,
     summary="Detect potential supply shock anomalies",
     description="Uses Isolation Forest anomaly detection model to flag potential supply shocks or price crash risks across recent mandi arrival and price volatility records.",
-    tags=["Supply Shock Detection"]
+    tags=["Supply Shock Detection"],
+    dependencies=[Depends(_require_forecast_runtime)]
 )
 def detect_supply_shocks(
     request: Request,
@@ -232,7 +246,8 @@ def detect_supply_shocks(
     status_code=status.HTTP_200_OK,
     summary="Calculate spatial mandi price arbitrage opportunities",
     description="Calculates spatial wholesale modal price differences across APMC mandis to identify higher-margin selling market opportunities for farmers and procurement officers.",
-    tags=["Procurement Arbitrage"]
+    tags=["Procurement Arbitrage"],
+    dependencies=[Depends(_require_dataset_runtime)]
 )
 def calculate_arbitrage(
     request: Request,
@@ -254,7 +269,8 @@ def calculate_arbitrage(
     status_code=status.HTTP_200_OK,
     summary="Get 30-day historical price trends and market analytics",
     description="Returns historical wholesale modal prices, mandi arrivals, 30-day rolling volatility, and trend direction for a given commodity and market.",
-    tags=["Market Analytics"]
+    tags=["Market Analytics"],
+    dependencies=[Depends(_require_dataset_runtime)]
 )
 def get_analytics_trends(
     request: Request,
@@ -275,42 +291,35 @@ def get_analytics_trends(
     status_code=status.HTTP_200_OK,
     summary="Download Institutional Procurement PDF Advisory Brief",
     description="Generates a downloadable PDF report summarizing forecast risk bands, spatial arbitrage gradients, and supply shock alerts.",
-    tags=["PDF Reports"]
+    tags=["PDF Reports"],
+    dependencies=[Depends(_require_forecast_runtime)]
 )
 def download_procurement_pdf(
     request: Request,
     commodity: str = Query("Potato", description="Commodity name"),
     market: str = Query("Agra", description="APMC Mandi name")
 ):
-    p10_val, p50_val, p90_val, arb_items, decision = None, None, None, None, None
+    from backend.app.schemas import PricePredictionRequest
 
-    # Compute live forecast & arbitrage if models and dataset are loaded
-    if hasattr(request.app, "state") and getattr(request.app.state, "models_loaded", False):
-        try:
-            from backend.app.schemas import PricePredictionRequest
-            pred_req = PricePredictionRequest(commodity=commodity, market=market)
-            pred_res = predict_price_service(
-                req=pred_req,
-                models=request.app.state.models,
-                metadata=request.app.state.metadata,
-                dataset=request.app.state.dataset
-            )
-            p10_val = pred_res.p10_floor_price
-            p50_val = pred_res.p50_median_price
-            p90_val = pred_res.p90_ceiling_price
-        except Exception:
-            pass
+    pred_req = PricePredictionRequest(commodity=commodity, market=market)
+    pred_res = predict_price_service(
+        req=pred_req,
+        models=request.app.state.models,
+        metadata=request.app.state.metadata,
+        dataset=request.app.state.dataset,
+    )
+    p10_val = pred_res.p10_floor_price
+    p50_val = pred_res.p50_median_price
+    p90_val = pred_res.p90_ceiling_price
 
-        try:
-            arb_res = calculate_arbitrage_service(
-                commodity=commodity,
-                base_market=market,
-                date=None,
-                dataset=request.app.state.dataset
-            )
-            arb_items = [item.model_dump() for item in arb_res.opportunities]
-        except Exception:
-            pass
+    arb_res = calculate_arbitrage_service(
+        commodity=commodity,
+        base_market=market,
+        date=None,
+        dataset=request.app.state.dataset,
+    )
+    arb_items = [item.model_dump() for item in arb_res.opportunities]
+    decision = None
 
     pdf_bytes = generate_procurement_pdf(
         commodity=commodity,
