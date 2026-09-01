@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
     container_name: croplens_backend
     restart: unless-stopped
     ports:
@@ -18,10 +20,6 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - AUTH_COOKIE_SECURE=${AUTH_COOKIE_SECURE:-true}
       - AUTH_COOKIE_SAMESITE=${AUTH_COOKIE_SAMESITE:-lax}
-      - SMS_PROVIDER=${SMS_PROVIDER:-local}
-      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
-      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
-      - TWILIO_VERIFY_SERVICE_SID=${TWILIO_VERIFY_SERVICE_SID:-}
       - DATABASE_URL=sqlite:////app/data/db/croplens.db
       - MODEL_REGISTRY_PATH=/app/backend/app/models/registry.json
       - PYTHONUNBUFFERED=1
