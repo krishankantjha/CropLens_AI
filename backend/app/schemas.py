@@ -4,6 +4,7 @@ Defines strict validation for price prediction, supply shock alerts, spatial arb
 """
 
 from datetime import date as Date
+import re
 from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
 from backend.app.core.constants import VALID_COMMODITIES, VALID_MARKETS
@@ -207,6 +208,21 @@ class AnalyticsTrendResponse(BaseModel):
 
 # --- Authentication Schemas ---
 
+
+def canonicalize_indian_mobile(value: str) -> str:
+    """Return a canonical 10-digit Indian mobile number or reject the input."""
+    if not isinstance(value, str):
+        raise ValueError("mobile_number must be a string")
+    normalized = value.strip().replace(" ", "").replace("-", "")
+    if normalized.startswith("+91"):
+        normalized = normalized[3:]
+    elif normalized.startswith("91") and len(normalized) == 12:
+        normalized = normalized[2:]
+    if not re.fullmatch(r"[6-9][0-9]{9}", normalized):
+        raise ValueError("mobile_number must be a valid Indian 10-digit mobile number")
+    return normalized
+
+
 class UserRegisterRequest(BaseModel):
     mobile_number: str = Field(..., description="10-digit Indian mobile number", json_schema_extra={"example": "9876543210"})
     full_name: str = Field(..., description="User display name", json_schema_extra={"example": "Ramesh Patel"})
@@ -217,21 +233,41 @@ class UserRegisterRequest(BaseModel):
     preferred_commodity: Optional[str] = Field("Tomato", description="Default preferred crop", json_schema_extra={"example": "Tomato"})
     language: Optional[str] = Field("en", description="Preferred language code", json_schema_extra={"example": "hi"})
 
+    @field_validator("mobile_number")
+    @classmethod
+    def validate_mobile_number(cls, value: str) -> str:
+        return canonicalize_indian_mobile(value)
+
 
 class UserLoginRequest(BaseModel):
     mobile_number: str = Field(..., description="Registered mobile number", json_schema_extra={"example": "9876543210"})
     password: str = Field(..., description="Account password", json_schema_extra={"example": "farmer123"})
 
+    @field_validator("mobile_number")
+    @classmethod
+    def validate_mobile_number(cls, value: str) -> str:
+        return canonicalize_indian_mobile(value)
+
 
 class UserOTPRequest(BaseModel):
     mobile_number: str = Field(..., description="Mobile number for OTP verification", json_schema_extra={"example": "9876543210"})
 
+    @field_validator("mobile_number")
+    @classmethod
+    def validate_mobile_number(cls, value: str) -> str:
+        return canonicalize_indian_mobile(value)
+
 
 class UserOTPVerifyRequest(BaseModel):
     mobile_number: str = Field(..., description="Mobile number", json_schema_extra={"example": "9876543210"})
-    otp_code: str = Field(..., description="6-digit OTP code", json_schema_extra={"example": "123456"})
+    otp_code: str = Field(..., min_length=6, max_length=6, pattern=r"^[0-9]{6}$", description="6-digit OTP code", json_schema_extra={"example": "123456"})
     full_name: Optional[str] = Field(None, description="Full name for new account registration", json_schema_extra={"example": "Ramesh Patel"})
     email: Optional[str] = Field(None, description="Optional email for new account registration", json_schema_extra={"example": "ramesh@example.com"})
+
+    @field_validator("mobile_number")
+    @classmethod
+    def validate_mobile_number(cls, value: str) -> str:
+        return canonicalize_indian_mobile(value)
 
 
 class UserPreferencesRequest(BaseModel):
