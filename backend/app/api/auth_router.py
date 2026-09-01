@@ -24,7 +24,14 @@ from backend.app.core.config import (
 )
 from backend.app.core.security import hash_password, verify_password, create_access_token, decode_access_token, create_refresh_token
 from backend.app.core.redis_client import redis_store
-from backend.app.services.twilio_verify import TwilioProviderError, send_verification, verify_code
+from backend.app.services.twilio_verify import (
+    TwilioProviderError,
+    is_sms_configured,
+    is_verify_configured,
+    send_programmable_sms,
+    send_verification,
+    verify_code,
+)
 from backend.app.schemas import (
     UserRegisterRequest,
     UserLoginRequest,
@@ -121,13 +128,15 @@ def register_user(payload: UserRegisterRequest, response: Response, db: Session 
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"User with mobile number '{clean_mobile}' is already registered."
+            detail=f"User with mobile number '{clean_mobile}' is already registered. Please login instead."
         )
 
-    hashed_pwd = hash_password(payload.password)
+    raw_password = payload.password if payload.password else secrets.token_urlsafe(16)
+    hashed_pwd = hash_password(raw_password)
     new_user = User(
         mobile_number=clean_mobile,
-        full_name=payload.full_name,
+        full_name=payload.full_name.strip() if payload.full_name else f"Farmer ({clean_mobile[-4:]})",
+        email=payload.email.strip() if payload.email and payload.email.strip() else None,
         hashed_password=hashed_pwd,
         role=payload.role if payload.role in ["farmer", "trader"] else "farmer",
         home_mandi=payload.home_mandi or "Azadpur",
@@ -185,12 +194,31 @@ def send_otp(payload: UserOTPRequest):
     check_rate_limit(f"otp_{clean_mobile}")
 
     if SMS_PROVIDER == "twilio":
-        try:
-            send_verification(f"+91{clean_mobile}")
-        except TwilioProviderError:
+        if is_verify_configured():
+            try:
+                send_verification(f"+91{clean_mobile}")
+            except TwilioProviderError:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="OTP delivery is temporarily unavailable. Check Twilio Verify logs.",
+                )
+        elif is_sms_configured():
+            otp_code = str(secrets.randbelow(900000) + 100000)
+            redis_store.set_otp(clean_mobile, otp_code, ttl_seconds=OTP_VALIDITY_SECONDS)
+            try:
+                send_programmable_sms(
+                    f"+91{clean_mobile}",
+                    f"Your CropLens AI verification code is {otp_code}. Valid for 5 minutes.",
+                )
+            except TwilioProviderError:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="SMS delivery failed. Check Twilio credentials and recipient number.",
+                )
+        else:
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="OTP delivery is temporarily unavailable. Please try again later.",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Twilio is configured, but neither TWILIO_VERIFY_SERVICE_SID nor TWILIO_PHONE_NUMBER was provided.",
             )
     else:
         if ENVIRONMENT == "production":
@@ -209,7 +237,7 @@ def send_otp(payload: UserOTPRequest):
 def verify_otp(payload: UserOTPVerifyRequest, response: Response, db: Session = Depends(get_db)):
     """Verifies OTP code with expiration check, consumes OTP once, and logs in user."""
     clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
-    if SMS_PROVIDER == "twilio":
+    if SMS_PROVIDER == "twilio" and is_verify_configured():
         try:
             valid_code = verify_code(f"+91{clean_mobile}", payload.otp_code.strip())
         except TwilioProviderError:
@@ -242,11 +270,12 @@ def verify_otp(payload: UserOTPVerifyRequest, response: Response, db: Session = 
 
     user = db.query(User).filter(User.mobile_number == clean_mobile).first()
     if not user:
-        # Auto-register new farmer user on first OTP login
-        hashed_pwd = hash_password("otp_default_pass_123")
+        # Register new farmer user with provided name & email
+        hashed_pwd = hash_password(secrets.token_urlsafe(16))
         user = User(
             mobile_number=clean_mobile,
-            full_name=f"Farmer ({clean_mobile[-4:]})",
+            full_name=payload.full_name.strip() if payload.full_name and payload.full_name.strip() else f"Farmer ({clean_mobile[-4:]})",
+            email=payload.email.strip() if payload.email and payload.email.strip() else None,
             hashed_password=hashed_pwd,
             role="farmer",
             home_mandi="Azadpur",
@@ -254,6 +283,12 @@ def verify_otp(payload: UserOTPVerifyRequest, response: Response, db: Session = 
             language="en"
         )
         db.add(user)
+        db.commit()
+        db.refresh(user)
+    elif payload.full_name and payload.full_name.strip():
+        user.full_name = payload.full_name.strip()
+        if payload.email:
+            user.email = payload.email.strip()
         db.commit()
         db.refresh(user)
 
@@ -272,25 +307,32 @@ def verify_otp(payload: UserOTPVerifyRequest, response: Response, db: Session = 
 def refresh_token(response: Response, refresh_cookie: Optional[str] = Cookie(None, alias=AUTH_REFRESH_COOKIE), db: Session = Depends(get_db)):
     """Issues new access token using a valid refresh token."""
     refresh_value = refresh_cookie
-    decoded = decode_access_token(refresh_value) if refresh_value else None
-    if not decoded or decoded.get("type") != "refresh":
+    if not refresh_value:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token"
+            detail="Session has expired. Please log in again."
         )
-    
-    mobile_number = decoded.get("sub")
-    user = db.query(User).filter(User.mobile_number == mobile_number).first()
+
+    payload = decode_access_token(refresh_value)
+    if not payload or "sub" not in payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh session."
+        )
+
+    mobile = payload["sub"]
+    user = db.query(User).filter(User.mobile_number == mobile).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User no longer exists"
+            detail="User not found."
         )
-        
+
     token_data = {"sub": user.mobile_number, "role": user.role}
     new_access_token = create_access_token(data=token_data)
-    csrf_token = set_auth_cookies(response, new_access_token, refresh_value)
-    
+    new_refresh_token = create_refresh_token(data=token_data)
+    csrf_token = set_auth_cookies(response, new_access_token, new_refresh_token)
+
     return {
         "csrf_token": csrf_token,
         "user": user.to_dict()
@@ -318,7 +360,11 @@ def get_me(current_user: User = Depends(get_current_user)):
 
 @auth_router.put("/preferences", response_model=UserResponse)
 def update_preferences(payload: UserPreferencesRequest, current_user: User = Depends(get_current_user), _: None = Depends(verify_csrf), db: Session = Depends(get_db)):
-    """Updates home mandi, preferred crop, or language code for current user."""
+    """Updates home mandi, preferred crop, language, or profile information for current user."""
+    if payload.full_name:
+        current_user.full_name = payload.full_name.strip()
+    if payload.email is not None:
+        current_user.email = payload.email.strip() if payload.email else None
     if payload.home_mandi:
         current_user.home_mandi = payload.home_mandi
     if payload.preferred_commodity:
