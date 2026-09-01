@@ -27,6 +27,8 @@ from backend.app.services.nasa_power_sync import fetch_live_nasa_weather
 
 _FORECAST_7D_CACHE: Dict[str, Dict[str, Any]] = {}
 _PRICE_CACHE: Dict[str, Dict[str, Any]] = {}
+_CACHE_SCHEMA_VERSION = "2"
+_CACHE_TTL_SECONDS = 6 * 60 * 60
 _CACHE_STATS = {
     "hits": 0,
     "misses": 0,
@@ -54,27 +56,73 @@ _MARKET_DISTRICTS = {
 }
 
 
+def dataset_watermark(dataset: Optional[pd.DataFrame]) -> str:
+    """Return a stable serving-data watermark for cache identity and observability."""
+    if not isinstance(dataset, pd.DataFrame) or dataset.empty or "date" not in dataset.columns:
+        return "empty"
+    dates = pd.to_datetime(dataset["date"], errors="coerce").dropna()
+    latest = dates.max().date().isoformat() if not dates.empty else "invalid"
+    return f"{latest}:{len(dataset)}"
+
+
 def _make_cache_key(
     commodity: str,
     market: str,
     date: Optional[str] = None,
+    *,
+    horizon_days: int = 7,
+    model_version: Optional[str] = None,
+    data_watermark: Optional[str] = None,
 ) -> str:
     c = commodity.strip().lower()
     m = market.strip().lower()
     d = date.strip() if date else datetime.date.today().isoformat()
-    return f"{c}::{m}::{d}"
+    model = (model_version or "unknown").strip()
+    watermark = (data_watermark or "unknown").strip()
+    return f"v{_CACHE_SCHEMA_VERSION}::{c}::{m}::{d}::h{horizon_days}::m{model}::d{watermark}"
+
+
+def _cached_payload(
+    cache: Dict[str, Dict[str, Any]],
+    key: str,
+) -> Optional[Dict[str, Any]]:
+    entry = cache.get(key)
+    if entry is None:
+        return None
+    created_at = entry.get("created_at")
+    try:
+        created_timestamp = datetime.datetime.fromisoformat(created_at).timestamp()
+    except (TypeError, ValueError, OverflowError):
+        cache.pop(key, None)
+        return None
+    if time.time() - created_timestamp > _CACHE_TTL_SECONDS:
+        cache.pop(key, None)
+        return None
+    return entry.get("payload")
 
 
 def get_cached_forecast_7d(
     commodity: str,
     market: str,
     date: Optional[str] = None,
+    *,
+    horizon_days: int = 7,
+    model_version: Optional[str] = None,
+    data_watermark: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
-    """Retrieve a pre-computed seven-day forecast from the process cache."""
-    key = _make_cache_key(commodity, market, date)
-    if key in _FORECAST_7D_CACHE:
+    """Retrieve a forecast only for the requested model/data/horizon context."""
+    key = _make_cache_key(
+        commodity,
+        market,
+        date,
+        horizon_days=horizon_days,
+        model_version=model_version,
+        data_watermark=data_watermark,
+    )
+    payload = _cached_payload(_FORECAST_7D_CACHE, key)
+    if payload is not None:
         _CACHE_STATS["hits"] += 1
-        return _FORECAST_7D_CACHE[key]
+        return payload
     _CACHE_STATS["misses"] += 1
     return None
 
@@ -84,9 +132,27 @@ def set_cached_forecast_7d(
     market: str,
     payload: Dict[str, Any],
     date: Optional[str] = None,
+    *,
+    horizon_days: int = 7,
+    model_version: Optional[str] = None,
+    data_watermark: Optional[str] = None,
 ) -> None:
-    """Store a seven-day forecast in the process cache."""
-    _FORECAST_7D_CACHE[_make_cache_key(commodity, market, date)] = payload
+    """Store a forecast with creation time and source-data/model metadata."""
+    key = _make_cache_key(
+        commodity,
+        market,
+        date,
+        horizon_days=horizon_days,
+        model_version=model_version,
+        data_watermark=data_watermark,
+    )
+    _FORECAST_7D_CACHE[key] = {
+        "payload": payload,
+        "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "model_version": model_version or "unknown",
+        "data_watermark": data_watermark or "unknown",
+        "horizon_days": horizon_days,
+    }
 
 
 def get_cached_price(
@@ -157,6 +223,9 @@ def warm_prediction_cache(app: Any) -> Dict[str, Any]:
                     market,
                     result.model_dump(),
                     date=today_str,
+                    horizon_days=7,
+                    model_version=getattr(app.state, "model_version", "unknown"),
+                    data_watermark=dataset_watermark(dataset),
                 )
                 warmed_count += 1
             except Exception:
