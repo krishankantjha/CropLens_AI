@@ -20,9 +20,11 @@ from backend.app.core.config import (
     AUTH_REFRESH_COOKIE,
     ENVIRONMENT,
     REFRESH_TOKEN_EXPIRE_DAYS,
+    SMS_PROVIDER,
 )
 from backend.app.core.security import hash_password, verify_password, create_access_token, decode_access_token, create_refresh_token
 from backend.app.core.redis_client import redis_store
+from backend.app.services.twilio_verify import TwilioProviderError, send_verification, verify_code
 from backend.app.schemas import (
     UserRegisterRequest,
     UserLoginRequest,
@@ -182,12 +184,20 @@ def send_otp(payload: UserOTPRequest):
 
     check_rate_limit(f"otp_{clean_mobile}")
 
-    if ENVIRONMENT == "production":
-        otp_code = str(secrets.randbelow(900000) + 100000)
+    if SMS_PROVIDER == "twilio":
+        try:
+            send_verification(f"+91{clean_mobile}")
+        except TwilioProviderError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="OTP delivery is temporarily unavailable. Please try again later.",
+            )
     else:
-        otp_code = "123456"  # Standard demo/test OTP in dev & testing
-
-    redis_store.set_otp(clean_mobile, otp_code, ttl_seconds=OTP_VALIDITY_SECONDS)
+        if ENVIRONMENT == "production":
+            otp_code = str(secrets.randbelow(900000) + 100000)
+        else:
+            otp_code = "123456"  # Standard demo/test OTP in dev & testing
+        redis_store.set_otp(clean_mobile, otp_code, ttl_seconds=OTP_VALIDITY_SECONDS)
 
     return {
         "message": f"OTP successfully sent to +91 {clean_mobile}",
@@ -199,22 +209,36 @@ def send_otp(payload: UserOTPRequest):
 def verify_otp(payload: UserOTPVerifyRequest, response: Response, db: Session = Depends(get_db)):
     """Verifies OTP code with expiration check, consumes OTP once, and logs in user."""
     clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
-    stored_code = redis_store.get_otp(clean_mobile)
+    if SMS_PROVIDER == "twilio":
+        try:
+            valid_code = verify_code(f"+91{clean_mobile}", payload.otp_code.strip())
+        except TwilioProviderError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="OTP verification is temporarily unavailable. Please try again later.",
+            )
+        if not valid_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired OTP code.",
+            )
+    else:
+        stored_code = redis_store.get_otp(clean_mobile)
 
-    if not stored_code:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No active OTP found or OTP has expired. Please request a new OTP."
-        )
+        if not stored_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No active OTP found or OTP has expired. Please request a new OTP."
+            )
 
-    if payload.otp_code.strip() != stored_code:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid OTP code entered."
-        )
+        if payload.otp_code.strip() != stored_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid OTP code entered."
+            )
 
-    # One-time consumption: delete OTP immediately upon verification
-    redis_store.delete_otp(clean_mobile)
+        # One-time consumption: delete OTP immediately upon verification
+        redis_store.delete_otp(clean_mobile)
 
     user = db.query(User).filter(User.mobile_number == clean_mobile).first()
     if not user:
