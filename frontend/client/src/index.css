@@ -185,6 +185,9 @@ select:disabled { cursor: not-allowed; opacity: .6; }
 .auth-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; background: var(--green-soft); }
 .auth-card h1 { max-width: 390px; margin: 0; color: var(--green); font: 700 clamp(30px, 5vw, 44px)/1.03 Georgia, "Times New Roman", serif; letter-spacing: -.055em; }
 .auth-intro { margin: 14px 0 25px; color: var(--ink-soft); font-size: 16px; line-height: 1.5; }
+.auth-flow-heading { display: flex; flex-direction: column; gap: 5px; margin-bottom: 2px; color: var(--green); }
+.auth-flow-heading span { color: var(--ink-muted); font-size: 12px; line-height: 1.4; }
+.auth-secondary-actions { display: flex; justify-content: center; min-height: 22px; margin-top: 14px; }
 .auth-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 22px; padding: 4px; border-radius: 12px; background: var(--paper-deep); }
 .auth-tabs button { min-height: 38px; border: 0; border-radius: 9px; background: transparent; color: var(--ink-muted); font-size: 12px; font-weight: 700; cursor: pointer; }
 .auth-tabs button.active { background: white; color: var(--green); box-shadow: 0 3px 9px rgba(23,35,29,.08); }
