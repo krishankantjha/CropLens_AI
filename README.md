@@ -43,7 +43,7 @@ CropLens AI bridges this gap through an end-to-end intelligence pipeline:
                                     │
                                     ▼
                   ┌───────────────────────────────────┐
-                  │    FastAPI BACKEND (Python 3.12)  │
+                  │    FastAPI BACKEND (Python 3.11)  │
                   │    REST API / SQLAlchemy / Redis  │
                   └─────────────────┬─────────────────┘
                                     │
@@ -106,7 +106,7 @@ CropLens AI bridges this gap through an end-to-end intelligence pipeline:
 ## 🛠 Setup & Installation Guide
 
 ### Prerequisites
-* Python 3.12+
+* Python 3.11+
 * Redis (Optional: falls back to in-memory store if unconfigured)
 
 ### 1. Backend Setup (FastAPI)
@@ -114,8 +114,8 @@ CropLens AI bridges this gap through an end-to-end intelligence pipeline:
 # Navigate to backend directory
 cd backend
 
-# Install dependencies
-pip install -r requirements.txt
+# Install the resolved dependency set
+pip install -r requirements.lock
 
 # Run database migrations
 alembic upgrade head
@@ -148,7 +148,7 @@ Model-backed forecasting, anomaly, arbitrage, analytics, and PDF routes require 
 
 The canonical IEEE manuscript is `reports/research_paper/croplens_ieee_paper.tex`, with its bibliography in `reports/research_paper/references.bib` and manuscript-specific figures in `reports/research_paper/figures/`. Exploratory analysis figures belong in `reports/eda_insights/`, model-evaluation figures belong in `reports/model_evaluation/`, and frozen tabular research evidence belongs in `reports/research_results/`.
 
-The evaluation figure set and manuscript figure set are maintained separately because the corresponding files are not byte-identical: the former records evaluation outputs, while the latter contains the exact assets referenced by the paper source. Generated model binaries, checkpoints, local backups, caches, logs, frontend build output, and LaTeX auxiliary files remain local and are excluded from version control.
+The evaluation figure set and manuscript figure set are maintained separately because the corresponding files are not byte-identical: the former records evaluation outputs, while the latter contains the exact assets referenced by the paper source. Generated model binaries, checkpoints, local backups, caches, logs, frontend build output, and LaTeX auxiliary files remain local and are excluded from version control. The committed classification and provenance rules are defined in `reports/artifact-policy.json`; new research outputs must be assigned to a category and generated evidence must record its source data, command, environment lock, and output hash.
 
 ---
 
