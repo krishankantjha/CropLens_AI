@@ -52,6 +52,12 @@ CORS_ORIGINS: str = os.getenv("CORS_ORIGINS", "")
 # --- Google OAuth ---
 GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
 
+# --- Twilio Verify SMS OTP ---
+SMS_PROVIDER: str = os.getenv("SMS_PROVIDER", "local").strip().lower()
+TWILIO_API_KEY_SID: str = os.getenv("TWILIO_API_KEY_SID", "").strip()
+TWILIO_API_KEY_SECRET: str = os.getenv("TWILIO_API_KEY_SECRET", "").strip()
+TWILIO_VERIFY_SERVICE_SID: str = os.getenv("TWILIO_VERIFY_SERVICE_SID", "").strip()
+
 # --- Database ---
 BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DATABASE_URL: str = os.getenv(
