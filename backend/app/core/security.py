@@ -4,6 +4,7 @@ Handles Bcrypt password hashing and JWT access token creation/decoding.
 """
 
 import logging
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 import bcrypt
@@ -49,18 +50,21 @@ def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
     now_utc = datetime.now(timezone.utc)
     expire = now_utc + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"exp": expire, "type": "refresh"})
+    to_encode.update({
+        "exp": expire,
+        "type": "refresh",
+        "jti": to_encode.get("jti") or secrets.token_urlsafe(32),
+    })
     encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
     return encoded_jwt
 
 
-def decode_access_token(token: str) -> Optional[dict]:
-    """Decodes and validates JWT token, returning payload dict or None if invalid."""
+def _decode_token(token: str) -> Optional[dict]:
+    """Decode a JWT using the configured algorithm and secret."""
     try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        return payload
+        return jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
-        logger.warning("JWT access token has expired")
+        logger.warning("JWT token has expired")
         return None
     except jwt.InvalidTokenError as e:
         logger.warning(f"Invalid JWT token: {e}")
@@ -68,3 +72,19 @@ def decode_access_token(token: str) -> Optional[dict]:
     except Exception as e:
         logger.warning(f"Unexpected token decoding error: {e}")
         return None
+
+
+def decode_access_token(token: str) -> Optional[dict]:
+    """Decode only an access token and reject refresh tokens."""
+    payload = _decode_token(token)
+    if not payload or payload.get("type") != "access":
+        return None
+    return payload
+
+
+def decode_refresh_token(token: str) -> Optional[dict]:
+    """Decode only a refresh token with a required unique identifier."""
+    payload = _decode_token(token)
+    if not payload or payload.get("type") != "refresh" or not payload.get("jti"):
+        return None
+    return payload
