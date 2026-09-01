@@ -94,7 +94,8 @@ CropLens AI bridges this gap through an end-to-end intelligence pipeline:
 
 ### Forecasting & Analytics
 * `POST /api/v1/predict/forecast-7d` — Generates 7-day quantile price forecasts ($P_{10}$, $P_{50}$, $P_{90}$) and actionable recommendations.
-* `GET /api/v1/predict/analytics-trends` — Retrieves 30-day price trends, volatility metrics, and arrival volume statistics.
+* `GET /api/v1/analytics/trends` — Retrieves 30-day price trends, volatility metrics, and arrival volume statistics.
+* `GET /api/v1/predict/forecast` — Generates a 1–14-day quantile price forecast using query parameters.
 
 ### Procurement & Arbitrage
 * `GET /api/v1/procurement/arbitrage` — Computes cross-mandi net revenue and transport cost differentials.
@@ -125,9 +126,21 @@ python app/main.py
 * API Base URL: `http://localhost:8000`
 * Interactive API Documentation (Swagger): `http://localhost:8000/docs`
 
-### 2. Frontend Status
+### 2. Frontend Setup
 
-The legacy frontend has been removed from the repository. A fresh frontend will be added after the backend API contract and live-data path are finalized. Until then, use the FastAPI Swagger interface at `http://localhost:8000/docs` for API verification.
+The maintained frontend is located in `frontend/`. It requires the backend base URL at build time through `VITE_API_BASE_URL`.
+
+```bash
+cd frontend
+cp .env.example .env
+npm ci
+npm run check
+npm run build
+```
+
+For local development, start the backend at `http://localhost:8000` and run `npm run dev`. For a deployed frontend, set `VITE_API_BASE_URL` to the public backend origin before building. The frontend calls authenticated and CSRF-protected API routes, so it must be served from an origin included in the backend `CORS_ORIGINS` configuration.
+
+Model-backed forecasting, anomaly, arbitrage, analytics, and PDF routes require the versioned model bundle and serving dataset. Without those resources, the backend remains available for documentation and health inspection but returns HTTP 503 for the affected routes.
 
 ---
 
@@ -146,7 +159,7 @@ The evaluation figure set and manuscript figure set are maintained separately be
   cd backend
   pytest
   ```
-* **Frontend End-to-End Tests:** These will be added with the fresh frontend after the backend contract audit is complete.
+* **Frontend Validation:** Run `npm run check` and `npm run build` from `frontend/`. Browser-level authentication and CSRF checks should be run against a configured staging backend.
 
 ---
 **Maintained by Krishan Kant Jha.**
