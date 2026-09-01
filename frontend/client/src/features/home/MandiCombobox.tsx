@@ -57,9 +57,11 @@ export function MandiCombobox({ items, value, onChange, disabled = false, inputR
         ref={triggerRef}
         className="combobox-trigger"
         type="button"
-        aria-haspopup="dialog"
-        aria-controls="mandi-options"
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-controls="mandi-listbox"
         aria-expanded={open}
+        aria-autocomplete="list"
         disabled={disabled}
         onClick={() => (open ? setOpen(false) : focusInput())}
       >
@@ -68,10 +70,10 @@ export function MandiCombobox({ items, value, onChange, disabled = false, inputR
         <ChevronDown size={17} />
       </button>
       {open ? (
-        <div className="combobox-popover" id="mandi-options" role="dialog" aria-modal="false" aria-label={t("searchMandi")}>
+        <div className="combobox-popover">
           <Command label={t("searchMandi")} className="mandi-command">
             <div className="command-search"><Search size={16} /><Command.Input ref={inputRef ?? localInputRef} placeholder={t("searchMandiPlaceholder")} /></div>
-            <Command.List role="listbox" aria-label={t("searchMandi")}>
+            <Command.List id="mandi-listbox" role="listbox" aria-label={t("searchMandi")}>
               <Command.Empty>{t("noMandiMatches")}</Command.Empty>
               {items.map((item) => (
                   <Command.Item
