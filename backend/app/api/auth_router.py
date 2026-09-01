@@ -22,7 +22,14 @@ from backend.app.core.config import (
     REFRESH_TOKEN_EXPIRE_DAYS,
     SMS_PROVIDER,
 )
-from backend.app.core.security import hash_password, verify_password, create_access_token, decode_access_token, create_refresh_token
+from backend.app.core.security import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    decode_access_token,
+    decode_refresh_token,
+    create_refresh_token,
+)
 from backend.app.core.redis_client import redis_store
 from backend.app.services.twilio_verify import (
     TwilioProviderError,
@@ -51,6 +58,10 @@ def set_auth_cookies(response: Response, access_token: str, refresh_token: str) 
     response.set_cookie(AUTH_ACCESS_COOKIE, access_token, max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60, httponly=True, secure=AUTH_COOKIE_SECURE, samesite=AUTH_COOKIE_SAMESITE, path="/")
     response.set_cookie(AUTH_REFRESH_COOKIE, refresh_token, max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, httponly=True, secure=AUTH_COOKIE_SECURE, samesite=AUTH_COOKIE_SAMESITE, path="/api/v1/auth")
     response.set_cookie(AUTH_CSRF_COOKIE, csrf_token, max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60, httponly=False, secure=AUTH_COOKIE_SECURE, samesite=AUTH_COOKIE_SAMESITE, path="/")
+    refresh_payload = decode_refresh_token(refresh_token)
+    if not refresh_payload or not refresh_payload.get("jti"):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to establish a secure refresh session.")
+    redis_store.store_refresh_token(refresh_payload["jti"], REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
     return csrf_token
 
 
@@ -122,7 +133,7 @@ def require_system_operator(current_user: User = Depends(get_current_user)) -> U
 @auth_router.post("/register", response_model=AuthSessionResponse, status_code=status.HTTP_201_CREATED)
 def register_user(payload: UserRegisterRequest, response: Response, db: Session = Depends(get_db)):
     """Registers a new user account in SQLite and returns JWT access token."""
-    clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
+    clean_mobile = payload.mobile_number
     check_rate_limit(f"reg_{clean_mobile}")
     existing_user = db.query(User).filter(User.mobile_number == clean_mobile).first()
     if existing_user:
@@ -161,7 +172,7 @@ def register_user(payload: UserRegisterRequest, response: Response, db: Session 
 @auth_router.post("/login", response_model=AuthSessionResponse)
 def login_user(payload: UserLoginRequest, response: Response, db: Session = Depends(get_db)):
     """Authenticates mobile number & password, issuing JWT access token."""
-    clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
+    clean_mobile = payload.mobile_number
     check_rate_limit(f"login_{clean_mobile}")
     user = db.query(User).filter(User.mobile_number == clean_mobile).first()
     if not user or not verify_password(payload.password, user.hashed_password):
@@ -184,7 +195,7 @@ def login_user(payload: UserLoginRequest, response: Response, db: Session = Depe
 @auth_router.post("/otp/send")
 def send_otp(payload: UserOTPRequest):
     """Sends 6-digit OTP code to mobile number for passwordless login."""
-    clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
+    clean_mobile = payload.mobile_number
     if len(clean_mobile) != 10:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -236,7 +247,7 @@ def send_otp(payload: UserOTPRequest):
 @auth_router.post("/otp/verify", response_model=AuthSessionResponse)
 def verify_otp(payload: UserOTPVerifyRequest, response: Response, db: Session = Depends(get_db)):
     """Verifies OTP code with expiration check, consumes OTP once, and logs in user."""
-    clean_mobile = "".join(filter(str.isdigit, payload.mobile_number))[-10:]
+    clean_mobile = payload.mobile_number
     if SMS_PROVIDER == "twilio" and is_verify_configured():
         try:
             valid_code = verify_code(f"+91{clean_mobile}", payload.otp_code.strip())
@@ -304,7 +315,12 @@ def verify_otp(payload: UserOTPVerifyRequest, response: Response, db: Session = 
 
 
 @auth_router.post("/refresh", response_model=AuthSessionResponse)
-def refresh_token(response: Response, refresh_cookie: Optional[str] = Cookie(None, alias=AUTH_REFRESH_COOKIE), db: Session = Depends(get_db)):
+def refresh_token(
+    response: Response,
+    refresh_cookie: Optional[str] = Cookie(None, alias=AUTH_REFRESH_COOKIE),
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_csrf),
+):
     """Issues new access token using a valid refresh token."""
     refresh_value = refresh_cookie
     if not refresh_value:
@@ -313,11 +329,11 @@ def refresh_token(response: Response, refresh_cookie: Optional[str] = Cookie(Non
             detail="Session has expired. Please log in again."
         )
 
-    payload = decode_access_token(refresh_value)
-    if not payload or "sub" not in payload:
+    payload = decode_refresh_token(refresh_value)
+    if not payload or "sub" not in payload or not redis_store.consume_refresh_token(payload["jti"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh session."
+            detail="Invalid or already-used refresh session."
         )
 
     mobile = payload["sub"]
@@ -340,7 +356,15 @@ def refresh_token(response: Response, refresh_cookie: Optional[str] = Cookie(Non
 
 
 @auth_router.post("/logout")
-def logout(response: Response, _: None = Depends(verify_csrf)):
+def logout(
+    response: Response,
+    refresh_cookie: Optional[str] = Cookie(None, alias=AUTH_REFRESH_COOKIE),
+    _: None = Depends(verify_csrf),
+):
+    if refresh_cookie:
+        refresh_payload = decode_refresh_token(refresh_cookie)
+        if refresh_payload and refresh_payload.get("jti"):
+            redis_store.revoke_refresh_token(refresh_payload["jti"])
     clear_auth_cookies(response)
     return {"message": "Signed out successfully."}
 
