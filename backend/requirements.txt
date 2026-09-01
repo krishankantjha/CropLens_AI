@@ -37,10 +37,10 @@ tzlocal==5.4.4
 
 
 # Distributed Caching & Rate Limiting
-redis>=5.0.0
+redis==8.1.0
 
 # Database Migrations
-alembic>=1.14.0
+alembic==1.19.1
 
 # Environment Variable Management
 python-dotenv==1.0.1
