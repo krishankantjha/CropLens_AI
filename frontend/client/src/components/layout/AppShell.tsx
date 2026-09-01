@@ -1,19 +1,14 @@
 // Earthline Intelligence: a calm, mobile-first shell that keeps the farmer's next action visible.
 import { useEffect, useState } from "react";
-import { Bell, ChartNoAxesCombined, Globe2, Home, MapPin, Moon, ShieldAlert, Sun, UserRound } from "lucide-react";
+import { Bell, ChartNoAxesCombined, Globe2, Home, MapPin, ShieldAlert, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { getHealth } from "@/api/client";
-import { BrandLogo } from "@/components/ui/BrandLogo";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useTheme } from "@/contexts/ThemeContext";
-import { useSession } from "@/contexts/SessionContext";
 
 type AppShellProps = { children: ReactNode };
 
 export function AppShell({ children }: AppShellProps) {
   const { language, setLanguage, t } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
-  const { isAuthenticated } = useSession();
   const [serviceState, setServiceState] = useState<"checking" | "live" | "unavailable">("checking");
   useEffect(() => {
     let active = true;
@@ -25,6 +20,7 @@ export function AppShell({ children }: AppShellProps) {
   ];
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main">{t("skipToContent")}</a>
       <header className="topbar">
         <a className="brand" href="#home" aria-label={`${t("home")} CropLens AI`}>
           <img src="/logo-icon.png" alt="" className="brand-icon-img" />
@@ -36,12 +32,11 @@ export function AppShell({ children }: AppShellProps) {
         <nav className="desktop-nav" aria-label={t("home")}>{navItems.map(({ label, href, icon: Icon }) => <a key={href} href={href}><Icon size={17} />{label}</a>)}</nav>
         <div className="topbar-actions">
           <button className="language-button" type="button" aria-label={t("changeLanguage")} onClick={() => setLanguage(language === "en" ? "hi" : "en")}><Globe2 size={17} /> <span>{language === "en" ? "English / हिन्दी" : "हिन्दी / English"}</span></button>
-          <button className="theme-button" type="button" aria-label={theme === "dark" ? t("switchToLight") : t("switchToDark")} title={theme === "dark" ? t("switchToLight") : t("switchToDark")} onClick={toggleTheme}>{theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}</button>
           <span className={`service-pill service-pill--${serviceState}`}><span className="service-dot" />{serviceState === "checking" ? t("checking") : serviceState === "live" ? t("live") : t("unavailable")}</span>
           <a className="account-button" href="/profile" aria-label={t("farmerProfile")}><UserRound size={17} /><span>{t("farmerProfile")}</span></a>
         </div>
       </header>
-      <main>{children}</main>
+      <main id="main">{children}</main>
       <nav className="mobile-nav" aria-label={t("home")}>{navItems.map(({ label, href, icon: Icon }) => <a key={href} href={href}><Icon size={20} /><span>{label === t("marketRisk") ? (language === "en" ? "Risk" : "जोखिम") : label}</span></a>)}</nav>
     </div>
   );
