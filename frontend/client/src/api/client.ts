@@ -62,7 +62,7 @@ export function login(payload: { mobile_number: string; password: string }) {
   return request<AuthSessionResponse>("/api/v1/auth/login", { method: "POST", body: JSON.stringify(payload) });
 }
 
-export function register(payload: { mobile_number: string; password: string; full_name: string; role: string; home_mandi?: string; preferred_commodity?: string; language?: string }) {
+export function register(payload: { mobile_number: string; full_name: string; email?: string; password?: string; role?: string; home_mandi?: string; preferred_commodity?: string; language?: string }) {
   return request<AuthSessionResponse>("/api/v1/auth/register", { method: "POST", body: JSON.stringify(payload) });
 }
 
@@ -70,7 +70,7 @@ export function sendOtp(payload: { mobile_number: string }) {
   return request<{ message?: string; expires_in_seconds?: number }>("/api/v1/auth/otp/send", { method: "POST", body: JSON.stringify(payload) });
 }
 
-export function verifyOtp(payload: { mobile_number: string; otp_code: string }) {
+export function verifyOtp(payload: { mobile_number: string; otp_code: string; full_name?: string; email?: string }) {
   return request<AuthSessionResponse>("/api/v1/auth/otp/verify", { method: "POST", body: JSON.stringify(payload) });
 }
 
@@ -86,7 +86,7 @@ export function logout() {
   return authRequest<{ message?: string }>("/api/v1/auth/logout", { method: "POST" });
 }
 
-export function updatePreferences(payload: { home_mandi?: string; preferred_commodity?: string; language?: string }) {
+export function updatePreferences(payload: { full_name?: string; email?: string; home_mandi?: string; preferred_commodity?: string; language?: string }) {
   return authRequest<UserProfile>("/api/v1/auth/preferences", { method: "PUT", body: JSON.stringify(payload) });
 }
 
