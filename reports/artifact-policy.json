@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "purpose": "Classify committed research assets and prevent accidental mixing of source, evidence, and disposable outputs.",
+  "categories": {
+    "source": [
+      "research/notebooks/**",
+      "reports/research_paper/*.tex",
+      "reports/research_paper/*.bib"
+    ],
+    "frozen_evidence": [
+      "reports/research_results/**"
+    ],
+    "release_assets": [
+      "reports/research_paper/figures/**"
+    ],
+    "generated_evidence": [
+      "reports/model_evaluation/**",
+      "reports/eda_insights/**"
+    ],
+    "disposable_local": [
+      "backend/app/models/**",
+      "data/processed/**",
+      "frontend/dist/**",
+      "frontend/node_modules/**",
+      "**/*.log",
+      "**/*.sqlite3",
+      "**/*.parquet"
+    ]
+  },
+  "rules": [
+    "Every newly committed research output must belong to one category.",
+    "Generated evidence must record its source data, generation command, environment lock, and output hash in the owning workflow.",
+    "Disposable local artifacts must remain ignored and must not be force-added to Git.",
+    "Release assets must be referenced by the manuscript or release documentation before commit."
+  ]
+}
