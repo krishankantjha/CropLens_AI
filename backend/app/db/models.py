@@ -24,6 +24,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     mobile_number = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=False)
+    email = Column(String, nullable=True, index=True)
     hashed_password = Column(String, nullable=False)
     role = Column(String, default="farmer", nullable=False)  # "farmer" or "trader"
     home_mandi = Column(String, default="Azadpur", nullable=False)
@@ -39,6 +40,7 @@ class User(Base):
             "id": self.id,
             "mobile_number": self.mobile_number,
             "full_name": self.full_name,
+            "email": self.email,
             "role": self.role,
             "home_mandi": self.home_mandi,
             "preferred_commodity": self.preferred_commodity,
