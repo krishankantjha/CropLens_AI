@@ -209,8 +209,9 @@ class AnalyticsTrendResponse(BaseModel):
 
 class UserRegisterRequest(BaseModel):
     mobile_number: str = Field(..., description="10-digit Indian mobile number", json_schema_extra={"example": "9876543210"})
-    password: str = Field(..., description="User account password", json_schema_extra={"example": "farmer123"})
-    full_name: str = Field(..., description="User display name", json_schema_extra={"example": "Kisan User"})
+    full_name: str = Field(..., description="User display name", json_schema_extra={"example": "Ramesh Patel"})
+    email: Optional[str] = Field(None, description="Optional user email address", json_schema_extra={"example": "ramesh@example.com"})
+    password: Optional[str] = Field(None, description="Optional account password", json_schema_extra={"example": "farmer123"})
     role: Optional[str] = Field("farmer", description="User role: farmer or trader", json_schema_extra={"example": "farmer"})
     home_mandi: Optional[str] = Field("Azadpur", description="Default home mandi", json_schema_extra={"example": "Azadpur"})
     preferred_commodity: Optional[str] = Field("Tomato", description="Default preferred crop", json_schema_extra={"example": "Tomato"})
@@ -229,9 +230,13 @@ class UserOTPRequest(BaseModel):
 class UserOTPVerifyRequest(BaseModel):
     mobile_number: str = Field(..., description="Mobile number", json_schema_extra={"example": "9876543210"})
     otp_code: str = Field(..., description="6-digit OTP code", json_schema_extra={"example": "123456"})
+    full_name: Optional[str] = Field(None, description="Full name for new account registration", json_schema_extra={"example": "Ramesh Patel"})
+    email: Optional[str] = Field(None, description="Optional email for new account registration", json_schema_extra={"example": "ramesh@example.com"})
 
 
 class UserPreferencesRequest(BaseModel):
+    full_name: Optional[str] = Field(None, json_schema_extra={"example": "Ramesh Patel"})
+    email: Optional[str] = Field(None, json_schema_extra={"example": "ramesh@example.com"})
     home_mandi: Optional[str] = Field(None, json_schema_extra={"example": "Lasalgaon"})
     preferred_commodity: Optional[str] = Field(None, json_schema_extra={"example": "Onion"})
     language: Optional[str] = Field(None, json_schema_extra={"example": "hi"})
@@ -241,6 +246,7 @@ class UserResponse(BaseModel):
     id: int
     mobile_number: str
     full_name: str
+    email: Optional[str] = None
     role: str
     home_mandi: str
     preferred_commodity: str
