@@ -192,7 +192,9 @@ async def lifespan(app: FastAPI):
         app.state.model_version = "unavailable"
         app.state.models_loaded = False
         app.state.dataset_loaded = False
-        app.state.startup_error = str(e)
+        # Keep internal exception details in server logs only. Public health
+        # responses must not disclose filesystem paths, SQL, or provider data.
+        app.state.startup_error = "Service initialization failed"
         app.state.startup_timestamp = datetime.now(timezone.utc).isoformat()
         app.state.startup_duration_ms = round((time.time() - start_time) * 1000, 2)
         print(f"WARNING: CropLens AI started in DEGRADED MODE. Resource initialization failed: {str(e)}")
@@ -317,4 +319,9 @@ def health_check() -> HealthResponse:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("backend.app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "backend.app.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=ENVIRONMENT == "development",
+    )
