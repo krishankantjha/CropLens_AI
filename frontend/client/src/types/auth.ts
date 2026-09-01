@@ -3,6 +3,7 @@ export type UserProfile = {
   id: number;
   mobile_number: string;
   full_name: string;
+  email?: string;
   role: string;
   home_mandi: string;
   preferred_commodity: string;
