@@ -27,3 +27,4 @@ TEST_DB_PATH = os.path.join(
 os.environ["ENVIRONMENT"] = "testing"
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB_PATH}"
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")
+os.environ.setdefault("SMS_PROVIDER", "local")

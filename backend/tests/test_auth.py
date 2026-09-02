@@ -93,21 +93,49 @@ def test_user_registration_and_login(client: TestClient):
     assert client.get("/api/v1/auth/me").status_code == 401
 
 
-def test_otp_flow(client: TestClient):
-    """Test OTP code sending and passwordless verification."""
+def test_otp_login_requires_existing_account(client: TestClient):
+    """OTP login must not create placeholder accounts without a prior signup."""
     test_mobile = f"98{str(time.time_ns())[-8:]}"
 
-    # Send OTP
-    send_res = client.post("/api/v1/auth/otp/send", json={"mobile_number": test_mobile})
-    assert send_res.status_code == 200
-    assert "expires_in_seconds" in send_res.json()
+    send_res = client.post("/api/v1/auth/otp/send", json={"mobile_number": test_mobile, "purpose": "login"})
+    assert send_res.status_code == 404
+    assert "create an account" in send_res.json()["detail"].lower()
 
-    # Verify OTP
+
+def test_otp_signup_with_name(client: TestClient):
+    """OTP verification can create an account when a full name is provided."""
+    test_mobile = f"97{str(time.time_ns())[-8:]}"
+
+    send_res = client.post("/api/v1/auth/otp/send", json={"mobile_number": test_mobile, "purpose": "signup"})
+    assert send_res.status_code == 200
+
     verify_res = client.post("/api/v1/auth/otp/verify", json={
         "mobile_number": test_mobile,
-        "otp_code": "123456"
+        "otp_code": "123456",
+        "full_name": "OTP Signup Farmer",
     })
     assert verify_res.status_code == 200
     verify_data = verify_res.json()
-    assert "csrf_token" in verify_data
     assert verify_data["user"]["mobile_number"] == test_mobile
+    assert verify_data["user"]["full_name"] == "OTP Signup Farmer"
+
+
+def test_otp_login_for_registered_user(client: TestClient):
+    """Registered users can log in with OTP without resending their name."""
+    test_mobile = f"96{str(time.time_ns())[-8:]}"
+    register_res = client.post("/api/v1/auth/register", json={
+        "mobile_number": test_mobile,
+        "password": "testpassword123",
+        "full_name": "Password Signup Farmer",
+    })
+    assert register_res.status_code == 201
+
+    send_res = client.post("/api/v1/auth/otp/send", json={"mobile_number": test_mobile, "purpose": "login"})
+    assert send_res.status_code == 200
+
+    verify_res = client.post("/api/v1/auth/otp/verify", json={
+        "mobile_number": test_mobile,
+        "otp_code": "123456",
+    })
+    assert verify_res.status_code == 200
+    assert verify_res.json()["user"]["full_name"] == "Password Signup Farmer"

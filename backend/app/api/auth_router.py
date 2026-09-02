@@ -146,7 +146,7 @@ def register_user(payload: UserRegisterRequest, response: Response, db: Session 
     hashed_pwd = hash_password(raw_password)
     new_user = User(
         mobile_number=clean_mobile,
-        full_name=payload.full_name.strip() if payload.full_name else f"Farmer ({clean_mobile[-4:]})",
+        full_name=payload.full_name.strip(),
         email=payload.email.strip() if payload.email and payload.email.strip() else None,
         hashed_password=hashed_pwd,
         role=payload.role if payload.role in ["farmer", "trader"] else "farmer",
@@ -193,7 +193,7 @@ def login_user(payload: UserLoginRequest, response: Response, db: Session = Depe
 
 
 @auth_router.post("/otp/send")
-def send_otp(payload: UserOTPRequest):
+def send_otp(payload: UserOTPRequest, db: Session = Depends(get_db)):
     """Sends 6-digit OTP code to mobile number for passwordless login."""
     clean_mobile = payload.mobile_number
     if len(clean_mobile) != 10:
@@ -203,6 +203,18 @@ def send_otp(payload: UserOTPRequest):
         )
 
     check_rate_limit(f"otp_{clean_mobile}")
+
+    existing_user = db.query(User).filter(User.mobile_number == clean_mobile).first()
+    if payload.purpose == "login" and not existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No account found for this mobile number. Please create an account first.",
+        )
+    if payload.purpose == "signup" and existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An account already exists for this mobile number. Please log in instead.",
+        )
 
     if SMS_PROVIDER == "twilio":
         if is_verify_configured():
@@ -281,17 +293,22 @@ def verify_otp(payload: UserOTPVerifyRequest, response: Response, db: Session = 
 
     user = db.query(User).filter(User.mobile_number == clean_mobile).first()
     if not user:
-        # Register new farmer user with provided name & email
+        provided_name = payload.full_name.strip() if payload.full_name and payload.full_name.strip() else None
+        if not provided_name:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No account found for this mobile number. Please create an account first.",
+            )
         hashed_pwd = hash_password(secrets.token_urlsafe(16))
         user = User(
             mobile_number=clean_mobile,
-            full_name=payload.full_name.strip() if payload.full_name and payload.full_name.strip() else f"Farmer ({clean_mobile[-4:]})",
+            full_name=provided_name,
             email=payload.email.strip() if payload.email and payload.email.strip() else None,
             hashed_password=hashed_pwd,
             role="farmer",
             home_mandi="Azadpur",
             preferred_commodity="Tomato",
-            language="en"
+            language="en",
         )
         db.add(user)
         db.commit()

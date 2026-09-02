@@ -251,11 +251,24 @@ class UserLoginRequest(BaseModel):
 
 class UserOTPRequest(BaseModel):
     mobile_number: str = Field(..., description="Mobile number for OTP verification", json_schema_extra={"example": "9876543210"})
+    purpose: str = Field(
+        "login",
+        description="login = existing account only; signup = new account registration",
+        json_schema_extra={"example": "login"},
+    )
 
     @field_validator("mobile_number")
     @classmethod
     def validate_mobile_number(cls, value: str) -> str:
         return canonicalize_indian_mobile(value)
+
+    @field_validator("purpose")
+    @classmethod
+    def validate_purpose(cls, value: str) -> str:
+        normalized = (value or "login").strip().lower()
+        if normalized not in {"login", "signup"}:
+            raise ValueError("purpose must be 'login' or 'signup'")
+        return normalized
 
 
 class UserOTPVerifyRequest(BaseModel):
