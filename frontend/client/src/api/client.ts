@@ -129,7 +129,7 @@ export function register(payload: { mobile_number: string; full_name: string; em
   return request<AuthSessionResponse>("/api/v1/auth/register", { method: "POST", body: JSON.stringify(payload), notifyUnauthorized: false });
 }
 
-export function sendOtp(payload: { mobile_number: string }) {
+export function sendOtp(payload: { mobile_number: string; purpose?: "login" | "signup" }) {
   return request<{ message?: string; expires_in_seconds?: number }>("/api/v1/auth/otp/send", { method: "POST", body: JSON.stringify(payload), notifyUnauthorized: false });
 }
 

@@ -12,14 +12,36 @@ type MandiComboboxProps = {
   disabled?: boolean;
   inputRef?: RefObject<HTMLInputElement | null>;
   focusRequest?: number;
+  recentIds?: string[];
 };
 
-export function MandiCombobox({ items, value, onChange, disabled = false, inputRef, focusRequest = 0 }: MandiComboboxProps) {
+export function MandiCombobox({ items, value, onChange, disabled = false, inputRef, focusRequest = 0, recentIds = [] }: MandiComboboxProps) {
   const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const localInputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = items.find((item) => item.id === value);
+  const recentItems = recentIds
+    .map((id) => items.find((item) => item.id === id))
+    .filter((item): item is ResourceOption => Boolean(item));
+  const recentIdSet = new Set(recentIds);
+  const otherItems = items.filter((item) => !recentIdSet.has(item.id));
+
+  const renderItem = (item: ResourceOption) => (
+    <Command.Item
+      key={item.id}
+      role="option"
+      aria-selected={item.id === value}
+      value={`${item.label} ${item.id}`}
+      onSelect={() => {
+        onChange(item.id);
+        setOpen(false);
+      }}
+    >
+      <span>{item.label}</span>
+      {item.id === value ? <Check size={16} /> : null}
+    </Command.Item>
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -81,18 +103,12 @@ export function MandiCombobox({ items, value, onChange, disabled = false, inputR
             <div className="command-search"><Search size={16} /><Command.Input ref={inputRef ?? localInputRef} placeholder={t("searchMandiPlaceholder")} /></div>
             <Command.List id="mandi-listbox" role="listbox" aria-label={t("searchMandi")}>
               <Command.Empty>{t("noMandiMatches")}</Command.Empty>
-              {items.map((item) => (
-                  <Command.Item
-                    key={item.id}
-                    role="option"
-                    aria-selected={item.id === value}
-                  value={`${item.label} ${item.id}`}
-                  onSelect={() => { onChange(item.id); setOpen(false); }}
-                >
-                  <span>{item.label}</span>
-                  {item.id === value ? <Check size={16} /> : null}
-                </Command.Item>
-              ))}
+              {recentItems.length ? (
+                <Command.Group heading={t("recentMandis")}>
+                  {recentItems.map((item) => renderItem(item))}
+                </Command.Group>
+              ) : null}
+              {otherItems.map((item) => renderItem(item))}
             </Command.List>
           </Command>
         </div>

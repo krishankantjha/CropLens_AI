@@ -45,7 +45,6 @@ export type ForecastResponse = {
   forecasts?: DailyForecastPoint[];
   peak_day?: DailyForecastPoint;
   decision?: string;
-  decision_en?: string;
   decision_hi?: string;
   expected_gain?: number;
   confidence?: string;

@@ -30,6 +30,9 @@
   --amber-soft: #f4e6c4;
   --red: #a33d2b;
   --red-soft: #f4e0d8;
+  --decision-sell: var(--amber);
+  --decision-hold: var(--ink-muted);
+  --decision-profit: var(--green);
   --background: var(--paper);
   --foreground: var(--ink);
   --card: #fbf6ea;
@@ -62,6 +65,9 @@
   --amber-soft: #3a2d14;
   --red: #e08a72;
   --red-soft: #3a1e18;
+  --decision-sell: var(--amber);
+  --decision-hold: var(--ink-muted);
+  --decision-profit: var(--green);
   --background: var(--paper);
   --foreground: var(--ink);
   --card: #1a1610;

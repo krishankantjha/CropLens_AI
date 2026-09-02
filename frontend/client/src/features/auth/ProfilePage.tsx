@@ -6,6 +6,7 @@ import { BrandLogo } from "@/components/ui/BrandLogo";
 import { StatePanel } from "@/components/feedback/StatePanel";
 import { useLanguage, type Language } from "@/contexts/LanguageContext";
 import { useSession } from "@/contexts/SessionContext";
+import { appToast } from "@/lib/toast";
 import type { ResourceEntry, ResourceOption } from "@/types/api";
 import type { UserProfile } from "@/types/auth";
 
@@ -13,6 +14,7 @@ export default function ProfilePage() {
   const { language: appLanguage, setLanguage, t } = useLanguage();
   const { clearSession, isSessionReady, setUser: setSessionUser } = useSession();
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [fullName, setFullName] = useState("");
   const [homeMandi, setHomeMandi] = useState("");
   const [preferredCommodity, setPreferredCommodity] = useState("");
   const [language, setLocalLanguage] = useState<Language>(appLanguage);
@@ -32,6 +34,7 @@ export default function ProfilePage() {
       ]);
       setUser(profile);
       setSessionUser(profile);
+      setFullName(profile.full_name ?? "");
       setHomeMandi(profile.home_mandi);
       setPreferredCommodity(profile.preferred_commodity);
       const nextLanguage: Language = profile.language === "hi" ? "hi" : "en";
@@ -55,12 +58,23 @@ export default function ProfilePage() {
   const mandiOptions = useMemo(() => markets, [markets]);
 
   const save = async () => {
+    const trimmedName = fullName.trim();
+    if (!trimmedName) {
+      setError(t("enterName"));
+      return;
+    }
     setBusy(true); setError(""); setMessage("");
     try {
-      const updated = await updatePreferences({ home_mandi: homeMandi, preferred_commodity: preferredCommodity, language });
+      const updated = await updatePreferences({
+        full_name: trimmedName,
+        home_mandi: homeMandi,
+        preferred_commodity: preferredCommodity,
+        language,
+      });
       setUser(updated);
       setSessionUser(updated);
       setLanguage(language);
+      appToast.success(t("saveSuccess"));
       setMessage(t("saveSuccess"));
     } catch {
       setError(t("couldNotSavePreferences"));
@@ -79,7 +93,7 @@ export default function ProfilePage() {
         <section className="profile-card" aria-busy="true">
           <div className="auth-brand-full">
             <BrandLogo size={42} />
-            <span className="auth-logo-text"><strong>CropLens AI</strong><small>Your market. Your decision.</small></span>
+            <span className="auth-logo-text"><strong>CropLens AI</strong><small>{t("brandTagline")}</small></span>
           </div>
           <StatePanel kind="loading" title={t("loadingProfile")} message={t("profileLoadingMessage")} />
         </section>
@@ -104,7 +118,7 @@ export default function ProfilePage() {
       <section className="profile-card" aria-labelledby="profile-title">
         <div className="auth-brand-full">
           <span className="auth-logo-badge"><BrandLogo size={38} /></span>
-          <span className="auth-logo-text"><strong>CropLens AI</strong><small>Your market. Your decision.</small></span>
+          <span className="auth-logo-text"><strong>CropLens AI</strong><small>{t("brandTagline")}</small></span>
         </div>
         <p className="eyebrow"><UserRound size={14} /> {t("farmerProfile")}</p>
         <h1 id="profile-title">{t("preferences")}</h1>
@@ -114,6 +128,10 @@ export default function ProfilePage() {
           <span><strong>{user.full_name}</strong><small>{user.mobile_number}{user.email ? ` • ${user.email}` : ""}</small></span>
         </div>
         <div className="auth-form">
+          <label className="field">
+            <span>{t("fullName")}</span>
+            <input value={fullName} onChange={(event) => setFullName(event.target.value)} autoComplete="name" placeholder={t("enterName")} required />
+          </label>
           <label className="field">
             <span>{t("homeMandi")}</span>
             {mandiOptions.length ? (

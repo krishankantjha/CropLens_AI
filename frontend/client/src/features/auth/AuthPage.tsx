@@ -7,9 +7,11 @@ import type { AuthSessionResponse } from "@/types/auth";
 import { StatePanel } from "@/components/feedback/StatePanel";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSession } from "@/contexts/SessionContext";
+import { appToast } from "@/lib/toast";
 
 type AuthTab = "login" | "signup";
 type LoginMode = "otp" | "password";
+type SignupMode = "otp" | "password";
 type Step = "input" | "verify";
 
 export default function AuthPage() {
@@ -19,6 +21,7 @@ export default function AuthPage() {
 
   const [activeTab, setActiveTab] = useState<AuthTab>("login");
   const [loginMode, setLoginMode] = useState<LoginMode>("otp");
+  const [signupMode, setSignupMode] = useState<SignupMode>("password");
   const [step, setStep] = useState<Step>("input");
   const [fullName, setFullName] = useState("");
   const [mobile, setMobile] = useState("");
@@ -49,13 +52,30 @@ export default function AuthPage() {
   }, [resendIn]);
 
   const resetFeedback = () => { setMessage(""); setError(""); };
-  const switchTab = (tab: AuthTab) => { resetFeedback(); setActiveTab(tab); setStep("input"); setOtp(""); };
+  const switchTab = (tab: AuthTab) => {
+    resetFeedback();
+    setActiveTab(tab);
+    setStep("input");
+    setOtp("");
+    if (tab === "signup") setSignupMode("password");
+    if (tab === "login") setLoginMode("otp");
+  };
   const cleanDigits = (val: string) => val.replace(/\D/g, "").slice(0, 10);
+
+  const authErrorMessage = (requestError: unknown, loginAttempt: boolean) => {
+    const err = requestError as { status?: number; message?: string };
+    if (loginAttempt && err.status === 404) return t("accountNotFoundSignup");
+    if (!loginAttempt && err.status === 400 && err.message?.toLowerCase().includes("already exists")) {
+      return t("alreadyRegisteredLogin");
+    }
+    return err.message ?? t("authenticationFailed");
+  };
 
   const completeSession = (response: AuthSessionResponse) => {
     setSession(response.csrf_token, response.user);
     const nextLanguage = response.user.language === "hi" ? "hi" : "en";
     setLanguage(nextLanguage);
+    appToast.success(t("toastLoginSuccess"));
     setMessage(t("redirectingHome"));
     window.setTimeout(() => setLocation("/"), 400);
   };
@@ -67,15 +87,23 @@ export default function AuthPage() {
       setError(language === "hi" ? "कृपया 10 अंकों का वैध मोबाइल नंबर दर्ज करें।" : "Please enter a valid 10-digit mobile number.");
       return;
     }
+    if (activeTab === "signup" && !fullName.trim()) {
+      setError(t("enterName"));
+      return;
+    }
     setBusy(true);
     resetFeedback();
     try {
-      const response = await sendOtp({ mobile_number: cleanMobile });
+      const response = await sendOtp({
+        mobile_number: cleanMobile,
+        purpose: activeTab === "signup" ? "signup" : "login",
+      });
+      appToast.success(response.message ?? t("toastOtpSent"));
       setMessage(response.message ?? t("otpRequested"));
       setStep("verify");
       setResendIn(response.expires_in_seconds ? Math.min(response.expires_in_seconds, 30) : 30);
     } catch (requestError) {
-      setError((requestError as { message?: string }).message ?? t("authenticationFailed"));
+      setError(authErrorMessage(requestError, activeTab === "login"));
     } finally {
       setBusy(false);
     }
@@ -85,6 +113,10 @@ export default function AuthPage() {
     event.preventDefault();
     if (otp.trim().length !== 6) {
       setError(language === "hi" ? "कृपया 6 अंकों का OTP दर्ज करें।" : "Please enter the 6-digit OTP code.");
+      return;
+    }
+    if (activeTab === "signup" && !fullName.trim()) {
+      setError(t("enterName"));
       return;
     }
     setBusy(true);
@@ -97,7 +129,7 @@ export default function AuthPage() {
       });
       completeSession(response);
     } catch (requestError) {
-      setError((requestError as { message?: string }).message ?? t("authenticationFailed"));
+      setError(authErrorMessage(requestError, activeTab === "login"));
     } finally {
       setBusy(false);
     }
@@ -129,7 +161,7 @@ export default function AuthPage() {
       return;
     }
     if (!fullName.trim()) {
-      setError(language === "hi" ? "कृपया अपना पूरा नाम दर्ज करें।" : "Please enter your full name.");
+      setError(t("enterName"));
       return;
     }
     if (password.trim().length < 6) {
@@ -175,13 +207,64 @@ export default function AuthPage() {
     </label>
   );
 
+  const otpVerifyForm = (
+    <form className="auth-form" onSubmit={(event) => void handleVerifyOtp(event)}>
+      <div className="auth-step-notice">
+        <span className="notice-phone">+91 {cleanDigits(mobile)}</span>
+        <button type="button" className="edit-link" onClick={() => setStep("input")}>{t("editNumber")}</button>
+      </div>
+      <label className="field">
+        <span>{t("otpCode")}</span>
+        <span className="input-wrap">
+          <KeyRound size={17} />
+          <input value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required autoComplete="one-time-code" placeholder={t("enterOtp")} autoFocus />
+        </span>
+      </label>
+      <button className="primary-button auth-submit" type="submit" disabled={busy}>
+        <span>{busy ? t("pleaseWait") : activeTab === "signup" ? t("verifyAndCompleteSignup") : t("verifyOtp")}</span>
+        <CheckCircle2 size={18} />
+      </button>
+      <div className="otp-actions">
+        <button className="text-button" type="button" disabled={busy || resendIn > 0} onClick={() => void handleSendOtp()}>
+          {resendIn > 0 ? `${t("resendOtpIn")} ${resendIn} ${t("otpWait")}` : t("resendOtp")}
+        </button>
+      </div>
+    </form>
+  );
+
+  const signupIdentityFields = (
+    <>
+      <label className="field">
+        <span>{t("fullName")}</span>
+        <span className="input-wrap">
+          <User size={17} />
+          <input value={fullName} onChange={(event) => setFullName(event.target.value)} required autoComplete="name" placeholder={t("enterName")} />
+        </span>
+      </label>
+      <label className="field">
+        <span>{t("mobileNumber")}</span>
+        <span className="input-wrap">
+          <Phone size={17} />
+          <input value={mobile} onChange={(event) => setMobile(event.target.value)} required inputMode="tel" autoComplete="tel" placeholder={t("enterMobile")} />
+        </span>
+      </label>
+      <label className="field">
+        <span>{t("emailAddress")}</span>
+        <span className="input-wrap">
+          <Mail size={17} />
+          <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder={t("enterEmail")} />
+        </span>
+      </label>
+    </>
+  );
+
   return (
     <div className="auth-page">
       <Link className="back-link" href="/"><ArrowLeft size={16} /> {t("backToMarket")}</Link>
       <section className="auth-card" aria-labelledby="auth-title">
         <div className="auth-brand-full">
           <BrandLogo size={42} />
-          <span className="auth-logo-text"><strong>CropLens AI</strong><small>Your market. Your decision.</small></span>
+          <span className="auth-logo-text"><strong>CropLens AI</strong><small>{t("brandTagline")}</small></span>
         </div>
         <p className="eyebrow"><LockKeyhole size={14} /> {t("farmerAccount")}</p>
         <h1 id="auth-title">{activeTab === "login" ? t("keepDecisionsClose") : t("createFarmerAccount")}</h1>
@@ -214,30 +297,7 @@ export default function AuthPage() {
               </form>
             )}
 
-            {loginMode === "otp" && step === "verify" && (
-              <form className="auth-form" onSubmit={(event) => void handleVerifyOtp(event)}>
-                <div className="auth-step-notice">
-                  <span className="notice-phone">+91 {cleanDigits(mobile)}</span>
-                  <button type="button" className="edit-link" onClick={() => setStep("input")}>{t("editNumber")}</button>
-                </div>
-                <label className="field">
-                  <span>{t("otpCode")}</span>
-                  <span className="input-wrap">
-                    <KeyRound size={17} />
-                    <input value={otp} onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required autoComplete="one-time-code" placeholder={t("enterOtp")} autoFocus />
-                  </span>
-                </label>
-                <button className="primary-button auth-submit" type="submit" disabled={busy}>
-                  <span>{busy ? t("pleaseWait") : t("verifyOtp")}</span>
-                  <CheckCircle2 size={18} />
-                </button>
-                <div className="otp-actions">
-                  <button className="text-button" type="button" disabled={busy || resendIn > 0} onClick={() => void handleSendOtp()}>
-                    {resendIn > 0 ? `${t("resendOtpIn")} ${resendIn} ${t("otpWait")}` : t("resendOtp")}
-                  </button>
-                </div>
-              </form>
-            )}
+            {loginMode === "otp" && step === "verify" ? otpVerifyForm : null}
 
             {loginMode === "password" && (
               <form className="auth-form" onSubmit={(event) => void handlePasswordLogin(event)}>
@@ -268,29 +328,9 @@ export default function AuthPage() {
 
         {activeTab === "signup" && (
           <div className="auth-tab-panel" role="tabpanel" id="signup-panel" aria-labelledby="signup-tab">
-            {step === "input" && (
+            {signupMode === "password" && step === "input" && (
               <form className="auth-form" onSubmit={(event) => void handleRegister(event)}>
-                <label className="field">
-                  <span>{t("fullName")}</span>
-                  <span className="input-wrap">
-                    <User size={17} />
-                    <input value={fullName} onChange={(event) => setFullName(event.target.value)} required autoComplete="name" placeholder={t("enterName")} />
-                  </span>
-                </label>
-                <label className="field">
-                  <span>{t("mobileNumber")}</span>
-                  <span className="input-wrap">
-                    <Phone size={17} />
-                    <input value={mobile} onChange={(event) => setMobile(event.target.value)} required inputMode="tel" autoComplete="tel" placeholder={t("enterMobile")} />
-                  </span>
-                </label>
-                <label className="field">
-                  <span>{t("emailAddress")}</span>
-                  <span className="input-wrap">
-                    <Mail size={17} />
-                    <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" placeholder={t("enterEmail")} />
-                  </span>
-                </label>
+                {signupIdentityFields}
                 {passwordField}
                 <button className="primary-button auth-submit" type="submit" disabled={busy}>
                   <span>{busy ? t("pleaseWait") : t("createFarmerAccount")}</span>
@@ -298,13 +338,45 @@ export default function AuthPage() {
                 </button>
               </form>
             )}
+
+            {signupMode === "otp" && step === "input" && (
+              <form className="auth-form" onSubmit={(event) => void handleSendOtp(event)}>
+                {signupIdentityFields}
+                <button className="primary-button auth-submit" type="submit" disabled={busy}>
+                  <span>{busy ? t("pleaseWait") : t("sendOtpAndRegister")}</span>
+                  <ArrowRight size={18} />
+                </button>
+              </form>
+            )}
+
+            {signupMode === "otp" && step === "verify" ? otpVerifyForm : null}
+
             <div className="auth-secondary-actions">
+              {signupMode === "password" ? (
+                <button className="text-button" type="button" onClick={() => { resetFeedback(); setSignupMode("otp"); setStep("input"); }}>{t("signupWithOtp")}</button>
+              ) : (
+                <button className="text-button" type="button" onClick={() => { resetFeedback(); setSignupMode("password"); setStep("input"); }}>{t("signupWithPassword")}</button>
+              )}
               <button className="text-button" type="button" onClick={() => switchTab("login")}>{t("alreadyHaveAccount")}</button>
             </div>
           </div>
         )}
 
-        {error ? <StatePanel kind="error" title={t("authenticationFailed")} message={error} /> : null}
+        {error ? (
+          <StatePanel
+            kind="error"
+            title={t("authenticationFailed")}
+            message={error}
+            actionLabel={error === t("accountNotFoundSignup") ? t("signupTab") : error === t("alreadyRegisteredLogin") ? t("loginTab") : undefined}
+            onAction={
+              error === t("accountNotFoundSignup")
+                ? () => switchTab("signup")
+                : error === t("alreadyRegisteredLogin")
+                  ? () => switchTab("login")
+                  : undefined
+            }
+          />
+        ) : null}
         {message ? <div className="success-panel" role="status"><LockKeyhole size={17} /><span>{message}</span></div> : null}
       </section>
     </div>

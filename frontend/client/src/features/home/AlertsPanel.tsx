@@ -5,12 +5,17 @@ import { createAlert, deleteAlert, getCurrentUser, listAlerts } from "@/api/clie
 import { StatePanel } from "@/components/feedback/StatePanel";
 import { useLanguage, type Language } from "@/contexts/LanguageContext";
 import { useSession } from "@/contexts/SessionContext";
+import { appToast } from "@/lib/toast";
 import type { AlertSubscription } from "@/types/alerts";
 
-type AlertsPanelProps = { commodity: string; market: string };
+type AlertsPanelProps = {
+  commodity: string;
+  market: string;
+  showGuestPrompt?: boolean;
+};
 type RequestError = { message?: string };
 
-export function AlertsPanel({ commodity, market }: AlertsPanelProps) {
+export function AlertsPanel({ commodity, market, showGuestPrompt = false }: AlertsPanelProps) {
   const { language: appLanguage, t } = useLanguage();
   const { isAuthenticated } = useSession();
   const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
@@ -57,7 +62,9 @@ export function AlertsPanel({ commodity, market }: AlertsPanelProps) {
     setMessage("");
     try {
       const result = await createAlert({ mobile_number: mobile, channel, crop: commodity, mandi: market, delivery_time: time, language, telegram_chat_id: telegramChatId.trim() || undefined });
-      setMessage(result.message ?? t("alertSaved"));
+      const savedMessage = result.message ?? t("toastAlertSaved");
+      appToast.success(savedMessage);
+      setMessage(savedMessage);
       await load();
     } catch (requestError) {
       setError((requestError as RequestError).message ?? t("alertSaveFailed"));
@@ -73,6 +80,7 @@ export function AlertsPanel({ commodity, market }: AlertsPanelProps) {
     try {
       await deleteAlert(id, mobile);
       await load();
+      appToast.success(t("toastAlertRemoved"));
       setMessage(t("alertRemoved"));
     } catch (requestError) {
       setError((requestError as RequestError).message ?? t("alertRemoveFailed"));
@@ -82,6 +90,9 @@ export function AlertsPanel({ commodity, market }: AlertsPanelProps) {
   };
 
   if (!isAuthenticated) {
+    if (!showGuestPrompt) {
+      return <span id="alerts" className="section-anchor" aria-hidden="true" />;
+    }
     return (
       <div className="alert-panel" id="alerts">
         <div className="alert-panel__heading">
@@ -146,8 +157,8 @@ export function AlertsPanel({ commodity, market }: AlertsPanelProps) {
         {subscriptions.map((subscription) => (
           <div className="subscription-row" key={subscription.id}>
             <span>
-              <strong>{subscription.crop ?? "Selected crop"}</strong>
-              <small>{subscription.mandi ?? "Selected mandi"} · {subscription.channel ?? "Alert"} · {subscription.delivery_time ?? "Scheduled"}</small>
+              <strong>{subscription.crop ?? "—"}</strong>
+              <small>{[subscription.mandi, subscription.channel, subscription.delivery_time].filter(Boolean).join(" · ") || "—"}</small>
             </span>
             <button type="button" className="icon-button-danger" disabled={busy} aria-label={t("removeAlert")} onClick={() => void remove(subscription.id)}>
               <Trash2 size={16} />
