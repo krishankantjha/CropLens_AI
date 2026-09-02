@@ -20,6 +20,12 @@ function money(valueToFormat: number | null) {
   return valueToFormat === null ? "—" : `₹${Math.round(valueToFormat).toLocaleString("en-IN")}`;
 }
 
+function axisTick(valueToFormat: number) {
+  const rounded = Math.round(valueToFormat);
+  if (Math.abs(rounded) >= 10000) return `₹${Math.round(rounded / 1000)}k`;
+  return `₹${rounded}`;
+}
+
 export const ForecastChart = memo(function ForecastChart({ points }: ForecastChartProps) {
   const { language, t } = useLanguage();
   const usable: ChartPoint[] = points
@@ -51,7 +57,7 @@ export const ForecastChart = memo(function ForecastChart({ points }: ForecastCha
           </defs>
           <CartesianGrid vertical={false} stroke="var(--border)" strokeDasharray="4 5" />
           <XAxis dataKey="label" tick={{ fontSize: 11, fill: "var(--ink-muted)" }} tickLine={false} axisLine={false} />
-          <YAxis tick={{ fontSize: 11, fill: "var(--ink-muted)" }} tickLine={false} axisLine={false} tickFormatter={(valueToFormat) => `₹${Math.round(valueToFormat / 1000)}k`} width={42} />
+          <YAxis tick={{ fontSize: 11, fill: "var(--ink-muted)" }} tickLine={false} axisLine={false} tickFormatter={axisTick} width={52} />
           <Tooltip
             content={({ active, payload }) => {
               const point = payload?.[0]?.payload as ChartPoint | undefined;

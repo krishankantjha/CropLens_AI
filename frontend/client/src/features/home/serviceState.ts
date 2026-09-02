@@ -24,12 +24,6 @@ export function isUnavailable(error: unknown): boolean {
   return apiError.status === 0 || apiError.status === 408 || apiError.status === 429 || apiError.status === 502 || apiError.status === 503 || apiError.status === 504;
 }
 
-function serviceLabel(service: ServiceName): string {
-  if (service === "forecast") return "forecast";
-  if (service === "risk") return "market-risk information";
-  return "mandi comparison";
-}
-
 export type FarmerErrorMessages = {
   invalidSelection: string;
   unavailable: string;

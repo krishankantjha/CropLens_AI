@@ -228,7 +228,11 @@ export default defineConfig({
         target: process.env.BACKEND_URL || "http://127.0.0.1:8000",
         changeOrigin: true,
       },
-    }, // Keep the browser origin aligned with backend CORS configuration
+      "/health": {
+        target: process.env.BACKEND_URL || "http://127.0.0.1:8000",
+        changeOrigin: true,
+      },
+    },
     host: true,
     allowedHosts: [
       ".manuspre.computer",
