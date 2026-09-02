@@ -64,6 +64,12 @@ export function MandiCombobox({ items, value, onChange, disabled = false, inputR
         aria-autocomplete="list"
         disabled={disabled}
         onClick={() => (open ? setOpen(false) : focusInput())}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown" || event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            if (!open) focusInput();
+          }
+        }}
       >
         <MapPin size={18} />
         <span className={selected ? "combobox-value" : "combobox-placeholder"}>{selected?.label ?? t("selectMandi")}</span>
