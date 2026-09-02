@@ -6,8 +6,7 @@ export function BrandLogo({ size = 36, className }: { size?: number; className?:
       height={size}
       alt="CropLens AI"
       className={className}
-      style={{ objectFit: "contain", display: "inline-block" }}
+      style={{ objectFit: "contain", display: "inline-block", borderRadius: Math.round(size * 0.22) }}
     />
   );
 }
-
