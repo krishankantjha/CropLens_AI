@@ -4,9 +4,11 @@ Pre-loads Phase 3 ML model binaries and master dataset into application state on
 Exposes root documentation and health check endpoints.
 """
 
+import json
 import os
 import time
 import warnings
+from pathlib import Path
 from requests.exceptions import RequestsDependencyWarning
 warnings.simplefilter('ignore', RequestsDependencyWarning)
 from datetime import datetime, timezone
@@ -158,10 +160,17 @@ async def lifespan(app: FastAPI):
             from backend.app.db.database import engine, Base
             Base.metadata.create_all(bind=engine)
 
+        print("[Startup] Database migrations complete.")
+        print("[Startup] Loading ML models and serving dataset (this may take ~20s)...")
         artifacts = load_model_artifacts()
+        print(
+            f"[Startup] Models loaded ({len(artifacts['dataset']):,} dataset rows, "
+            f"version {artifacts['model_version']})."
+        )
         app.state.models = artifacts["models"]
         app.state.metadata = artifacts["metadata"]
         app.state.dataset = artifacts["dataset"]
+        app.state.dataset_path = artifacts.get("dataset_path")
         app.state.model_version = artifacts["model_version"]
         app.state.models_loaded = True
         app.state.dataset_loaded = True
@@ -171,19 +180,81 @@ async def lifespan(app: FastAPI):
 
         # Initialize and start APScheduler background worker
         from backend.app.services.scheduler_service import init_scheduler, warm_prediction_cache, trigger_manual_sync
-        init_scheduler(app)
-        warm_prediction_cache(app)
-
-        # Run live Agmarknet & NASA sync in the background so FastAPI starts immediately without blocking
         import threading
-        def _bg_startup_sync():
+
+        init_scheduler(app)
+
+        def _bg_cache_warming() -> None:
+            print("[Startup] Warming forecast cache in background...")
+            try:
+                cache_result = warm_prediction_cache(app)
+                print(
+                    "[Startup] Forecast cache warmed: "
+                    f"{cache_result.get('warmed_pairs', 0)} pairs "
+                    f"({cache_result.get('status', 'unknown')})."
+                )
+            except Exception as cache_err:
+                print(f"[WARNING] Forecast cache warming skipped or failed: {cache_err}")
+
+        _debug_log_path = Path(get_base_dir()) / "debug-07c031.log"
+
+        def _startup_debug_log(hypothesis_id: str, location: str, message: str, data: dict) -> None:
+            # #region agent log
+            try:
+                entry = {
+                    "sessionId": "07c031",
+                    "hypothesisId": hypothesis_id,
+                    "location": location,
+                    "message": message,
+                    "data": data,
+                    "timestamp": int(time.time() * 1000),
+                }
+                with _debug_log_path.open("a", encoding="utf-8") as handle:
+                    handle.write(json.dumps(entry) + "\n")
+            except OSError:
+                pass
+            # #endregion
+
+        def _bg_startup_sync() -> None:
+            print(
+                "[Startup] Live data sync started in background "
+                "(Agmarknet → NASA weather → NDVI; usually ~10–30s)..."
+            )
+            _startup_debug_log(
+                "H-SYNC",
+                "main.py:_bg_startup_sync",
+                "startup sync thread started",
+                {},
+            )
+            sync_started = time.time()
             try:
                 sync_res = trigger_manual_sync(app)
-                print(f"[INFO] Startup live sync result: {sync_res.get('status', 'unknown')}")
+                elapsed_s = round(time.time() - sync_started, 1)
+                print(
+                    f"[Startup] Live data sync result: {sync_res.get('status', 'unknown')} "
+                    f"(completed in {elapsed_s}s)"
+                )
+                _startup_debug_log(
+                    "H-SYNC",
+                    "main.py:_bg_startup_sync",
+                    "startup sync thread finished",
+                    {"status": sync_res.get("status"), "elapsed_s": elapsed_s},
+                )
             except Exception as sync_err:
                 print(f"[WARNING] Startup live sync skipped or failed: {str(sync_err)}")
+                _startup_debug_log(
+                    "H-SYNC",
+                    "main.py:_bg_startup_sync",
+                    "startup sync thread failed",
+                    {"error": str(sync_err)},
+                )
 
+        threading.Thread(target=_bg_cache_warming, daemon=True, name="startup-cache-worker").start()
         threading.Thread(target=_bg_startup_sync, daemon=True, name="startup-sync-worker").start()
+
+        ready_ms = round((time.time() - start_time) * 1000, 2)
+        print(f"[Startup] API ready in {ready_ms / 1000:.1f}s (cache warming continues in background).")
+        print("[Startup] Uvicorn is now serving — open http://127.0.0.1:8000/health (terminal stays busy; that is normal).")
     except Exception as e:
         # DEGRADED MODE: Log the error but allow the server to start so /docs and /health are accessible.
         app.state.models = {}
@@ -272,6 +343,22 @@ class HealthResponse(BaseModel):
     startup_timestamp: str = Field(...)
     startup_duration_ms: float = Field(..., json_schema_extra={"example": 120.45})
     startup_error: Optional[str] = Field(default=None, description="Sanitized startup diagnostic when the service is degraded")
+    last_sync_at: Optional[str] = Field(
+        default=None,
+        description="UTC timestamp of the most recent live-data sync attempt",
+    )
+    latest_mandi_date: Optional[str] = Field(
+        default=None,
+        description="Latest official mandi price date persisted in the database (YYYY-MM-DD)",
+    )
+    live_rows_incorporated: int = Field(
+        default=0,
+        description="Live rows merged into the serving dataset during the last sync",
+    )
+    live_data_status: Optional[str] = Field(
+        default=None,
+        description="fresh | partial | historical — summary of live-data readiness",
+    )
 
 
 @app.get("/", response_model=RootResponse, tags=["General"])
@@ -291,6 +378,8 @@ def read_root() -> RootResponse:
 @app.get("/health", response_model=HealthResponse, tags=["General"])
 def health_check() -> HealthResponse:
     """System Health Check Endpoint verifying model and dataset readiness."""
+    from backend.app.services.scheduler_service import get_live_data_summary
+
     models_loaded = getattr(app.state, "models_loaded", False)
     dataset_loaded = getattr(app.state, "dataset_loaded", False)
     
@@ -302,6 +391,21 @@ def health_check() -> HealthResponse:
     loaded_model_names = list(models.keys())
     dataset_rows = len(dataset) if dataset is not None else 0
     feature_count = len(metadata.get("feature_cols", []))
+    live_summary = get_live_data_summary()
+    live_rows = int(live_summary.get("live_rows_incorporated") or 0)
+    latest_mandi_date = live_summary.get("latest_mandi_date")
+    last_sync_at = live_summary.get("last_sync_at")
+    refresh_status = live_summary.get("last_refresh_status")
+    agmarknet_status = live_summary.get("last_agmarknet_status")
+
+    if live_rows > 0 and refresh_status == "success":
+        live_data_status = "fresh"
+    elif agmarknet_status in {"success", "partial"} or live_rows > 0:
+        live_data_status = "partial"
+    elif latest_mandi_date:
+        live_data_status = "partial"
+    else:
+        live_data_status = "historical"
 
     return HealthResponse(
         status=status_str,
@@ -313,7 +417,11 @@ def health_check() -> HealthResponse:
         feature_count=feature_count,
         startup_timestamp=getattr(app.state, "startup_timestamp", ""),
         startup_duration_ms=getattr(app.state, "startup_duration_ms", 0.0),
-        startup_error=getattr(app.state, "startup_error", None)
+        startup_error=getattr(app.state, "startup_error", None),
+        last_sync_at=last_sync_at,
+        latest_mandi_date=latest_mandi_date,
+        live_rows_incorporated=live_rows,
+        live_data_status=live_data_status,
     )
 
 

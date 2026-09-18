@@ -132,6 +132,11 @@ class MultiDayForecastResponse(BaseModel):
     commodity: str = Field(..., json_schema_extra={"example": "Potato"})
     market: str = Field(..., json_schema_extra={"example": "Agra"})
     forecast_horizon_days: int = Field(default=7, json_schema_extra={"example": 7})
+    last_observed_date: str = Field(
+        ...,
+        description="Date (YYYY-MM-DD) of the latest official mandi price row used for this forecast",
+        json_schema_extra={"example": "2026-08-21"},
+    )
     current_price: float = Field(..., description="Day-0 closing reference price (Rs/qtl)", json_schema_extra={"example": 1650.0})
     forecasts: List[DailyForecastPoint] = Field(..., description="List of daily forecast trajectories")
     peak_day: DailyForecastPoint = Field(..., description="Forecast point with highest projected price")
