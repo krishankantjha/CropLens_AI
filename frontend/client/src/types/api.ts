@@ -41,6 +41,7 @@ export type ForecastResponse = {
   market?: string;
   forecast_horizon_days?: number;
   horizon?: number;
+  last_observed_date?: string;
   current_price?: number;
   forecasts?: DailyForecastPoint[];
   peak_day?: DailyForecastPoint;

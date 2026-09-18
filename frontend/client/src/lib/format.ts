@@ -37,3 +37,21 @@ export function formatDataAsOf(date: Date, language: Language) {
     minute: "2-digit",
   });
 }
+
+export function formatMarketDate(isoDate: string, language: Language) {
+  const parsed = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return isoDate;
+  return parsed.toLocaleDateString(language === "hi" ? "hi-IN" : "en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export function daysSinceIsoDate(isoDate: string) {
+  const parsed = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return Math.floor((today.getTime() - parsed.getTime()) / (24 * 60 * 60 * 1000));
+}

@@ -1,6 +1,8 @@
 const HOME_GUIDE_KEY = "croplens_home_guide_seen";
 const MARKET_CHECKED_KEY = "croplens_market_checked";
 
+export const MARKET_CHECKED_EVENT = "croplens-market-checked";
+
 export function isHomeGuideSeen() {
   if (typeof window === "undefined") return true;
   return window.localStorage.getItem(HOME_GUIDE_KEY) === "1";
@@ -17,4 +19,5 @@ export function hasMarketCheckedBefore() {
 
 export function markMarketCheckedBefore() {
   window.localStorage.setItem(MARKET_CHECKED_KEY, "1");
+  window.dispatchEvent(new CustomEvent(MARKET_CHECKED_EVENT));
 }
