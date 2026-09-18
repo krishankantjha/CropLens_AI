@@ -4,7 +4,7 @@ import { PriceCorridor } from "./PriceCorridor";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { ForecastPoint, ForecastResponse } from "@/types/api";
 import { farmerDecisionText, farmerGainMessage, farmerTrustLabel } from "@/lib/farmerCopy";
-import { formatDataAsOf, money, pointLabel, type DecisionTone } from "@/lib/format";
+import { daysSinceIsoDate, formatMarketDate, money, pointLabel, type DecisionTone } from "@/lib/format";
 
 type DecisionHeroCardProps = {
   forecast: ForecastResponse;
@@ -19,7 +19,7 @@ type DecisionHeroCardProps = {
   voiceError: string;
   onSpeak: () => void;
   onShare: () => void;
-  dataAsOf?: Date | null;
+  lastObservedDate?: string;
 };
 
 export function DecisionHeroCard({
@@ -35,9 +35,11 @@ export function DecisionHeroCard({
   voiceError,
   onSpeak,
   onShare,
-  dataAsOf,
+  lastObservedDate,
 }: DecisionHeroCardProps) {
   const { t } = useLanguage();
+  const mandiAgeDays = lastObservedDate ? daysSinceIsoDate(lastObservedDate) : null;
+  const mandiReportIsStale = mandiAgeDays !== null && mandiAgeDays > 2;
   const peakDayLabel = peakDay ? pointLabel(peakDay, language, t("day")) : undefined;
   const farmerCopy = {
     actionSellToday: t("actionSellToday"),
@@ -102,9 +104,16 @@ export function DecisionHeroCard({
       </div>
       <PriceCorridor current={currentPrice} low={p10Price} median={p50Price} high={p90Price} label={t("priceCorridor")} />
       {voiceError ? <p className="form-note" role="alert">{voiceError}</p> : null}
-      {dataAsOf || forecast.model_version ? (
+      {lastObservedDate || forecast.model_version ? (
         <div className="decision-trust" lang={language}>
-          {dataAsOf ? <span>{t("dataAsOf").replace("{datetime}", formatDataAsOf(dataAsOf, language))}</span> : null}
+          {lastObservedDate ? (
+            <span>{t("lastMandiReport").replace("{date}", formatMarketDate(lastObservedDate, language))}</span>
+          ) : null}
+          {mandiReportIsStale && mandiAgeDays !== null ? (
+            <span className="decision-trust--stale" role="note">
+              {t("mandiReportStale").replace("{days}", String(mandiAgeDays))}
+            </span>
+          ) : null}
           {forecast.model_version ? (
             <span>
               {t("modelVersionLabel")}: {forecast.model_version}

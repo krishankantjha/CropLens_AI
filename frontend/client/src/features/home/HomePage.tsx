@@ -49,7 +49,6 @@ export default function HomePage() {
   const [mandiFocusRequest, setMandiFocusRequest] = useState(0);
   const [chartHorizon, setChartHorizon] = useState<ChartHorizon>(7);
   const [showHomeGuide, setShowHomeGuide] = useState(false);
-  const [forecastReceivedAt, setForecastReceivedAt] = useState<Date | null>(null);
   const preferencesApplied = useRef(false);
   const pendingOnboardingCheck = useRef(false);
   const forecastRequestId = useRef(0);
@@ -133,7 +132,6 @@ export default function HomePage() {
       const data = await getForecast(current);
       if (forecastRequestId.current === id) {
         setForecastState({ data, error: null, loading: false, requestedFor: current });
-        setForecastReceivedAt(new Date());
       }
     } catch (error) {
       if (forecastRequestId.current === id) setForecastState({ data: null, error: asApiError(error), loading: false, requestedFor: current });
@@ -219,7 +217,6 @@ export default function HomePage() {
     setForecastState(emptyState());
     setRiskState(emptyState());
     setProcurementState(emptyState());
-    setForecastReceivedAt(null);
     setVoiceError("");
     if (window.location.hash !== "#home") window.location.hash = "#home";
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -449,7 +446,7 @@ export default function HomePage() {
                   voiceError={voiceError}
                   onSpeak={speakAdvisory}
                   onShare={shareAdvisory}
-                  dataAsOf={forecastReceivedAt}
+                  lastObservedDate={forecast.last_observed_date}
                 />
               ) : null}
               {forecast ? (

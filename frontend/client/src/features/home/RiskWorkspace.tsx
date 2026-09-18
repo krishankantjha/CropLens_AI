@@ -20,7 +20,7 @@ function riskSummary(risk: RiskResponse, hasWarnings: boolean, unusual: string, 
 
 export function RiskWorkspace({ isAuthenticated, loading, errorPanel, risk }: RiskWorkspaceProps) {
   const { t } = useLanguage();
-  const riskRecords = risk?.anomalies ?? risk?.records ?? [];
+  const riskRecords = (risk?.anomalies ?? risk?.records ?? []).filter((record) => record.is_anomaly === true);
   const hasWarnings = riskRecords.length > 0;
 
   if (!isAuthenticated) {

@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { ArrowRight, CalendarDays, ChevronDown, Leaf, RotateCcw, Sparkles } from "lucide-react";
 
@@ -168,7 +168,32 @@ function MarketFields({
 
   const otherCommodities = commodities.filter((item) => !recentCommodityIds.includes(item.id));
 
+  const awaitingSelection = !hasSelection && !resourceLoading && !forecastLoading;
+  const canPulse = hasSelection && validSelection && !resourceLoading && !forecastLoading;
+  const [selectionHintVisible, setSelectionHintVisible] = useState(false);
+  const hintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useEffect(() => () => {
+    if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
+  }, []);
+
+  function showSelectionHint(autoHide = false) {
+    if (!awaitingSelection) return;
+    setSelectionHintVisible(true);
+    if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
+    hintTimeoutRef.current = null;
+    if (autoHide) {
+      hintTimeoutRef.current = setTimeout(() => setSelectionHintVisible(false), 3200);
+    }
+  }
+
+  function hideSelectionHint() {
+    if (hintTimeoutRef.current) {
+      clearTimeout(hintTimeoutRef.current);
+      hintTimeoutRef.current = null;
+    }
+    setSelectionHintVisible(false);
+  }
 
   return (
 
@@ -340,21 +365,37 @@ function MarketFields({
 
         ) : null}
 
-        <button
-
-          className={`primary-button${hasSelection && validSelection ? " primary-button--ready" : ""}`}
-
-          type="submit"
-
-          disabled={!hasSelection || resourceLoading || forecastLoading}
-
+        <div
+          className={`market-form__cta${awaitingSelection ? " market-form__cta--awaiting" : ""}`}
+          onMouseEnter={awaitingSelection ? () => showSelectionHint() : undefined}
+          onMouseLeave={awaitingSelection ? hideSelectionHint : undefined}
         >
-
-          <span>{forecastLoading ? t("checkingLiveMarket") : t("checkTodaysMarket")}</span>
-
-          <ArrowRight size={18} />
-
-        </button>
+          <button
+            className={`primary-button${canPulse ? " primary-button--ready" : ""}${awaitingSelection ? " primary-button--awaiting" : ""}`}
+            type="submit"
+            disabled={!hasSelection || resourceLoading || forecastLoading}
+            aria-describedby={selectionHintVisible && awaitingSelection ? "market-form-hint" : undefined}
+          >
+            <span>{forecastLoading ? t("checkingLiveMarket") : t("checkTodaysMarket")}</span>
+            <ArrowRight size={18} />
+          </button>
+          {awaitingSelection ? (
+            <>
+              <span
+                className="market-form__cta-shield"
+                aria-hidden="true"
+                onClick={() => showSelectionHint(true)}
+              />
+              <p
+                role="tooltip"
+                id="market-form-hint"
+                className={`market-form__hint${selectionHintVisible ? " market-form__hint--visible" : ""}`}
+              >
+                {t("selectCropMandiHint")}
+              </p>
+            </>
+          ) : null}
+        </div>
 
       </form>
 
