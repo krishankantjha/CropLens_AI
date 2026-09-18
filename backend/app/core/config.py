@@ -95,28 +95,101 @@ DATABASE_URL: str = os.getenv(
 REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 # --- Live data providers ---
-AGMARKNET_API_KEY: str = os.getenv("AGMARKNET_API_KEY", "").strip()
+AGMARKNET_API_KEY: str = os.getenv("AGMARKNET_API_KEY", "").strip().rstrip(",").strip()
 AGMARKNET_API_PAGE_SIZE: int = min(
-    max(int(os.getenv("AGMARKNET_API_PAGE_SIZE", "1000")), 1),
+    max(int(os.getenv("AGMARKNET_API_PAGE_SIZE", "50")), 1),
     1000,
 )
-AGMARKNET_MAX_PAGES: int = max(int(os.getenv("AGMARKNET_MAX_PAGES", "10")), 1)
+AGMARKNET_MAX_PAGES: int = max(int(os.getenv("AGMARKNET_MAX_PAGES", "1")), 1)
+AGMARKNET_CONNECT_TIMEOUT_SECONDS: int = max(
+    int(os.getenv("AGMARKNET_CONNECT_TIMEOUT_SECONDS", "10")),
+    3,
+)
 AGMARKNET_TIMEOUT_SECONDS: int = max(
-    int(os.getenv("AGMARKNET_TIMEOUT_SECONDS", "40")),
+    int(os.getenv("AGMARKNET_TIMEOUT_SECONDS", "30")),
+    5,
+)
+AGMARKNET_READ_TIMEOUT_SECONDS: int = max(
+    int(os.getenv("AGMARKNET_READ_TIMEOUT_SECONDS", str(AGMARKNET_TIMEOUT_SECONDS))),
     5,
 )
 AGMARKNET_RETRY_ATTEMPTS: int = min(
-    max(int(os.getenv("AGMARKNET_RETRY_ATTEMPTS", "2")), 0),
+    max(int(os.getenv("AGMARKNET_RETRY_ATTEMPTS", "0")), 0),
+    3,
+)
+AGMARKNET_INTER_REQUEST_DELAY_SECONDS: float = max(
+    float(os.getenv("AGMARKNET_INTER_REQUEST_DELAY_SECONDS", "0.5")),
+    0.0,
+)
+NASA_POWER_CONNECT_TIMEOUT_SECONDS: int = max(
+    int(os.getenv("NASA_POWER_CONNECT_TIMEOUT_SECONDS", "10")),
     3,
 )
 NASA_POWER_TIMEOUT_SECONDS: int = max(
-    int(os.getenv("NASA_POWER_TIMEOUT_SECONDS", "20")),
+    int(os.getenv("NASA_POWER_TIMEOUT_SECONDS", "30")),
     5,
+)
+NASA_POWER_RETRY_ATTEMPTS: int = min(
+    max(int(os.getenv("NASA_POWER_RETRY_ATTEMPTS", "1")), 0),
+    3,
 )
 
 # --- Sentinel Hub Live NDVI ---
 SENTINEL_HUB_API_KEY: str = os.getenv("SENTINEL_HUB_API_KEY", "").strip()
+SENTINEL_HUB_CONNECT_TIMEOUT_SECONDS: int = max(
+    int(os.getenv("SENTINEL_HUB_CONNECT_TIMEOUT_SECONDS", "10")),
+    3,
+)
 SENTINEL_HUB_TIMEOUT_SECONDS: int = max(
-    int(os.getenv("SENTINEL_HUB_TIMEOUT_SECONDS", "25")),
+    int(os.getenv("SENTINEL_HUB_TIMEOUT_SECONDS", "45")),
     5,
+)
+SENTINEL_HUB_RETRY_ATTEMPTS: int = min(
+    max(int(os.getenv("SENTINEL_HUB_RETRY_ATTEMPTS", "1")), 0),
+    3,
+)
+SENTINEL_HUB_LOOKBACK_DAYS: int = max(
+    int(os.getenv("SENTINEL_HUB_LOOKBACK_DAYS", "30")),
+    7,
+)
+SENTINEL_HUB_MAX_CLOUD_COVERAGE: int = min(
+    max(int(os.getenv("SENTINEL_HUB_MAX_CLOUD_COVERAGE", "40")), 5),
+    100,
+)
+SENTINEL_HUB_RELAXED_CLOUD_COVERAGE: int = min(
+    max(int(os.getenv("SENTINEL_HUB_RELAXED_CLOUD_COVERAGE", "60")), 5),
+    100,
+)
+SENTINEL_HUB_INTER_REQUEST_DELAY_SECONDS: float = max(
+    float(os.getenv("SENTINEL_HUB_INTER_REQUEST_DELAY_SECONDS", "0.5")),
+    0.0,
+)
+
+# --- Live merge fallbacks (Goal 3 serving coverage) ---
+LIVE_MERGE_ALLOW_HISTORICAL_NDVI_FALLBACK: bool = os.getenv(
+    "LIVE_MERGE_ALLOW_HISTORICAL_NDVI_FALLBACK", "true"
+).lower() in {"1", "true", "yes", "on"}
+LIVE_MERGE_ALLOW_HISTORICAL_WEATHER_FALLBACK: bool = os.getenv(
+    "LIVE_MERGE_ALLOW_HISTORICAL_WEATHER_FALLBACK", "true"
+).lower() in {"1", "true", "yes", "on"}
+LIVE_MERGE_NDVI_LOOKBACK_DAYS: int = max(
+    int(os.getenv("LIVE_MERGE_NDVI_LOOKBACK_DAYS", "30")),
+    7,
+)
+LIVE_MERGE_WEATHER_LOOKBACK_DAYS: int = max(
+    int(os.getenv("LIVE_MERGE_WEATHER_LOOKBACK_DAYS", "14")),
+    3,
+)
+
+# --- Serving dataset parquet snapshots ---
+MASTER_PARQUET_PATH: str = os.getenv("MASTER_PARQUET_PATH", "").strip()
+PARQUET_SNAPSHOT_ENABLED: bool = os.getenv(
+    "PARQUET_SNAPSHOT_ENABLED", "true"
+).lower() in {"1", "true", "yes", "on"}
+PARQUET_SNAPSHOT_ON_LIVE_REFRESH: bool = os.getenv(
+    "PARQUET_SNAPSHOT_ON_LIVE_REFRESH", "true"
+).lower() in {"1", "true", "yes", "on"}
+PARQUET_SNAPSHOT_MAX_BACKUPS: int = max(
+    int(os.getenv("PARQUET_SNAPSHOT_MAX_BACKUPS", "5")),
+    1,
 )
