@@ -60,15 +60,43 @@ Thumbs.db
 
 # Environment Secrets & Credentials
 .env
+.env.*
+!.env.example
+!**/.env.example
 .env.local
 .env.*.local
+backend/.env
+frontend/.env
 *.pem
 *.key
+*.credentials
+secrets.json
+
+# Local SQLite / Redis runtime files
+backend/app/croplens.db-journal
+backend/app/croplens.db-wal
+backend/app/croplens.db-shm
+
+# Parquet snapshots & rolling backups (regenerated locally)
+data/processed/backups/
+
+# Training, benchmark, and debug logs
+run_logs/
+debug-*.log
+
+# Local research paper exports & conference templates (keep LaTeX sources in reports/)
+*_Research_Paper*.pdf
+CropLens_AI_Research_Paper*.pdf
+IEEE_*.pdf
+ICCISD_*.pdf
+*.doc
+*.docx
 
 # Local audit, research, and training artifacts
 .ruff_cache/
 .mypy_cache/
 .vite/
+.cursor/
 local_*/
 backend/app/models/.checkpoints/
 backend/app/models/registry.json
