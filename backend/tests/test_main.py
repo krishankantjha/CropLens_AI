@@ -39,6 +39,8 @@ def test_health_check(client):
     assert "models_loaded" in data
     assert "dataset_loaded" in data
     assert data["startup_duration_ms"] >= 0
+    assert "live_data_status" in data
+    assert "latest_mandi_date" in data
 
 
 def test_system_resources_contract(client):

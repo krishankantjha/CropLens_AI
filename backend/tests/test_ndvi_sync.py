@@ -59,7 +59,7 @@ def test_ndvi_sync_persists_observation(monkeypatch, db_session):
             }
         ]
     }
-    monkeypatch.setattr(sentinel_hub_sync.requests, "post", lambda *args, **kwargs: FakeResponse(payload))
+    monkeypatch.setattr(sentinel_hub_sync, "_perform_post", lambda *args, **kwargs: FakeResponse(payload))
 
     result = sentinel_hub_sync.fetch_live_ndvi("Agra", db=db_session)
 

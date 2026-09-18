@@ -37,20 +37,24 @@ def db_session():
 def test_agmarknet_sync_filters_and_upserts_supported_records(monkeypatch, db_session):
     monkeypatch.setattr(agmarknet_sync, "AGMARKNET_API_KEY", "test-key")
     monkeypatch.setattr(agmarknet_sync, "AGMARKNET_MAX_PAGES", 1)
+    monkeypatch.setattr(agmarknet_sync, "AGMARKNET_INTER_REQUEST_DELAY_SECONDS", 0)
 
     def fake_get(url, params, timeout):
-        commodity = params["filters[commodity]"]
+        market = params["filters[market]"]
+        commodity = agmarknet_sync.VALID_COMMODITIES[
+            agmarknet_sync.VALID_MARKETS.index(market)
+        ]
         return FakeResponse(
             {
                 "records": [
                     {
                         "Commodity": commodity,
-                        "Market": "Agra",
+                        "Market": market,
                         "Arrival_Date": "21/08/2026",
                         "Modal_Price": "2,100",
                         "Arrival_In_Qtl": "450",
                         "State": "Uttar Pradesh",
-                        "District": "Agra",
+                        "District": market,
                         "Variety": "Standard",
                         "Grade": "FAQ",
                         "Min_Price": "1,900",
@@ -60,11 +64,12 @@ def test_agmarknet_sync_filters_and_upserts_supported_records(monkeypatch, db_se
             }
         )
 
-    monkeypatch.setattr(agmarknet_sync.requests, "get", fake_get)
+    monkeypatch.setattr(agmarknet_sync, "_perform_get", fake_get)
     result = agmarknet_sync.sync_live_agmarknet_prices(db_session)
 
     assert result["status"] == "success"
     assert result["records_synced"] == 10
+    assert result["fetch_strategy"] == "per_market"
     rows = db_session.query(MarketData).all()
     assert len(rows) == 10
     assert rows[0].date == "2026-08-21"
@@ -73,10 +78,49 @@ def test_agmarknet_sync_filters_and_upserts_supported_records(monkeypatch, db_se
     assert rows[0].min_price == 1900.0
 
 
-def test_agmarknet_fetch_retries_transient_timeout(monkeypatch):
+def test_agmarknet_fetch_continues_after_single_market_failure(monkeypatch):
+    monkeypatch.setattr(agmarknet_sync, "AGMARKNET_API_KEY", "test-key")
+    monkeypatch.setattr(agmarknet_sync, "AGMARKNET_MAX_PAGES", 1)
+    monkeypatch.setattr(agmarknet_sync, "AGMARKNET_INTER_REQUEST_DELAY_SECONDS", 0)
+    failing_market = agmarknet_sync.VALID_MARKETS[0]
+
+    def fake_get(url, params, timeout):
+        market = params["filters[market]"]
+        if market == failing_market:
+            return FakeResponse({}, status_code=503)
+        commodity = agmarknet_sync.VALID_COMMODITIES[
+            agmarknet_sync.VALID_MARKETS.index(market)
+        ]
+        return FakeResponse(
+            {
+                "records": [
+                    {
+                        "Commodity": commodity,
+                        "Market": market,
+                        "Arrival_Date": "21/08/2026",
+                        "Modal_Price": "2,100",
+                        "Arrival_In_Qtl": "450",
+                        "Min_Price": "1,900",
+                        "Max_Price": "2,200",
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr(agmarknet_sync, "_perform_get", fake_get)
+    records, result = agmarknet_sync._fetch_live_records()
+
+    assert result["status"] == "partial"
+    assert result["markets_failed"] == 1
+    assert result["markets_succeeded"] == len(agmarknet_sync.VALID_MARKETS) - 1
+    assert len(records) == len(agmarknet_sync.VALID_MARKETS) - 1
+
+
+def test_agmarknet_fetch_retries_transient_connection_error(monkeypatch):
     monkeypatch.setattr(agmarknet_sync, "AGMARKNET_API_KEY", "test-key")
     monkeypatch.setattr(agmarknet_sync, "AGMARKNET_MAX_PAGES", 1)
     monkeypatch.setattr(agmarknet_sync, "AGMARKNET_RETRY_ATTEMPTS", 2)
+    monkeypatch.setattr(agmarknet_sync, "AGMARKNET_INTER_REQUEST_DELAY_SECONDS", 0)
     monkeypatch.setattr(agmarknet_sync.time, "sleep", lambda _seconds: None)
     calls = 0
 
@@ -84,15 +128,15 @@ def test_agmarknet_fetch_retries_transient_timeout(monkeypatch):
         nonlocal calls
         calls += 1
         if calls < 3:
-            raise requests.Timeout("temporary upstream timeout")
+            raise requests.ConnectionError("temporary upstream connection reset")
         return FakeResponse({"records": []})
 
-    monkeypatch.setattr(agmarknet_sync.requests, "get", flaky_get)
+    monkeypatch.setattr(agmarknet_sync, "_perform_get", flaky_get)
     records, result = agmarknet_sync._fetch_live_records()
 
     assert records == []
     assert result["status"] == "success"
-    assert calls == len(agmarknet_sync.VALID_COMMODITIES) + 2
+    assert calls == len(agmarknet_sync.VALID_MARKETS) + 2
 
 
 def test_nasa_power_skips_provider_missing_value_rows(monkeypatch, db_session):
@@ -106,7 +150,7 @@ def test_nasa_power_skips_provider_missing_value_rows(monkeypatch, db_session):
             }
         }
     }
-    monkeypatch.setattr(nasa_power_sync.requests, "get", lambda *args, **kwargs: FakeResponse(payload))
+    monkeypatch.setattr(nasa_power_sync, "_perform_get", lambda *args, **kwargs: FakeResponse(payload))
 
     result = nasa_power_sync.fetch_live_nasa_weather("Agra", days=1, db=db_session)
 
@@ -126,7 +170,7 @@ def test_nasa_power_persists_valid_observation(monkeypatch, db_session):
             }
         }
     }
-    monkeypatch.setattr(nasa_power_sync.requests, "get", lambda *args, **kwargs: FakeResponse(payload))
+    monkeypatch.setattr(nasa_power_sync, "_perform_get", lambda *args, **kwargs: FakeResponse(payload))
 
     result = nasa_power_sync.fetch_live_nasa_weather("Agra", days=1, db=db_session)
 
@@ -135,6 +179,154 @@ def test_nasa_power_persists_valid_observation(monkeypatch, db_session):
     assert row.date == "2026-08-20"
     assert row.temp_max == pytest.approx(34.2)
     assert row.rainfall_mm == pytest.approx(4.5)
+
+
+def test_refresh_application_dataset_uses_nearest_weather_and_ndvi(monkeypatch, db_session):
+    from types import SimpleNamespace
+
+    from backend.app.services import scheduler_service
+
+    history = []
+    for day in range(1, 6):
+        history.append(
+            {
+                "date": f"2026-08-{day:02d}",
+                "state": "Uttar Pradesh",
+                "district": "Agra",
+                "market": "Agra",
+                "market_id": "M001",
+                "commodity": "Potato",
+                "variety": "Standard",
+                "grade": "FAQ",
+                "min_price": 1800.0,
+                "max_price": 2200.0,
+                "modal_price": 2000.0 + day,
+                "arrivals_in_qtl": 500.0 + day,
+                "temp_max": 33.0,
+                "temp_min": 23.0,
+                "rainfall_mm": 0.0,
+                "ndvi_mean": 0.55,
+                "is_festive_season": 0,
+                "festival_name": "None",
+                "harvest_season_type": "Zaid Lean Season",
+                "latitude": 27.1767,
+                "longitude": 78.0081,
+            }
+        )
+
+    db_session.add(
+        MarketData(
+            commodity="Potato",
+            market="Agra",
+            modal_price=2500.0,
+            arrivals_in_qtl=620.0,
+            date="2026-08-06",
+            state="Uttar Pradesh",
+            district="Agra",
+            variety="Standard",
+            grade="FAQ",
+            min_price=2300.0,
+            max_price=2700.0,
+        )
+    )
+    db_session.add(
+        WeatherData(
+            market="Agra",
+            date="2026-08-05",
+            temp_max=35.0,
+            temp_min=24.0,
+            rainfall_mm=1.5,
+            solar_radiation=20.0,
+        )
+    )
+    db_session.add(NdviData(market="Agra", date="2026-08-04", ndvi_mean=0.62))
+    db_session.commit()
+
+    monkeypatch.setattr(scheduler_service, "SessionLocal", lambda: db_session)
+    app = SimpleNamespace(
+        state=SimpleNamespace(
+            dataset=__import__("pandas").DataFrame(history),
+            metadata={"feature_cols": ["modal_price", "arrivals_in_qtl", "price_lag_1d"]},
+            models_loaded=True,
+            dataset_loaded=True,
+        )
+    )
+
+    result = scheduler_service.refresh_application_dataset(app)
+
+    assert result["status"] == "success"
+    refreshed = app.state.dataset
+    row = refreshed[
+        (refreshed["commodity"] == "Potato")
+        & (refreshed["market"] == "Agra")
+        & (refreshed["date"] == "2026-08-06")
+    ]
+    assert len(row) == 1
+    assert row.iloc[0]["temp_max"] == pytest.approx(35.0)
+    assert row.iloc[0]["ndvi_mean"] == pytest.approx(0.62)
+
+
+def test_build_live_rows_uses_historical_ndvi_when_live_missing():
+    from backend.app.services import scheduler_service
+
+    history = [
+        {
+            "date": "2026-08-05",
+            "state": "Uttar Pradesh",
+            "district": "Indore",
+            "market": "Indore",
+            "market_id": "M010",
+            "commodity": "Wheat",
+            "variety": "Standard",
+            "grade": "FAQ",
+            "min_price": 1800.0,
+            "max_price": 2200.0,
+            "modal_price": 2005.0,
+            "arrivals_in_qtl": 505.0,
+            "temp_max": 33.0,
+            "temp_min": 23.0,
+            "rainfall_mm": 0.0,
+            "ndvi_mean": 0.48,
+            "is_festive_season": 0,
+            "festival_name": "None",
+            "harvest_season_type": "Zaid Lean Season",
+            "latitude": 22.7196,
+            "longitude": 75.8577,
+        }
+    ]
+    market_row = MarketData(
+        commodity="Wheat",
+        market="Indore",
+        modal_price=2500.0,
+        arrivals_in_qtl=620.0,
+        date="2026-08-06",
+        state="Madhya Pradesh",
+        district="Indore",
+        variety="Standard",
+        grade="FAQ",
+        min_price=2300.0,
+        max_price=2700.0,
+    )
+    weather_row = WeatherData(
+        market="Indore",
+        date="2026-08-06",
+        temp_max=35.0,
+        temp_min=24.0,
+        rainfall_mm=1.5,
+        solar_radiation=20.0,
+    )
+
+    live_rows, stats = scheduler_service._build_live_rows(
+        [market_row],
+        [weather_row],
+        [],
+        __import__("pandas").DataFrame(history),
+    )
+
+    assert len(live_rows) == 1
+    assert live_rows.iloc[0]["ndvi_mean"] == pytest.approx(0.48)
+    assert stats["ndvi_historical"] == 1
+    assert stats["weather_live"] == 1
 
 
 def test_refresh_application_dataset_incorporates_persisted_live_row(monkeypatch, db_session):

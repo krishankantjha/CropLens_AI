@@ -139,6 +139,8 @@ def test_predict_7day_forecast(client):
     assert data["commodity"] == "Potato"
     assert data["market"] == "Agra"
     assert data["forecast_horizon_days"] == 7
+    assert "last_observed_date" in data
+    assert len(data["last_observed_date"]) == 10
     assert len(data["forecasts"]) == 7
 
     # Verify continuous horizon index & monotonic quantile bounds for each day
