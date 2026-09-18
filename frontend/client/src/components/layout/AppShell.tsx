@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import type { LucideIcon } from "lucide-react";
 import { Bell, Globe2, Home, LogIn, Moon, MoreHorizontal, Sun, UserRound } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
-import { getHealth } from "@/api/client";
+import { getHealth, type HealthResponse } from "@/api/client";
+import { formatDataAsOf, formatMarketDate } from "@/lib/format";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { OfflineBanner } from "@/components/layout/OfflineBanner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -11,10 +13,18 @@ import { OnboardingModal } from "@/features/onboarding/OnboardingModal";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSession } from "@/contexts/SessionContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { hasMarketCheckedBefore, MARKET_CHECKED_EVENT } from "@/lib/homeExperience";
 
 type AppShellProps = { children: ReactNode };
 
 type ServiceState = "checking" | "live" | "degraded" | "unavailable";
+
+type NavItem = {
+  label: string;
+  href: string;
+  hash: string;
+  icon: LucideIcon;
+};
 
 function currentHash() {
   return window.location.hash || "#home";
@@ -27,7 +37,9 @@ export function AppShell({ children }: AppShellProps) {
   const [location] = useLocation();
   const [hash, setHash] = useState(currentHash);
   const [serviceState, setServiceState] = useState<ServiceState>("checking");
+  const [liveHealth, setLiveHealth] = useState<HealthResponse | null>(null);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [alertsNavEnabled, setAlertsNavEnabled] = useState(() => hasMarketCheckedBefore());
   const prefsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,11 +49,18 @@ export function AppShell({ children }: AppShellProps) {
   }, []);
 
   useEffect(() => {
+    const syncAlertsNav = () => setAlertsNavEnabled(hasMarketCheckedBefore());
+    window.addEventListener(MARKET_CHECKED_EVENT, syncAlertsNav);
+    return () => window.removeEventListener(MARKET_CHECKED_EVENT, syncAlertsNav);
+  }, []);
+
+  useEffect(() => {
     let active = true;
     const load = () => {
       getHealth()
         .then((health) => {
           if (!active) return;
+          setLiveHealth(health);
           if (health.status === "healthy" || health.status === "operational" || health.status === "live") setServiceState("live");
           else if (health.status === "degraded") setServiceState("degraded");
           else setServiceState("unavailable");
@@ -74,12 +93,15 @@ export function AppShell({ children }: AppShellProps) {
     };
   }, [prefsOpen]);
 
-  const mainNav = [
-    { label: t("navMarket"), href: "/#home", hash: "#home", icon: Home },
-    { label: t("alerts"), href: "/#alerts", hash: "#alerts", icon: Bell },
-  ];
+  const showAlertsNav = isAuthenticated || alertsNavEnabled;
 
-  const accountNavItem =
+  const mainNav = useMemo(() => {
+    const items: NavItem[] = [{ label: t("navMarket"), href: "/#home", hash: "#home", icon: Home }];
+    if (showAlertsNav) items.push({ label: t("alerts"), href: "/#alerts", hash: "#alerts", icon: Bell });
+    return items;
+  }, [showAlertsNav, t]);
+
+  const accountNavItem: NavItem =
     isSessionReady && isAuthenticated
       ? { label: t("account"), href: "/profile", hash: "", icon: UserRound }
       : { label: t("login"), href: "/auth", hash: "", icon: LogIn };
@@ -92,10 +114,25 @@ export function AppShell({ children }: AppShellProps) {
 
   const serviceTooltip = useMemo(() => {
     if (serviceState === "checking") return t("serviceStatusChecking");
-    if (serviceState === "live") return t("serviceStatusLive");
     if (serviceState === "degraded") return t("serviceStatusDegraded");
-    return t("serviceStatusUnavailable");
-  }, [serviceState, t]);
+    if (serviceState === "unavailable") return t("serviceStatusUnavailable");
+    if (!liveHealth?.last_sync_at && liveHealth?.live_data_status === "historical") {
+      return t("serviceStatusLiveHistorical");
+    }
+    const mandiDate = liveHealth?.latest_mandi_date
+      ? formatMarketDate(liveHealth.latest_mandi_date, language)
+      : null;
+    const syncTime = liveHealth?.last_sync_at
+      ? formatDataAsOf(new Date(liveHealth.last_sync_at), language)
+      : null;
+    if (liveHealth?.live_data_status === "fresh" && syncTime && mandiDate) {
+      return t("serviceStatusLiveFresh").replace("{syncTime}", syncTime).replace("{mandiDate}", mandiDate);
+    }
+    if (mandiDate && (liveHealth?.live_data_status === "partial" || syncTime)) {
+      return t("serviceStatusLivePartial").replace("{mandiDate}", mandiDate);
+    }
+    return t("serviceStatusLive");
+  }, [language, liveHealth, serviceState, t]);
 
   const toggleLanguage = () => {
     setLanguage(language === "en" ? "hi" : "en");
@@ -105,6 +142,22 @@ export function AppShell({ children }: AppShellProps) {
   const toggleTheme = () => {
     setTheme(isDark ? "light" : "dark");
     setPrefsOpen(false);
+  };
+
+  const renderNavLink = (item: NavItem, iconSize: number, mobile = false) => {
+    const { label, href, hash: itemHash, icon: Icon } = item;
+    const active = itemHash ? location === "/" && hash === itemHash : location === href;
+    return (
+      <a
+        key={href}
+        href={href}
+        className={active ? "nav-link--active" : undefined}
+        aria-current={active ? "page" : undefined}
+      >
+        <Icon size={iconSize} />
+        {mobile ? <span>{label}</span> : label}
+      </a>
+    );
   };
 
   return (
@@ -122,40 +175,10 @@ export function AppShell({ children }: AppShellProps) {
         </a>
 
         <nav className="desktop-nav" aria-label={t("siteNav")}>
-          {mainNav.map(({ label, href, hash: itemHash, icon: Icon }) => {
-            const active = itemHash ? location === "/" && hash === itemHash : location === href;
-            return (
-              <a key={href} href={href} className={active ? "nav-link--active" : undefined} aria-current={active ? "page" : undefined}>
-                <Icon size={17} />
-                {label}
-              </a>
-            );
-          })}
+          {mainNav.map((item) => renderNavLink(item, 17))}
         </nav>
 
         <div className="topbar-actions">
-          <div className="topbar-prefs-desktop">
-            <button
-              className="language-button"
-              type="button"
-              aria-label={language === "en" ? t("changeLanguageToHindi") : t("changeLanguageToEnglish")}
-              aria-pressed={language === "hi"}
-              onClick={toggleLanguage}
-            >
-              <Globe2 size={17} /> <span>{language === "en" ? "English" : "हिन्दी"}</span>
-            </button>
-            <button
-              className="language-button theme-button"
-              type="button"
-              aria-label={t("switchTheme")}
-              aria-pressed={isDark}
-              onClick={toggleTheme}
-            >
-              {isDark ? <Sun size={17} /> : <Moon size={17} />}
-              <span className="sr-only">{isDark ? t("lightMode") : t("darkMode")}</span>
-            </button>
-          </div>
-
           <div className="topbar-prefs-overflow" ref={prefsRef}>
             <button
               className="language-button topbar-overflow-trigger"
@@ -216,16 +239,11 @@ export function AppShell({ children }: AppShellProps) {
         <strong>CropLens AI</strong> · {t("footerTagline")}
       </footer>
 
-      <nav className="mobile-nav" aria-label={t("mobileNav")}>
-        {mobileNav.map(({ label, href, hash: itemHash, icon: Icon }) => {
-          const active = itemHash ? location === "/" && hash === itemHash : location === href;
-          return (
-            <a key={href} href={href} className={active ? "nav-link--active" : undefined} aria-current={active ? "page" : undefined}>
-              <Icon size={20} />
-              <span>{label}</span>
-            </a>
-          );
-        })}
+      <nav
+        className={`mobile-nav${mobileNav.length === 2 ? " mobile-nav--duo" : ""}`}
+        aria-label={t("mobileNav")}
+      >
+        {mobileNav.map((item) => renderNavLink(item, 20, true))}
       </nav>
     </div>
   );
