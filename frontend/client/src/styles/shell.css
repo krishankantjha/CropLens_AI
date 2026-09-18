@@ -72,7 +72,7 @@
   font-size: 13px;
   font-weight: 600;
   font-family: inherit;
-  border: 1px solid rgba(31, 90, 61, 0.14);
+  border: 1px solid color-mix(in srgb, var(--green) 22%, var(--border));
   border-radius: 10px;
   background: var(--green-soft);
   cursor: help;
@@ -85,8 +85,7 @@
   text-align: left;
   line-height: 1.45;
 }
-.topbar-prefs-desktop { display: flex; align-items: center; gap: 8px; }
-.topbar-prefs-overflow { display: none; position: relative; }
+.topbar-prefs-overflow { display: block; position: relative; }
 .topbar-overflow-trigger { width: 42px; padding: 0; }
 .topbar-overflow-menu {
   position: absolute;
@@ -199,6 +198,11 @@ main#main { flex: 1; }
   background: var(--border);
   color: var(--ink-muted);
   border: 1px solid var(--border);
+}
+.primary-button--awaiting:disabled {
+  background: color-mix(in srgb, var(--green-soft) 88%, var(--paper));
+  color: color-mix(in srgb, var(--green) 72%, var(--ink-muted));
+  border: 1px dashed color-mix(in srgb, var(--green) 38%, var(--border));
 }
 .primary-button--ready:not(:disabled) {
   animation: ready-pulse 2.2s ease-in-out infinite;
@@ -317,8 +321,6 @@ main#main { flex: 1; }
   .brand-title-group strong { font-size: 19px; }
   .brand-title-group small { display: none; }
   .topbar-actions { gap: 5px; }
-  .topbar-prefs-desktop { display: none; }
-  .topbar-prefs-overflow { display: block; }
   .language-button span { display: none; }
   .account-button span { display: inline; font-size: 12px; }
   .language-button,
@@ -353,6 +355,7 @@ main#main { flex: 1; }
     backdrop-filter: blur(16px);
   }
   .mobile-nav a { display: grid; place-items: center; gap: 3px; min-height: 48px; color: var(--ink-muted); font-size: 12px; }
+  .mobile-nav--duo { grid-template-columns: repeat(2, 1fr); }
   .mobile-nav a.nav-link--active { color: var(--green); font-weight: 700; }
   .page-content { padding-bottom: 132px; }
   .site-footer { padding-bottom: 24px; }

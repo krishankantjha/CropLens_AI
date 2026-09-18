@@ -46,8 +46,10 @@
   --ring: var(--green);
   --radius: 1rem;
   --shadow: 0 18px 44px rgba(36, 28, 20, 0.1);
+  --shadow-card: 0 8px 22px rgba(36, 28, 20, 0.07);
   --font-display: "Fraunces", "Palatino Linotype", Georgia, serif;
-  --font-ui: "Source Sans 3", "Segoe UI", sans-serif;
+  --font-ui: "Source Sans 3", "Noto Sans Devanagari", "Segoe UI", sans-serif;
+  --font-display-hi: "Noto Sans Devanagari", "Source Sans 3", sans-serif;
   color-scheme: light;
 }
 
@@ -80,6 +82,7 @@
   --input: #3a3226;
   --ring: var(--green);
   --shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+  --shadow-card: 0 10px 28px rgba(0, 0, 0, 0.35);
   color-scheme: dark;
 }
 
@@ -137,6 +140,14 @@ input:focus-visible,
   top: 12px;
 }
 
+html[lang="hi"] .hero-copy h1,
+html[lang="hi"] .result-intro h2,
+html[lang="hi"] .alert-panel h2,
+html[lang="hi"] .brand-title-group strong {
+  font-family: var(--font-display-hi);
+  letter-spacing: -0.02em;
+}
+
 .spin { animation: spin 900ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes ready-pulse {
@@ -156,4 +167,5 @@ input:focus-visible,
   }
   .primary-button--ready:not(:disabled) { animation: none; }
   .skeleton-line { animation: none; }
+  .market-form__hint { transition: none; }
 }
