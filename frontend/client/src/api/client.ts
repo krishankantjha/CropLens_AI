@@ -167,8 +167,16 @@ export function deleteAlert(id: number, mobileNumber: string) {
   return request<{ message?: string }>(`/api/v1/alerts/subscriptions/${id}?${query.toString()}`, { method: "DELETE" });
 }
 
+export type HealthResponse = {
+  status?: string;
+  last_sync_at?: string | null;
+  latest_mandi_date?: string | null;
+  live_rows_incorporated?: number;
+  live_data_status?: "fresh" | "partial" | "historical" | null;
+};
+
 export function getHealth() {
-  return request<{ status?: string }>("/health", { notifyUnauthorized: false, retryOnUnauthorized: false });
+  return request<HealthResponse>("/health", { notifyUnauthorized: false, retryOnUnauthorized: false });
 }
 
 export function getResources() {
