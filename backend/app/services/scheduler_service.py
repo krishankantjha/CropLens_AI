@@ -15,6 +15,15 @@ import pandas as pd
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from backend.app.core.config import (
+    LIVE_MERGE_ALLOW_HISTORICAL_NDVI_FALLBACK,
+    LIVE_MERGE_ALLOW_HISTORICAL_WEATHER_FALLBACK,
+    LIVE_MERGE_NDVI_LOOKBACK_DAYS,
+    LIVE_MERGE_WEATHER_LOOKBACK_DAYS,
+    AGMARKNET_INTER_REQUEST_DELAY_SECONDS,
+    PARQUET_SNAPSHOT_ON_LIVE_REFRESH,
+    SENTINEL_HUB_INTER_REQUEST_DELAY_SECONDS,
+)
 from backend.app.core.constants import MANDI_COORDINATES
 from backend.app.db.database import SessionLocal
 from backend.app.db.models import MarketData, WeatherData
@@ -27,7 +36,7 @@ from backend.app.services.nasa_power_sync import fetch_live_nasa_weather
 
 _FORECAST_7D_CACHE: Dict[str, Dict[str, Any]] = {}
 _PRICE_CACHE: Dict[str, Dict[str, Any]] = {}
-_CACHE_SCHEMA_VERSION = "2"
+_CACHE_SCHEMA_VERSION = "3"
 _CACHE_TTL_SECONDS = 6 * 60 * 60
 _CACHE_STATS = {
     "hits": 0,
@@ -35,6 +44,9 @@ _CACHE_STATS = {
     "last_warmed_at": None,
     "last_sync_at": None,
     "total_warmed_records": 0,
+    "last_agmarknet_status": None,
+    "last_refresh_status": None,
+    "live_rows_incorporated": 0,
 }
 
 scheduler: Optional[AsyncIOScheduler] = None
@@ -54,6 +66,29 @@ _MARKET_DISTRICTS = {
     "Lasalgaon": "Nashik",
     "Mathura": "Mathura",
 }
+
+
+def get_live_data_summary() -> Dict[str, Any]:
+    """Public telemetry for health checks and UI freshness indicators."""
+    from sqlalchemy import func
+
+    latest_mandi_date: Optional[str] = None
+    persisted_market_rows = 0
+    db = SessionLocal()
+    try:
+        latest_mandi_date = db.query(func.max(MarketData.date)).scalar()
+        persisted_market_rows = db.query(MarketData).count()
+    finally:
+        db.close()
+
+    return {
+        "last_sync_at": _CACHE_STATS["last_sync_at"],
+        "latest_mandi_date": latest_mandi_date,
+        "persisted_market_rows": persisted_market_rows,
+        "last_agmarknet_status": _CACHE_STATS.get("last_agmarknet_status"),
+        "last_refresh_status": _CACHE_STATS.get("last_refresh_status"),
+        "live_rows_incorporated": _CACHE_STATS.get("live_rows_incorporated", 0),
+    }
 
 
 def dataset_watermark(dataset: Optional[pd.DataFrame]) -> str:
@@ -310,6 +345,128 @@ def _calendar_values(date_value: pd.Timestamp, commodity: str) -> Dict[str, Any]
     }
 
 
+def _lookup_nearest_weather(
+    weather_lookup: Dict[tuple[str, str], WeatherData],
+    market: str,
+    target_date: pd.Timestamp,
+    *,
+    max_lookback_days: int = LIVE_MERGE_WEATHER_LOOKBACK_DAYS,
+) -> Optional[WeatherData]:
+    """Return the latest weather row on or before the market date within a bounded window."""
+    for offset in range(max_lookback_days + 1):
+        check_date = (target_date - pd.Timedelta(days=offset)).strftime("%Y-%m-%d")
+        weather = weather_lookup.get((market, check_date))
+        if weather is not None:
+            return weather
+    return None
+
+
+def _lookup_nearest_ndvi(
+    ndvi_lookup: Dict[tuple[str, str], float],
+    market: str,
+    target_date: pd.Timestamp,
+    *,
+    max_lookback_days: int = LIVE_MERGE_NDVI_LOOKBACK_DAYS,
+) -> Optional[float]:
+    """Return the latest NDVI observation on or before the market date within a bounded window."""
+    for offset in range(max_lookback_days + 1):
+        check_date = (target_date - pd.Timedelta(days=offset)).strftime("%Y-%m-%d")
+        ndvi = ndvi_lookup.get((market, check_date))
+        if ndvi is not None:
+            return ndvi
+    return None
+
+
+class _WeatherObservation:
+    """Minimal weather payload used during live-row enrichment."""
+
+    __slots__ = ("temp_max", "temp_min", "rainfall_mm")
+
+    def __init__(self, temp_max: float, temp_min: float, rainfall_mm: float):
+        self.temp_max = temp_max
+        self.temp_min = temp_min
+        self.rainfall_mm = rainfall_mm
+
+
+def _latest_market_ndvi_from_dataset(dataset: pd.DataFrame, market: str) -> Optional[float]:
+    """Return the most recent historical NDVI for a mandi from the serving dataset."""
+    if dataset.empty or "ndvi_mean" not in dataset.columns:
+        return None
+    market_rows = dataset[dataset["market"].astype(str).str.lower().eq(market.lower())]
+    if market_rows.empty:
+        return None
+    ordered = market_rows.sort_values("date")
+    for ndvi_value in reversed(ordered["ndvi_mean"].tolist()):
+        if ndvi_value is None or pd.isna(ndvi_value):
+            continue
+        try:
+            parsed = float(ndvi_value)
+        except (TypeError, ValueError):
+            continue
+        if parsed >= 0:
+            return parsed
+    return None
+
+
+def _resolve_weather_observation(
+    weather_lookup: Dict[tuple[str, str], WeatherData],
+    market: str,
+    target_date: pd.Timestamp,
+    reference: Dict[str, Any],
+) -> tuple[Optional[_WeatherObservation], str]:
+    """Prefer live NASA POWER rows; fall back to the latest historical context."""
+    live_weather = _lookup_nearest_weather(weather_lookup, market, target_date)
+    if live_weather is not None:
+        return (
+            _WeatherObservation(
+                float(live_weather.temp_max),
+                float(live_weather.temp_min),
+                float(live_weather.rainfall_mm),
+            ),
+            "live",
+        )
+
+    if not LIVE_MERGE_ALLOW_HISTORICAL_WEATHER_FALLBACK:
+        return None, "missing"
+
+    temp_max = reference.get("temp_max")
+    temp_min = reference.get("temp_min")
+    rainfall_mm = reference.get("rainfall_mm")
+    if any(value is None or pd.isna(value) for value in (temp_max, temp_min, rainfall_mm)):
+        return None, "missing"
+
+    return (
+        _WeatherObservation(float(temp_max), float(temp_min), float(rainfall_mm or 0.0)),
+        "historical_reference",
+    )
+
+
+def _resolve_ndvi_value(
+    ndvi_lookup: Dict[tuple[str, str], float],
+    market: str,
+    target_date: pd.Timestamp,
+    reference: Dict[str, Any],
+    dataset: pd.DataFrame,
+) -> tuple[Optional[float], str]:
+    """Prefer live Sentinel rows; fall back to historical NDVI from the serving dataset."""
+    live_ndvi = _lookup_nearest_ndvi(ndvi_lookup, market, target_date)
+    if live_ndvi is not None:
+        return float(live_ndvi), "live"
+
+    if not LIVE_MERGE_ALLOW_HISTORICAL_NDVI_FALLBACK:
+        return None, "missing"
+
+    reference_ndvi = reference.get("ndvi_mean")
+    if reference_ndvi is not None and not pd.isna(reference_ndvi):
+        return float(reference_ndvi), "historical_reference"
+
+    market_ndvi = _latest_market_ndvi_from_dataset(dataset, market)
+    if market_ndvi is not None:
+        return market_ndvi, "historical_market"
+
+    return None, "missing"
+
+
 def _build_live_rows(
     market_rows: List[MarketData],
     weather_rows: List[WeatherData],
@@ -324,6 +481,16 @@ def _build_live_rows(
         (row.market, row.date): row.ndvi_mean for row in ndvi_rows
     }
     output: List[Dict[str, Any]] = []
+    stats = {
+        "weather_live": 0,
+        "weather_historical": 0,
+        "ndvi_live": 0,
+        "ndvi_historical": 0,
+        "skipped_missing_context": 0,
+        "skipped_missing_prices": 0,
+        "skipped_missing_weather": 0,
+        "skipped_missing_ndvi": 0,
+    }
 
     for row in market_rows:
         date_value = pd.to_datetime(row.date, errors="coerce")
@@ -331,24 +498,47 @@ def _build_live_rows(
             continue
         reference = _latest_reference_row(dataset, row.commodity, row.market)
         coordinates = MANDI_COORDINATES.get(row.market, {})
-        weather = weather_lookup.get((row.market, row.date))
         calendar = _calendar_values(date_value, row.commodity)
 
-        enriched = dict(reference)
-        live_ndvi = ndvi_lookup.get((row.market, row.date))
-        if weather is None or live_ndvi is None:
-            print(
-                f"[Sync Warning] Skipping {row.commodity}/{row.market} on {date_value.date()}: "
-                "live weather and NDVI observations are both required."
-            )
-            continue
         if row.min_price is None or row.max_price is None:
+            stats["skipped_missing_prices"] += 1
             print(
                 f"[Sync Warning] Skipping {row.commodity}/{row.market} on {date_value.date()}: "
                 "live minimum and maximum prices are required."
             )
             continue
 
+        weather, weather_source = _resolve_weather_observation(
+            weather_lookup, row.market, date_value, reference
+        )
+        if weather is None:
+            stats["skipped_missing_weather"] += 1
+            print(
+                f"[Sync Warning] Skipping {row.commodity}/{row.market} on {date_value.date()}: "
+                "weather context is unavailable."
+            )
+            continue
+        if weather_source == "live":
+            stats["weather_live"] += 1
+        else:
+            stats["weather_historical"] += 1
+
+        ndvi_value, ndvi_source = _resolve_ndvi_value(
+            ndvi_lookup, row.market, date_value, reference, dataset
+        )
+        if ndvi_value is None:
+            stats["skipped_missing_ndvi"] += 1
+            print(
+                f"[Sync Warning] Skipping {row.commodity}/{row.market} on {date_value.date()}: "
+                "NDVI context is unavailable."
+            )
+            continue
+        if ndvi_source == "live":
+            stats["ndvi_live"] += 1
+        else:
+            stats["ndvi_historical"] += 1
+
+        enriched = dict(reference)
         enriched.update(
             {
                 "commodity": row.commodity,
@@ -368,12 +558,13 @@ def _build_live_rows(
                 "temp_max": float(weather.temp_max),
                 "temp_min": float(weather.temp_min),
                 "rainfall_mm": float(weather.rainfall_mm),
-                "ndvi_mean": float(live_ndvi),
+                "ndvi_mean": float(ndvi_value),
                 **calendar,
             }
         )
         required_context = ("state", "district", "variety", "grade", "latitude", "longitude")
         if any(enriched.get(column) is None for column in required_context):
+            stats["skipped_missing_context"] += 1
             print(
                 f"[Sync Warning] Skipping {row.commodity}/{row.market} on {date_value.date()}: "
                 "required serving context is incomplete."
@@ -382,8 +573,8 @@ def _build_live_rows(
         output.append(enriched)
 
     if not output:
-        return pd.DataFrame()
-    return pd.DataFrame(output)
+        return pd.DataFrame(), stats
+    return pd.DataFrame(output), stats
 
 
 def refresh_application_dataset(app: Any) -> Dict[str, Any]:
@@ -399,9 +590,15 @@ def refresh_application_dataset(app: Any) -> Dict[str, Any]:
         market_rows = db.query(MarketData).all()
         weather_rows = db.query(WeatherData).all()
         ndvi_rows = db.query(NdviData).all()
-        live_rows = _build_live_rows(market_rows, weather_rows, ndvi_rows, current_dataset)
+        live_rows, merge_stats = _build_live_rows(
+            market_rows, weather_rows, ndvi_rows, current_dataset
+        )
         if live_rows.empty:
-            return {"status": "skipped", "reason": "No persisted live market rows"}
+            return {
+                "status": "skipped",
+                "reason": "No persisted live market rows",
+                "merge_stats": merge_stats,
+            }
 
         base = current_dataset.copy()
         base["date"] = pd.to_datetime(base["date"], errors="coerce")
@@ -425,13 +622,32 @@ def refresh_application_dataset(app: Any) -> Dict[str, Any]:
                 "reason": f"Missing model features after refresh: {missing_features}",
             }
 
+        if len(refreshed) < len(base):
+            return {
+                "status": "error",
+                "reason": (
+                    "Refused to shrink serving dataset during live refresh "
+                    f"({len(refreshed)} rows vs {len(base)} base rows)."
+                ),
+                "merge_stats": merge_stats,
+            }
+
         app.state.dataset = refreshed.reset_index(drop=True)
         app.state.dataset_loaded = True
         _invalidate_prediction_caches()
+
+        snapshot_result = {"status": "skipped", "reason": "No live rows to snapshot"}
+        if PARQUET_SNAPSHOT_ON_LIVE_REFRESH and len(live_rows) > 0:
+            from backend.app.services.dataset_snapshot import persist_serving_dataset_to_parquet
+
+            snapshot_result = persist_serving_dataset_to_parquet(app)
+
         return {
             "status": "success",
             "live_rows_incorporated": len(live_rows),
             "dataset_rows": len(app.state.dataset),
+            "merge_stats": merge_stats,
+            "parquet_snapshot": snapshot_result,
         }
     except Exception as exc:
         print(f"[Scheduler Error] Dataset refresh failed: {exc}")
@@ -495,6 +711,19 @@ async def scheduled_cache_warming() -> None:
     if _app_instance is not None:
         result = warm_prediction_cache(_app_instance)
         print(f"[Scheduler] Cache warming result: {result}")
+
+
+async def scheduled_parquet_snapshot() -> None:
+    """Monthly job that persists the serving dataset back to features_master.parquet."""
+    if _app_instance is None:
+        return
+    try:
+        from backend.app.services.dataset_snapshot import persist_serving_dataset_to_parquet
+
+        result = persist_serving_dataset_to_parquet(_app_instance)
+        print(f"[Scheduler] Parquet snapshot result: {result}")
+    except Exception as exc:
+        print(f"[Scheduler Error] Parquet snapshot failed: {exc}")
 
 
 async def scheduled_morning_alert_dispatch() -> None:
@@ -563,6 +792,15 @@ def init_scheduler(app: Any) -> AsyncIOScheduler:
         coalesce=True,
         max_instances=1,
     )
+    scheduler.add_job(
+        scheduled_parquet_snapshot,
+        trigger=CronTrigger(day=1, hour=2, minute=0),
+        id="monthly_parquet_snapshot",
+        name="Monthly Serving Dataset Parquet Snapshot",
+        replace_existing=True,
+        coalesce=True,
+        max_instances=1,
+    )
     scheduler.start()
     return scheduler
 
@@ -605,22 +843,46 @@ def get_scheduler_status() -> Dict[str, Any]:
     }
 
 
+def _summarize_upstream_results(label: str, results: List[Dict[str, Any]]) -> None:
+    """Print a compact per-mandi status line for sync debugging."""
+    parts = []
+    for result in results:
+        market = result.get("market", "?")
+        status = result.get("status", "unknown")
+        if label == "weather":
+            detail = result.get("days_synced", 0)
+        elif label == "ndvi":
+            detail = result.get("date") or result.get("message", "")
+        else:
+            detail = ""
+        parts.append(f"{market}={status}({detail})")
+    print(f"[Sync Debug] {label} per mandi: {', '.join(parts)}")
+
+
 def trigger_manual_sync(app: Any) -> Dict[str, Any]:
     """Run both upstream syncs, refresh serving state, and warm caches."""
+    print("[Sync Debug] Pipeline step 1/4: Agmarknet price fetch (slowest step)...")
     db = SessionLocal()
     try:
         from backend.app.services.sentinel_hub_sync import fetch_live_ndvi
 
         market_result = sync_live_agmarknet_prices(db=db)
         print(f"[Sync Debug] Agmarknet result: {market_result}")
-        weather_results = [
-            fetch_live_nasa_weather(market=market, days=7, db=db)
-            for market in MANDI_COORDINATES
-        ]
-        ndvi_results = [
-            fetch_live_ndvi(market=market, db=db)
-            for market in MANDI_COORDINATES
-        ]
+        print("[Sync Debug] Pipeline step 2/4: NASA weather fetch...")
+        weather_results: List[Dict[str, Any]] = []
+        for index, market in enumerate(MANDI_COORDINATES):
+            weather_results.append(fetch_live_nasa_weather(market=market, days=7, db=db))
+            if index > 0 and AGMARKNET_INTER_REQUEST_DELAY_SECONDS > 0:
+                time.sleep(AGMARKNET_INTER_REQUEST_DELAY_SECONDS)
+        _summarize_upstream_results("weather", weather_results)
+        print("[Sync Debug] Pipeline step 3/4: Sentinel NDVI fetch...")
+        ndvi_results: List[Dict[str, Any]] = []
+        for index, market in enumerate(MANDI_COORDINATES):
+            ndvi_results.append(fetch_live_ndvi(market=market, db=db))
+            if index > 0 and SENTINEL_HUB_INTER_REQUEST_DELAY_SECONDS > 0:
+                time.sleep(SENTINEL_HUB_INTER_REQUEST_DELAY_SECONDS)
+        _summarize_upstream_results("ndvi", ndvi_results)
+        print("[Sync Debug] Pipeline step 4/4: Merging live rows into serving dataset...")
         refresh_result = refresh_application_dataset(app)
         print(f"[Sync Debug] Refresh result: {refresh_result}")
         cache_result = warm_prediction_cache(app)
@@ -628,6 +890,11 @@ def trigger_manual_sync(app: Any) -> Dict[str, Any]:
         _CACHE_STATS["last_sync_at"] = datetime.datetime.now(
             datetime.timezone.utc
         ).isoformat()
+        _CACHE_STATS["last_agmarknet_status"] = market_result.get("status")
+        _CACHE_STATS["last_refresh_status"] = refresh_result.get("status")
+        _CACHE_STATS["live_rows_incorporated"] = refresh_result.get(
+            "live_rows_incorporated", 0
+        )
 
         successful_weather = sum(
             result.get("status") == "success" for result in weather_results
@@ -655,6 +922,11 @@ def trigger_manual_sync(app: Any) -> Dict[str, Any]:
                 "markets_attempted": len(MANDI_COORDINATES),
                 "markets_succeeded": successful_weather,
                 "results": weather_results,
+            },
+            "sentinel_ndvi_sync": {
+                "markets_attempted": len(MANDI_COORDINATES),
+                "markets_succeeded": successful_ndvi,
+                "results": ndvi_results,
             },
             "dataset_refresh": refresh_result,
             "cache_warming": cache_result,

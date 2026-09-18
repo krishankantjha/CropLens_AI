@@ -124,6 +124,13 @@ def predict_7day_forecast_service(
             detail='Historical current price is unavailable for the requested forecast.'
         )
     current_price = float(current_price_value)
+    last_observed_dt = pd.to_datetime(base_row["date"], errors="coerce")
+    if pd.isna(last_observed_dt):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Historical reference date is unavailable for the requested forecast.",
+        )
+    last_observed_date = last_observed_dt.strftime("%Y-%m-%d")
 
     # Seed 35-day historical price sequence for autoregressive lag roll-forward
     if 'modal_price' not in matched.columns:
@@ -233,6 +240,7 @@ def predict_7day_forecast_service(
         commodity=req.commodity,
         market=req.market,
         forecast_horizon_days=horizon,
+        last_observed_date=last_observed_date,
         current_price=round(current_price, 2),
         forecasts=daily_forecasts,
         peak_day=peak_day,

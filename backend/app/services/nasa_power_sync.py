@@ -8,12 +8,17 @@ It never substitutes synthetic weather for a failed upstream request.
 
 import datetime as dt
 import logging
+import time
 from typing import Any, Dict, Optional
 
 import requests
 from sqlalchemy.orm import Session
 
-from backend.app.core.config import NASA_POWER_TIMEOUT_SECONDS
+from backend.app.core.config import (
+    NASA_POWER_CONNECT_TIMEOUT_SECONDS,
+    NASA_POWER_RETRY_ATTEMPTS,
+    NASA_POWER_TIMEOUT_SECONDS,
+)
 from backend.app.core.constants import MANDI_COORDINATES
 from backend.app.db.database import SessionLocal
 from backend.app.db.models import WeatherData
@@ -22,6 +27,25 @@ logger = logging.getLogger("croplens.nasa_power")
 
 NASA_POWER_BASE_URL = "https://power.larc.nasa.gov/api/temporal/daily/point"
 NASA_MISSING_VALUE = -999.0
+_HTTP_HEADERS = {
+    "User-Agent": "CropLensAI/1.0 (CropLens agricultural market intelligence)",
+    "Accept": "application/json",
+}
+_HTTP_SESSION: Optional[requests.Session] = None
+
+
+def _get_http_session() -> requests.Session:
+    global _HTTP_SESSION
+    if _HTTP_SESSION is None:
+        session = requests.Session()
+        session.headers.update(_HTTP_HEADERS)
+        _HTTP_SESSION = session
+    return _HTTP_SESSION
+
+
+def _perform_get(url: str, params: Dict[str, Any], timeout: tuple[int, int]) -> requests.Response:
+    """HTTP GET via a reused session (patchable in tests)."""
+    return _get_http_session().get(url, params=params, timeout=timeout)
 
 
 def _valid_number(value: Any) -> Optional[float]:
@@ -61,14 +85,34 @@ def fetch_live_nasa_weather(
         "end": end_date.strftime("%Y%m%d"),
         "format": "JSON",
     }
+    timeout = (NASA_POWER_CONNECT_TIMEOUT_SECONDS, NASA_POWER_TIMEOUT_SECONDS)
 
     try:
-        response = requests.get(
-            NASA_POWER_BASE_URL,
-            params=params,
-            timeout=NASA_POWER_TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
+        total_attempts = NASA_POWER_RETRY_ATTEMPTS + 1
+        response = None
+        for attempt in range(total_attempts):
+            try:
+                response = _perform_get(NASA_POWER_BASE_URL, params, timeout)
+                response.raise_for_status()
+                break
+            except requests.ReadTimeout:
+                raise
+            except (requests.ConnectionError, requests.ConnectTimeout) as exc:
+                if attempt >= total_attempts - 1:
+                    raise exc
+                delay_seconds = min(2 ** attempt, 5)
+                logger.warning(
+                    "NASA POWER connection failed for %s on attempt %s/%s; retrying in %ss",
+                    market,
+                    attempt + 1,
+                    total_attempts,
+                    delay_seconds,
+                )
+                time.sleep(delay_seconds)
+
+        if response is None:
+            raise RuntimeError("NASA POWER request did not return a response.")
+
         payload = response.json()
         parameters = payload.get("properties", {}).get("parameter", {})
         temp_max = parameters.get("T2M_MAX", {})
