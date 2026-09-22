@@ -108,7 +108,6 @@ CropLens AI is completely self-contained with no paid cloud dependencies. You ca
 |---|---|---|
 | `PORT` | `8000` | Port for the Uvicorn FastAPI server |
 | `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Allowed CORS origins for browser security |
-| `TELEGRAM_BOT_TOKEN` | *(Optional)* | Telegram Bot API Token for live automated push alerts |
 | `JWT_SECRET_KEY` | *(Production Secret)* | Secret key for signing JWT user access tokens |
 | `DATABASE_URL` | `sqlite:///./backend/app/croplens.db` locally; explicit container path in Compose | SQLAlchemy database connection string |
 | `MODEL_REGISTRY_PATH` | Repository model registry by default | Optional path to a separately provisioned `registry.json` model bundle |

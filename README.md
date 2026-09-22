@@ -50,7 +50,7 @@ CropLens AI bridges this gap through an end-to-end intelligence pipeline:
          ┌──────────────────────────┼──────────────────────────┐
          ▼                          ▼                          ▼
 ┌──────────────────┐       ┌──────────────────┐       ┌──────────────────┐
-│ React 19 + Vite  │       │ LightGBM Q-Reg   │       │ WhatsApp / Telegram│
+│ React 19 + Vite  │       │ LightGBM Q-Reg   │       │ WhatsApp Alerts  │
 │ Frontend SPA     │       │ ($P_{10}/P_{50}/P_{90}$) │ Automated Alerts │
 └──────────────────┘       └──────────────────┘       └──────────────────┘
 ```
