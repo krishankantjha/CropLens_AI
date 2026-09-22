@@ -148,6 +148,21 @@ class DataResolver:
             ema21 = float(pd.Series(history_prices[-30:]).ewm(span=21, adjust=False).mean().iloc[-1])
             row['price_regime_indicator'] = 1.0 if ema7 > ema21 else 0.0
 
+        # Static / slow-moving features are carried from the latest observation during
+        # recursive roll-forward. When hub benchmark data is missing (NaN), use neutral
+        # defaults so non-hub mandis like Agra still forecast instead of crashing.
+        _neutral_spatial_defaults = {
+            'hub_price_diff': 0.0,
+            'spatial_price_gradient': 0.0,
+        }
+        for col in feature_cols:
+            if col in row and pd.notna(row[col]):
+                continue
+            if col in _neutral_spatial_defaults:
+                row[col] = _neutral_spatial_defaults[col]
+            elif col in base_row and pd.notna(base_row[col]):
+                row[col] = float(base_row[col])
+
         # Construct final row without fabricating missing contract features.
         missing_features = [col for col in feature_cols if col not in row or pd.isna(row[col])]
         if missing_features:

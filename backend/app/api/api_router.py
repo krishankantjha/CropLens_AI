@@ -14,6 +14,7 @@ from backend.app.schemas import (
 from backend.app.services.api_service import (
     predict_price_service,
     predict_7day_forecast_service,
+    enrich_forecast_with_net_profit,
     detect_supply_shocks_service,
     calculate_arbitrage_service,
     get_analytics_trends_service
@@ -61,6 +62,55 @@ def _require_forecast_runtime(request: Request) -> None:
     _require_dataset_runtime(request)
 
 
+def _resolve_forecast_response(
+    request: Request,
+    req: MultiDayForecastRequest,
+    *,
+    use_cache: bool = True,
+) -> MultiDayForecastResponse:
+    """Load or compute a forecast and attach perishability-aware net-profit advisory."""
+    _require_forecast_runtime(request)
+    model_version = getattr(request.app.state, "model_version", "unknown")
+    data_watermark = dataset_watermark(request.app.state.dataset)
+
+    cached = None
+    if use_cache:
+        cached = get_cached_forecast_7d(
+            req.commodity,
+            req.market,
+            req.start_date,
+            horizon_days=req.horizon_days,
+            model_version=model_version,
+            data_watermark=data_watermark,
+        )
+
+    if cached and cached.get("forecast_horizon_days") == req.horizon_days:
+        base = MultiDayForecastResponse(**{k: v for k, v in cached.items() if k != "net_profit_advisory"})
+    else:
+        base = predict_7day_forecast_service(
+            req=req,
+            models=request.app.state.models,
+            metadata=request.app.state.metadata,
+            dataset=request.app.state.dataset,
+        )
+        set_cached_forecast_7d(
+            req.commodity,
+            req.market,
+            base.model_dump(),
+            req.start_date,
+            horizon_days=req.horizon_days,
+            model_version=model_version,
+            data_watermark=data_watermark,
+        )
+
+    return enrich_forecast_with_net_profit(
+        base,
+        sale_quintals=req.sale_quintals,
+        storage_cost_per_day_rs=req.storage_cost_per_day_rs,
+        transport_cost_rs=req.transport_cost_rs,
+    )
+
+
 def _require_expensive_rate_limit(request: Request) -> None:
     """Limit expensive prediction and report generation per client address."""
     client_host = request.client.host if request.client else "unknown"
@@ -104,36 +154,7 @@ def predict_price(req: PricePredictionRequest, request: Request) -> PricePredict
     tags=["Price Forecasting"]
 )
 def predict_forecast_7d(req: MultiDayForecastRequest, request: Request) -> MultiDayForecastResponse:
-    _require_forecast_runtime(request)
-    model_version = getattr(request.app.state, "model_version", "unknown")
-    data_watermark = dataset_watermark(request.app.state.dataset)
-    cached = get_cached_forecast_7d(
-        req.commodity,
-        req.market,
-        req.start_date,
-        horizon_days=req.horizon_days,
-        model_version=model_version,
-        data_watermark=data_watermark,
-    )
-    if cached and cached.get("forecast_horizon_days") == req.horizon_days:
-        return MultiDayForecastResponse(**cached)
-
-    res = predict_7day_forecast_service(
-        req=req,
-        models=request.app.state.models,
-        metadata=request.app.state.metadata,
-        dataset=request.app.state.dataset
-    )
-    set_cached_forecast_7d(
-        req.commodity,
-        req.market,
-        res.model_dump(),
-        req.start_date,
-        horizon_days=req.horizon_days,
-        model_version=model_version,
-        data_watermark=data_watermark,
-    )
-    return res
+    return _resolve_forecast_response(request, req)
 
 
 @api_router.post(
@@ -145,37 +166,7 @@ def predict_forecast_7d(req: MultiDayForecastRequest, request: Request) -> Multi
     tags=["Price Forecasting"]
 )
 def predict_forecast(req: MultiDayForecastRequest, request: Request) -> MultiDayForecastResponse:
-    _require_forecast_runtime(request)
-    # Handle single-day vs multi-day via horizon_days parameter
-    model_version = getattr(request.app.state, "model_version", "unknown")
-    data_watermark = dataset_watermark(request.app.state.dataset)
-    cached = get_cached_forecast_7d(
-        req.commodity,
-        req.market,
-        req.start_date,
-        horizon_days=req.horizon_days,
-        model_version=model_version,
-        data_watermark=data_watermark,
-    )
-    if cached and cached.get("forecast_horizon_days") == req.horizon_days:
-        return MultiDayForecastResponse(**cached)
-
-    res = predict_7day_forecast_service(
-        req=req,
-        models=request.app.state.models,
-        metadata=request.app.state.metadata,
-        dataset=request.app.state.dataset
-    )
-    set_cached_forecast_7d(
-        req.commodity,
-        req.market,
-        res.model_dump(),
-        req.start_date,
-        horizon_days=req.horizon_days,
-        model_version=model_version,
-        data_watermark=data_watermark,
-    )
-    return res
+    return _resolve_forecast_response(request, req)
 
 
 @api_router.get(
@@ -191,39 +182,21 @@ def get_forecast(
     commodity: str = Query("Potato", description="Commodity name"),
     market: str = Query("Agra", description="APMC mandi name"),
     date: Optional[str] = Query(None, description="Starting reference date (YYYY-MM-DD)"),
-    horizon: int = Query(7, ge=1, le=14, description="Forecast horizon in days")
+    horizon: int = Query(7, ge=1, le=14, description="Forecast horizon in days"),
+    sale_quintals: float = Query(10.0, ge=0.1, le=50000.0, description="Sale quantity in quintals"),
+    storage_cost_per_day: float = Query(0.0, ge=0.0, le=100000.0, description="Daily storage cost in rupees"),
+    transport_cost: float = Query(0.0, ge=0.0, le=1000000.0, description="One-time transport cost in rupees"),
 ) -> MultiDayForecastResponse:
-    _require_forecast_runtime(request)
-    model_version = getattr(request.app.state, "model_version", "unknown")
-    data_watermark = dataset_watermark(request.app.state.dataset)
-    cached = get_cached_forecast_7d(
-        commodity,
-        market,
-        date,
+    req = MultiDayForecastRequest(
+        commodity=commodity,
+        market=market,
+        start_date=date,
         horizon_days=horizon,
-        model_version=model_version,
-        data_watermark=data_watermark,
+        sale_quintals=sale_quintals,
+        storage_cost_per_day_rs=storage_cost_per_day,
+        transport_cost_rs=transport_cost,
     )
-    if cached and cached.get("forecast_horizon_days") == horizon:
-        return MultiDayForecastResponse(**cached)
-
-    req = MultiDayForecastRequest(commodity=commodity, market=market, start_date=date, horizon_days=horizon)
-    res = predict_7day_forecast_service(
-        req=req,
-        models=request.app.state.models,
-        metadata=request.app.state.metadata,
-        dataset=request.app.state.dataset
-    )
-    set_cached_forecast_7d(
-        commodity,
-        market,
-        res.model_dump(),
-        date,
-        horizon_days=horizon,
-        model_version=model_version,
-        data_watermark=data_watermark,
-    )
-    return res
+    return _resolve_forecast_response(request, req)
 
 
 @api_router.get(

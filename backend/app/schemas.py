@@ -95,11 +95,43 @@ class DailyForecastPoint(BaseModel):
     type: str = Field(default="normal", description="Trend type: normal, drop, or peak", json_schema_extra={"example": "normal"})
 
 
+class NetProfitSellAdvisory(BaseModel):
+    method_version: str = Field(..., json_schema_extra={"example": "Perishability-Aware Net Profit Optimizer v1.0"})
+    commodity: str = Field(..., json_schema_extra={"example": "Tomato"})
+    sale_quintals: float = Field(..., ge=0.1, le=50000.0, json_schema_extra={"example": 10.0})
+    storage_cost_per_day_rs: float = Field(..., ge=0.0, json_schema_extra={"example": 15.0})
+    transport_cost_rs: float = Field(..., ge=0.0, json_schema_extra={"example": 200.0})
+    spoilage_half_life_days: float = Field(..., description="Crop-specific ambient spoilage half-life in days")
+    optimal_day_index: int = Field(..., description="0 = sell today; 1..N = forecast day index")
+    optimal_date: str = Field(..., json_schema_extra={"example": "2026-06-10"})
+    optimal_day_name: str = Field(..., json_schema_extra={"example": "Today"})
+    optimal_day_name_hi: str = Field(..., json_schema_extra={"example": "आज"})
+    optimal_price_per_qtl: float = Field(..., json_schema_extra={"example": 1650.0})
+    marketable_fraction: float = Field(..., description="Fraction of crop still sellable on optimal day")
+    sellable_quintals: float = Field(..., json_schema_extra={"example": 8.5})
+    spoilage_loss_quintals: float = Field(..., json_schema_extra={"example": 1.5})
+    spoilage_loss_percent: float = Field(..., json_schema_extra={"example": 15.0})
+    gross_revenue_rs: float = Field(..., json_schema_extra={"example": 14025.0})
+    storage_cost_total_rs: float = Field(..., json_schema_extra={"example": 45.0})
+    net_profit_total_rs: float = Field(..., json_schema_extra={"example": 13780.0})
+    net_profit_per_quintal_rs: float = Field(..., json_schema_extra={"example": 1378.0})
+    peak_price_day_index: int = Field(..., json_schema_extra={"example": 5})
+    peak_price_per_qtl: float = Field(..., json_schema_extra={"example": 1800.0})
+    peak_day_net_profit_rs: float = Field(..., json_schema_extra={"example": 12000.0})
+    net_advantage_vs_peak_rs: float = Field(..., description="Net profit gain vs selling on peak-price day")
+    overrides_peak_price_advice: bool = Field(..., description="True when net-optimal day differs from peak price day")
+    decision: str = Field(..., json_schema_extra={"example": "SELL TODAY — highest net profit after spoilage and costs"})
+    decision_hi: str = Field(..., json_schema_extra={"example": "आज बेचें — खराबी और खर्च के बाद सबसे अधिक शुद्ध लाभ"})
+
+
 class MultiDayForecastRequest(BaseModel):
     commodity: str = Field(..., description="Target commodity name", json_schema_extra={"example": "Potato"})
     market: str = Field(..., description="Target APMC mandi name", json_schema_extra={"example": "Agra"})
     start_date: Optional[str] = Field(None, description="Starting reference date (YYYY-MM-DD)", json_schema_extra={"example": "2025-06-15"})
     horizon_days: int = Field(default=7, ge=1, le=14, description="Forecast horizon in days (default 7)", json_schema_extra={"example": 7})
+    sale_quintals: float = Field(default=10.0, ge=0.1, le=50000.0, description="Farmer sale quantity in quintals for net-profit optimization")
+    storage_cost_per_day_rs: float = Field(default=0.0, ge=0.0, le=100000.0, description="Daily open-storage cost in rupees")
+    transport_cost_rs: float = Field(default=0.0, ge=0.0, le=1000000.0, description="One-time transport cost to mandi in rupees")
 
     @field_validator("start_date")
     @classmethod
@@ -145,6 +177,10 @@ class MultiDayForecastResponse(BaseModel):
     expected_gain: float = Field(..., description="Expected profit gain over current price (Rs/qtl)", json_schema_extra={"example": 130.0})
     confidence: str = Field("95.2%", description="Model confidence score", json_schema_extra={"example": "95.2%"})
     model_version: str = Field("7-Day Recursive Roll-Forward v1.0", json_schema_extra={"example": "7-Day Recursive Roll-Forward v1.0"})
+    net_profit_advisory: Optional[NetProfitSellAdvisory] = Field(
+        None,
+        description="Perishability-aware net-profit sell recommendation (spoilage + storage + transport)",
+    )
 
 
 # --- Supply Shock Anomaly Schemas ---

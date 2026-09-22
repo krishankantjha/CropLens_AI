@@ -196,35 +196,10 @@ async def lifespan(app: FastAPI):
             except Exception as cache_err:
                 print(f"[WARNING] Forecast cache warming skipped or failed: {cache_err}")
 
-        _debug_log_path = Path(get_base_dir()) / "debug-07c031.log"
-
-        def _startup_debug_log(hypothesis_id: str, location: str, message: str, data: dict) -> None:
-            # #region agent log
-            try:
-                entry = {
-                    "sessionId": "07c031",
-                    "hypothesisId": hypothesis_id,
-                    "location": location,
-                    "message": message,
-                    "data": data,
-                    "timestamp": int(time.time() * 1000),
-                }
-                with _debug_log_path.open("a", encoding="utf-8") as handle:
-                    handle.write(json.dumps(entry) + "\n")
-            except OSError:
-                pass
-            # #endregion
-
         def _bg_startup_sync() -> None:
             print(
                 "[Startup] Live data sync started in background "
                 "(Agmarknet → NASA weather → NDVI; usually ~10–30s)..."
-            )
-            _startup_debug_log(
-                "H-SYNC",
-                "main.py:_bg_startup_sync",
-                "startup sync thread started",
-                {},
             )
             sync_started = time.time()
             try:
@@ -234,20 +209,8 @@ async def lifespan(app: FastAPI):
                     f"[Startup] Live data sync result: {sync_res.get('status', 'unknown')} "
                     f"(completed in {elapsed_s}s)"
                 )
-                _startup_debug_log(
-                    "H-SYNC",
-                    "main.py:_bg_startup_sync",
-                    "startup sync thread finished",
-                    {"status": sync_res.get("status"), "elapsed_s": elapsed_s},
-                )
             except Exception as sync_err:
                 print(f"[WARNING] Startup live sync skipped or failed: {str(sync_err)}")
-                _startup_debug_log(
-                    "H-SYNC",
-                    "main.py:_bg_startup_sync",
-                    "startup sync thread failed",
-                    {"error": str(sync_err)},
-                )
 
         threading.Thread(target=_bg_cache_warming, daemon=True, name="startup-cache-worker").start()
         threading.Thread(target=_bg_startup_sync, daemon=True, name="startup-sync-worker").start()

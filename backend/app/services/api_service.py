@@ -11,10 +11,12 @@ from fastapi import HTTPException, status
 from backend.app.schemas import (
     PricePredictionRequest, PricePredictionResponse,
     MultiDayForecastRequest, MultiDayForecastResponse, DailyForecastPoint,
+    NetProfitSellAdvisory,
     SupplyShockResponse, SupplyShockItem,
     ArbitrageResponse, ArbitrageOpportunityItem,
     AnalyticsTrendResponse, TrendPoint
 )
+from backend.app.services.perishability_optimizer import optimize_net_profit_sell_day
 from backend.app.services.data_resolver import DataResolver
 
 
@@ -155,12 +157,18 @@ def predict_7day_forecast_service(
         target_dt = start_dt + pd.Timedelta(days=k)
         
         # Unified dynamic feature calculation via DataResolver
-        X_df = DataResolver.compute_dynamic_features(
-            base_row=base_row.to_dict(),
-            history_prices=history_prices,
-            target_dt=target_dt,
-            feature_cols=feature_cols
-        )
+        try:
+            X_df = DataResolver.compute_dynamic_features(
+                base_row=base_row.to_dict(),
+                history_prices=history_prices,
+                target_dt=target_dt,
+                feature_cols=feature_cols
+            )
+        except ValueError as feature_error:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(feature_error),
+            ) from feature_error
 
         # Score multi-quantile LightGBM models
         p10_raw = float(models['p10'].predict(X_df)[0])
@@ -470,4 +478,26 @@ def get_analytics_trends_service(
         price_volatility_30d=round(volatility, 2),
         price_trend_direction=direction,
         historical_points=trend_points
+    )
+
+
+def enrich_forecast_with_net_profit(
+    forecast: MultiDayForecastResponse,
+    *,
+    sale_quintals: float = 10.0,
+    storage_cost_per_day_rs: float = 0.0,
+    transport_cost_rs: float = 0.0,
+) -> MultiDayForecastResponse:
+    """Attach perishability-aware net-profit sell advisory to a forecast response."""
+    advisory_payload = optimize_net_profit_sell_day(
+        commodity=forecast.commodity,
+        current_price=forecast.current_price,
+        last_observed_date=forecast.last_observed_date,
+        forecasts=[point.model_dump() for point in forecast.forecasts],
+        sale_quintals=sale_quintals,
+        storage_cost_per_day_rs=storage_cost_per_day_rs,
+        transport_cost_rs=transport_cost_rs,
+    )
+    return forecast.model_copy(
+        update={"net_profit_advisory": NetProfitSellAdvisory(**advisory_payload)}
     )

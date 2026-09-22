@@ -51,15 +51,14 @@ class User(Base):
 
 class AlertSubscription(Base):
     """
-    Alert Subscription model storing daily advisory preferences for WhatsApp and Telegram.
+    Alert Subscription model storing daily WhatsApp advisory preferences.
     """
     __tablename__ = "alert_subscriptions"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     mobile_number = Column(String, nullable=False, index=True)
-    telegram_chat_id = Column(String, nullable=True)
-    channel = Column(String, default="whatsapp", nullable=False)  # "whatsapp", "telegram", "both"
+    channel = Column(String, default="whatsapp", nullable=False)  # "whatsapp"
     crop = Column(String, default="Potato", nullable=False)
     mandi = Column(String, default="Agra", nullable=False)
     delivery_time = Column(String, default="07:00 AM", nullable=False)
@@ -76,7 +75,6 @@ class AlertSubscription(Base):
             "id": self.id,
             "user_id": self.user_id,
             "mobile_number": self.mobile_number,
-            "telegram_chat_id": self.telegram_chat_id,
             "channel": self.channel,
             "crop": self.crop,
             "mandi": self.mandi,
@@ -97,7 +95,7 @@ class AlertLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     subscription_id = Column(Integer, ForeignKey("alert_subscriptions.id", ondelete="SET NULL"), nullable=True, index=True)
     recipient = Column(String, nullable=False)
-    channel = Column(String, nullable=False)  # "whatsapp", "telegram"
+    channel = Column(String, nullable=False)  # "whatsapp"
     crop = Column(String, nullable=False)
     mandi = Column(String, nullable=False)
     message_text = Column(String, nullable=False)

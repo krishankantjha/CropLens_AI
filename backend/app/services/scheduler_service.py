@@ -727,7 +727,7 @@ async def scheduled_parquet_snapshot() -> None:
 
 
 async def scheduled_morning_alert_dispatch() -> None:
-    """Daily job for dispatching scheduled advisory notifications."""
+    """Minute-level job for dispatching wa.me advisories at each subscription time."""
     if _app_instance is None:
         return
     try:
@@ -785,9 +785,9 @@ def init_scheduler(app: Any) -> AsyncIOScheduler:
     )
     scheduler.add_job(
         scheduled_morning_alert_dispatch,
-        trigger=CronTrigger(hour=7, minute=0),
+        trigger=CronTrigger(minute="*"),
         id="daily_morning_alerts",
-        name="Daily Morning Market Advisory Dispatches",
+        name="Scheduled WhatsApp Advisory Dispatches (IST)",
         replace_existing=True,
         coalesce=True,
         max_instances=1,
