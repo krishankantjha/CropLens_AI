@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { Bell, Check, Trash2 } from "lucide-react";
-import { createAlert, deleteAlert, getCurrentUser, listAlerts } from "@/api/client";
+import { Bell, Check, MessageCircle, Trash2 } from "lucide-react";
+import { createAlert, deleteAlert, getCurrentUser, listAlerts, testWhatsappAlert } from "@/api/client";
 import { StatePanel } from "@/components/feedback/StatePanel";
 import { useLanguage, type Language } from "@/contexts/LanguageContext";
 import { useSession } from "@/contexts/SessionContext";
@@ -20,8 +20,6 @@ export function AlertsPanel({ commodity, market, showGuestPrompt = false }: Aler
   const { isAuthenticated } = useSession();
   const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
   const [mobile, setMobile] = useState("");
-  const [channel, setChannel] = useState("whatsapp");
-  const [telegramChatId, setTelegramChatId] = useState("");
   const [time, setTime] = useState("");
   const [language, setLocalLanguage] = useState<Language>(appLanguage);
   const [busy, setBusy] = useState(false);
@@ -56,18 +54,50 @@ export function AlertsPanel({ commodity, market, showGuestPrompt = false }: Aler
     if (!commodity || !market) { setError(t("chooseCropMandiAlert")); return; }
     if (!mobile) { setError(t("addMobileAlert")); return; }
     if (!time) { setError(t("chooseDeliveryTime")); return; }
-    if ((channel === "telegram" || channel === "both") && !telegramChatId.trim()) { setError(t("enterTelegramChatId")); return; }
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const result = await createAlert({ mobile_number: mobile, channel, crop: commodity, mandi: market, delivery_time: time, language, telegram_chat_id: telegramChatId.trim() || undefined });
+      const result = await createAlert({
+        mobile_number: mobile,
+        channel: "whatsapp",
+        crop: commodity,
+        mandi: market,
+        delivery_time: time,
+        language,
+      });
       const savedMessage = result.message ?? t("toastAlertSaved");
       appToast.success(savedMessage);
       setMessage(savedMessage);
       await load();
     } catch (requestError) {
       setError((requestError as RequestError).message ?? t("alertSaveFailed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendTestAlert = async () => {
+    if (!commodity || !market) { setError(t("chooseCropMandiAlert")); return; }
+    if (!mobile) { setError(t("addMobileAlert")); return; }
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const result = await testWhatsappAlert({
+        mobile_number: mobile,
+        crop: commodity,
+        mandi: market,
+        lang: language,
+      });
+      const deeplink = result.deeplink_url;
+      if (!deeplink) throw new Error(t("testAlertFailed"));
+      window.open(deeplink, "_blank", "noopener,noreferrer");
+      const successMessage = result.message ?? t("testAlertOpened");
+      appToast.success(successMessage);
+      setMessage(successMessage);
+    } catch (requestError) {
+      setError((requestError as RequestError).message ?? t("testAlertFailed"));
     } finally {
       setBusy(false);
     }
@@ -124,18 +154,8 @@ export function AlertsPanel({ commodity, market, showGuestPrompt = false }: Aler
       <div className="alert-form">
         <label className="field">
           <span>{t("channel")}</span>
-          <select value={channel} onChange={(event) => setChannel(event.target.value)}>
-            <option value="whatsapp">{t("whatsappChannel")}</option>
-            <option value="telegram">{t("telegramChannel")}</option>
-            <option value="both">{t("bothChannels")}</option>
-          </select>
+          <input value={t("whatsappChannel")} readOnly aria-readonly="true" />
         </label>
-        {channel === "telegram" || channel === "both" ? (
-          <label className="field">
-            <span>{t("telegramChatId")}</span>
-            <input value={telegramChatId} onChange={(event) => setTelegramChatId(event.target.value)} inputMode="numeric" placeholder="e.g. 123456789" required />
-          </label>
-        ) : null}
         <label className="field">
           <span>{t("deliveryTime")}</span>
           <input value={time} onChange={(event) => setTime(event.target.value)} type="time" required />
@@ -147,7 +167,10 @@ export function AlertsPanel({ commodity, market, showGuestPrompt = false }: Aler
             <option value="hi">हिन्दी</option>
           </select>
         </label>
-        <button className="primary-button" type="button" disabled={busy} onClick={() => void save()}><Check size={17} /> {t("saveAlert")}</button>
+        <div className="alert-form__actions">
+          <button className="primary-button" type="button" disabled={busy} onClick={() => void save()}><Check size={17} /> {t("saveAlert")}</button>
+          <button className="secondary-button" type="button" disabled={busy} onClick={() => void sendTestAlert()}><MessageCircle size={17} /> {t("sendTestAlert")}</button>
+        </div>
       </div>
       {error ? <StatePanel kind="error" title={t("alertActionFailed")} message={error} /> : null}
       {message ? <div className="success-panel" role="status"><Check size={16} /> {message}</div> : null}

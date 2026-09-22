@@ -16,7 +16,9 @@ type CopyKey = {
 
 export function farmerDecisionText(forecast: ForecastResponse | null | undefined, language: Language): string {
   if (!forecast) return "";
-  const localized = language === "hi" ? forecast.decision_hi : forecast.decision;
+  const net = forecast.net_profit_advisory;
+  const netLocalized = net ? (language === "hi" ? net.decision_hi : net.decision) : undefined;
+  const localized = netLocalized?.trim() ? netLocalized : (language === "hi" ? forecast.decision_hi : forecast.decision);
   if (localized?.trim()) return simplifyDecisionText(localized, language);
   return "";
 }

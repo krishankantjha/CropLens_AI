@@ -2,7 +2,6 @@
 export type AlertSubscription = {
   id: number;
   mobile_number?: string;
-  telegram_chat_id?: string | null;
   channel?: string;
   crop?: string;
   mandi?: string;

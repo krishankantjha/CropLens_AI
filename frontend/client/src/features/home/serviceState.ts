@@ -2,10 +2,17 @@ import type { ApiError } from "@/types/api";
 
 export type ServiceName = "forecast" | "risk" | "procurement";
 
+export type SellParams = {
+  sale_quintals: number;
+  storage_cost_per_day: number;
+  transport_cost: number;
+};
+
 export type Selection = {
   commodity: string;
   market: string;
   horizon: number;
+  sellParams?: SellParams;
 };
 
 export function asApiError(error: unknown): ApiError {

@@ -19,7 +19,23 @@ import { getRecentCommodityIds, getRecentMarketIds, rememberMarketSelection } fr
 import { hasMarketCheckedBefore, isHomeGuideSeen, markHomeGuideSeen, markMarketCheckedBefore } from "@/lib/homeExperience";
 import { ONBOARDING_COMPLETE_EVENT, type OnboardingCompleteDetail } from "@/lib/onboarding";
 import type { ApiError, ForecastPoint, ForecastResponse, ProcurementResponse, ResourceEntry, ResourceOption, ResourcesResponse, RiskResponse } from "@/types/api";
-import { asApiError, isUnavailable, isValidSelection, toFarmerMessage, type Selection } from "./serviceState";
+import { asApiError, isUnavailable, isValidSelection, toFarmerMessage, type Selection, type SellParams } from "./serviceState";
+
+const SELL_QUINTALS_KEY = "croplens_sale_quintals";
+const STORAGE_COST_KEY = "croplens_storage_cost_per_day";
+const TRANSPORT_KEY = "croplens_transport_cost";
+
+function readStoredSellParams(): SellParams {
+  if (typeof window === "undefined") return { sale_quintals: 10, storage_cost_per_day: 0, transport_cost: 0 };
+  const quintals = Number.parseFloat(window.localStorage.getItem(SELL_QUINTALS_KEY) ?? "10");
+  const storage = Number.parseFloat(window.localStorage.getItem(STORAGE_COST_KEY) ?? "0");
+  const transport = Number.parseFloat(window.localStorage.getItem(TRANSPORT_KEY) ?? "0");
+  return {
+    sale_quintals: Number.isFinite(quintals) && quintals > 0 ? quintals : 10,
+    storage_cost_per_day: Number.isFinite(storage) && storage >= 0 ? storage : 0,
+    transport_cost: Number.isFinite(transport) && transport >= 0 ? transport : 0,
+  };
+}
 
 type ChartHorizon = 7 | 14;
 
@@ -49,7 +65,9 @@ export default function HomePage() {
   const [mandiFocusRequest, setMandiFocusRequest] = useState(0);
   const [chartHorizon, setChartHorizon] = useState<ChartHorizon>(7);
   const [showHomeGuide, setShowHomeGuide] = useState(false);
+  const [sellParams, setSellParams] = useState<SellParams>(() => readStoredSellParams());
   const preferencesApplied = useRef(false);
+  const sellParamsDebounceRef = useRef<number | null>(null);
   const pendingOnboardingCheck = useRef(false);
   const forecastRequestId = useRef(0);
   const riskRequestId = useRef(0);
@@ -78,6 +96,13 @@ export default function HomePage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(SELL_QUINTALS_KEY, String(sellParams.sale_quintals));
+    window.localStorage.setItem(STORAGE_COST_KEY, String(sellParams.storage_cost_per_day));
+    window.localStorage.setItem(TRANSPORT_KEY, String(sellParams.transport_cost));
+  }, [sellParams]);
+
   const commodities = useMemo<ResourceOption[]>(() => resources?.commodities ?? [], [resources]);
   const popularCrops = useMemo(() => commodities.slice(0, 4).map((item) => item.id), [commodities]);
   const markets = useMemo<ResourceOption[]>(
@@ -87,7 +112,7 @@ export default function HomePage() {
   const selectedCommodity = commodities.find((item) => item.id === commodity);
   const selectedMarket = markets.find((item) => item.id === market);
   const hasSelection = Boolean(commodity && market);
-  const selection = (): Selection => ({ commodity, market, horizon });
+  const selection = (): Selection => ({ commodity, market, horizon, sellParams });
   const validSelection = isValidSelection(selection(), commodities.map((item) => item.id), markets.map((item) => item.id));
 
   const recentMarketIds = useMemo(() => {
@@ -129,7 +154,14 @@ export default function HomePage() {
   const runForecast = async (current: Selection, id: number) => {
     setForecastState({ data: null, error: null, loading: true, requestedFor: current });
     try {
-      const data = await getForecast(current);
+      const data = await getForecast({
+        commodity: current.commodity,
+        market: current.market,
+        horizon: current.horizon,
+        sale_quintals: current.sellParams?.sale_quintals,
+        storage_cost_per_day: current.sellParams?.storage_cost_per_day,
+        transport_cost: current.sellParams?.transport_cost,
+      });
       if (forecastRequestId.current === id) {
         setForecastState({ data, error: null, loading: false, requestedFor: current });
       }
@@ -187,6 +219,23 @@ export default function HomePage() {
     pendingOnboardingCheck.current = false;
     submitForecast();
   }, [commodity, market]);
+
+  useEffect(
+    () => () => {
+      if (sellParamsDebounceRef.current !== null) window.clearTimeout(sellParamsDebounceRef.current);
+    },
+    [],
+  );
+
+  const handleSellParamsChange = (next: SellParams) => {
+    setSellParams(next);
+    if (!hasRequested || !validSelection) return;
+    if (sellParamsDebounceRef.current !== null) window.clearTimeout(sellParamsDebounceRef.current);
+    sellParamsDebounceRef.current = window.setTimeout(() => {
+      const current = { commodity, market, horizon, sellParams: next };
+      void runForecast(current, ++forecastRequestId.current);
+    }, 400);
+  };
 
   const retryForecast = () => {
     if (validSelection) {
@@ -250,7 +299,7 @@ export default function HomePage() {
   const p90Price = forecast?.p90_ceiling_price ?? primaryForecast?.p90_ceiling_price;
   const currentPrice = forecast?.current_price;
   const peakDay = forecast?.peak_day ?? points.find((point) => point.is_peak);
-  const tone = decisionTone(language === "hi" ? forecast?.decision_hi : forecast?.decision);
+  const tone = decisionTone(forecast ? farmerDecisionText(forecast, language) : undefined);
   const farmerCopyKeys = {
     actionSellToday: t("actionSellToday"),
     actionWaitFewDays: t("actionWaitFewDays"),
@@ -447,6 +496,8 @@ export default function HomePage() {
                   onSpeak={speakAdvisory}
                   onShare={shareAdvisory}
                   lastObservedDate={forecast.last_observed_date}
+                  sellParams={sellParams}
+                  onSellParamsChange={handleSellParamsChange}
                 />
               ) : null}
               {forecast ? (

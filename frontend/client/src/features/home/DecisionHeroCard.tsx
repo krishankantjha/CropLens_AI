@@ -3,6 +3,7 @@ import { DecisionBadge } from "./DecisionBadge";
 import { PriceCorridor } from "./PriceCorridor";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { ForecastPoint, ForecastResponse } from "@/types/api";
+import type { SellParams } from "@/features/home/serviceState";
 import { farmerDecisionText, farmerGainMessage, farmerTrustLabel } from "@/lib/farmerCopy";
 import { daysSinceIsoDate, formatMarketDate, money, pointLabel, type DecisionTone } from "@/lib/format";
 
@@ -20,6 +21,8 @@ type DecisionHeroCardProps = {
   onSpeak: () => void;
   onShare: () => void;
   lastObservedDate?: string;
+  sellParams: SellParams;
+  onSellParamsChange: (next: SellParams) => void;
 };
 
 export function DecisionHeroCard({
@@ -36,8 +39,11 @@ export function DecisionHeroCard({
   onSpeak,
   onShare,
   lastObservedDate,
+  sellParams,
+  onSellParamsChange,
 }: DecisionHeroCardProps) {
   const { t } = useLanguage();
+  const net = forecast.net_profit_advisory;
   const mandiAgeDays = lastObservedDate ? daysSinceIsoDate(lastObservedDate) : null;
   const mandiReportIsStale = mandiAgeDays !== null && mandiAgeDays > 2;
   const peakDayLabel = peakDay ? pointLabel(peakDay, language, t("day")) : undefined;
@@ -99,8 +105,55 @@ export function DecisionHeroCard({
               {t("bestDay")}: {peakDayLabel}
             </span>
           ) : null}
-          {tone === "sell" ? <p className="decision-hint">{t("sellUrgency")}</p> : null}
+          {net?.overrides_peak_price_advice && typeof net.net_advantage_vs_peak_rs === "number" && net.net_advantage_vs_peak_rs > 0 ? (
+            <p className="decision-hint">{t("overridesPeakNote").replace("{amount}", money(net.net_advantage_vs_peak_rs))}</p>
+          ) : tone === "sell" ? (
+            <p className="decision-hint">{t("sellUrgency")}</p>
+          ) : null}
         </div>
+      </div>
+      <div className="sell-optimizer">
+        <div className="sell-optimizer__title">{t("netProfitTitle")}</div>
+        <div className="sell-optimizer__grid">
+          <label className="field">
+            <span>{t("saleQuantity")}</span>
+            <input
+              type="number"
+              min={0.1}
+              step={1}
+              value={sellParams.sale_quintals}
+              onChange={(event) => onSellParamsChange({ ...sellParams, sale_quintals: Math.max(0.1, Number.parseFloat(event.target.value) || 0.1) })}
+            />
+          </label>
+          <label className="field">
+            <span>{t("storageCostPerDay")}</span>
+            <input
+              type="number"
+              min={0}
+              step={10}
+              value={sellParams.storage_cost_per_day}
+              onChange={(event) => onSellParamsChange({ ...sellParams, storage_cost_per_day: Math.max(0, Number.parseFloat(event.target.value) || 0) })}
+            />
+          </label>
+          <label className="field">
+            <span>{t("transportCostTotal")}</span>
+            <input
+              type="number"
+              min={0}
+              step={50}
+              value={sellParams.transport_cost}
+              onChange={(event) => onSellParamsChange({ ...sellParams, transport_cost: Math.max(0, Number.parseFloat(event.target.value) || 0) })}
+            />
+          </label>
+        </div>
+        {net ? (
+          <div className="sell-optimizer__summary">
+            <span>{t("netProfitTotal")}: <strong>{money(net.net_profit_total_rs)}</strong></span>
+            {typeof net.spoilage_loss_percent === "number" && net.spoilage_loss_percent > 0 ? (
+              <span>{t("spoilageLoss")}: {net.spoilage_loss_percent}% ({net.spoilage_loss_quintals} qtl)</span>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <PriceCorridor current={currentPrice} low={p10Price} median={p50Price} high={p90Price} label={t("priceCorridor")} />
       {voiceError ? <p className="form-note" role="alert">{voiceError}</p> : null}

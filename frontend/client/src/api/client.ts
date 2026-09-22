@@ -153,7 +153,7 @@ export function updatePreferences(payload: { full_name?: string; email?: string;
   return request<UserProfile>("/api/v1/auth/preferences", { method: "PUT", body: JSON.stringify(payload) });
 }
 
-export function createAlert(payload: { mobile_number: string; channel: string; crop: string; mandi: string; delivery_time: string; language: string; telegram_chat_id?: string }) {
+export function createAlert(payload: { mobile_number: string; channel: string; crop: string; mandi: string; delivery_time: string; language: string }) {
   return request<{ message?: string; subscription?: unknown }>("/api/v1/alerts/subscribe", { method: "POST", body: JSON.stringify(payload) });
 }
 
@@ -165,6 +165,20 @@ export function listAlerts(mobileNumber: string) {
 export function deleteAlert(id: number, mobileNumber: string) {
   const query = new URLSearchParams({ mobile_number: mobileNumber });
   return request<{ message?: string }>(`/api/v1/alerts/subscriptions/${id}?${query.toString()}`, { method: "DELETE" });
+}
+
+export type TestWhatsappAlertResponse = {
+  status?: string;
+  deeplink_url?: string;
+  test_triggered?: boolean;
+  message?: string;
+};
+
+export function testWhatsappAlert(payload: { mobile_number: string; crop: string; mandi: string; lang: string }) {
+  return request<TestWhatsappAlertResponse>("/api/v1/alerts/test-whatsapp", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export type HealthResponse = {
@@ -193,11 +207,21 @@ export function getProcurement(params: { commodity: string; base_market: string 
   return request<ProcurementResponse>(`/api/v1/procurement/arbitrage?${query.toString()}`, options);
 }
 
-export function getForecast(params: { commodity: string; market: string; horizon: number }) {
+export function getForecast(params: {
+  commodity: string;
+  market: string;
+  horizon: number;
+  sale_quintals?: number;
+  storage_cost_per_day?: number;
+  transport_cost?: number;
+}) {
   const query = new URLSearchParams({
     commodity: params.commodity,
     market: params.market,
     horizon: String(params.horizon),
+    sale_quintals: String(params.sale_quintals ?? 10),
+    storage_cost_per_day: String(params.storage_cost_per_day ?? 0),
+    transport_cost: String(params.transport_cost ?? 0),
   });
   return request<ForecastResponse>(`/api/v1/predict/forecast?${query.toString()}`, { notifyUnauthorized: false, retryOnUnauthorized: false });
 }

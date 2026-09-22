@@ -280,6 +280,48 @@ select:disabled { cursor: not-allowed; opacity: 0.6; }
   background: linear-gradient(135deg, color-mix(in srgb, var(--card) 96%, transparent), color-mix(in srgb, var(--paper-deep) 84%, var(--paper)));
   box-shadow: var(--shadow-card);
 }
+.sell-optimizer {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--paper-deep) 88%, var(--green-soft));
+}
+.sell-optimizer__title {
+  margin-bottom: 10px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sell-optimizer__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.sell-optimizer__grid .field span { font-size: 12px; }
+.sell-optimizer__grid input {
+  min-height: 44px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--input);
+  border-radius: 10px;
+  background: var(--paper);
+}
+.sell-optimizer__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 18px;
+  margin-top: 12px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.sell-optimizer__summary strong { color: var(--ink); }
+@media (max-width: 720px) {
+  .sell-optimizer__grid { grid-template-columns: 1fr; }
+}
+
 .decision-card { border-top: 4px solid var(--soil); }
 .decision-card--profit,
 .decision-card--hold { border-top-color: var(--green); }
@@ -562,7 +604,9 @@ select:disabled { cursor: not-allowed; opacity: 0.6; }
 .alert-form { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end; margin-top: 20px; }
 .alert-form select,
 .alert-form input { min-height: 48px; padding: 0 13px; border: 1px solid var(--input); border-radius: 10px; background: var(--paper); color: var(--ink); }
-.alert-form .primary-button { min-height: 48px; }
+.alert-form .primary-button,
+.alert-form .secondary-button { min-height: 48px; }
+.alert-form__actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .alert-form--wide { grid-template-columns: 1fr 1fr 1fr 1fr auto; }
 .subscription-list { display: grid; gap: 8px; margin-top: 18px; }
 .subscription-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 11px; background: var(--paper); }

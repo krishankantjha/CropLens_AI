@@ -36,6 +36,35 @@ export type DailyForecastPoint = {
 
 export type ForecastPoint = DailyForecastPoint;
 
+export type NetProfitSellAdvisory = {
+  method_version?: string;
+  commodity?: string;
+  sale_quintals?: number;
+  storage_cost_per_day_rs?: number;
+  transport_cost_rs?: number;
+  spoilage_half_life_days?: number;
+  optimal_day_index?: number;
+  optimal_date?: string;
+  optimal_day_name?: string;
+  optimal_day_name_hi?: string;
+  optimal_price_per_qtl?: number;
+  marketable_fraction?: number;
+  sellable_quintals?: number;
+  spoilage_loss_quintals?: number;
+  spoilage_loss_percent?: number;
+  gross_revenue_rs?: number;
+  storage_cost_total_rs?: number;
+  net_profit_total_rs?: number;
+  net_profit_per_quintal_rs?: number;
+  peak_price_day_index?: number;
+  peak_price_per_qtl?: number;
+  peak_day_net_profit_rs?: number;
+  net_advantage_vs_peak_rs?: number;
+  overrides_peak_price_advice?: boolean;
+  decision?: string;
+  decision_hi?: string;
+};
+
 export type ForecastResponse = {
   commodity?: string;
   market?: string;
@@ -50,6 +79,7 @@ export type ForecastResponse = {
   expected_gain?: number;
   confidence?: string;
   model_version?: string;
+  net_profit_advisory?: NetProfitSellAdvisory;
   p10_floor_price?: number;
   p50_median_price?: number;
   p90_ceiling_price?: number;
