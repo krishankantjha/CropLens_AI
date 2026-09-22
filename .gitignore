@@ -84,6 +84,9 @@ data/processed/backups/
 run_logs/
 debug-*.log
 
+# Patent disclosure drafts (local institutional filing artifacts)
+docs/patent/
+
 # Local research paper exports & conference templates (keep LaTeX sources in reports/)
 *_Research_Paper*.pdf
 CropLens_AI_Research_Paper*.pdf
